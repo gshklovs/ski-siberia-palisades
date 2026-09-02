@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Siberia / the Palisades — Palisades Tahoe</title>
+<style>
+  html,body{margin:0;height:100%;background:#0d1420;overflow:hidden;font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;color:#cfe0f2}
+  #hud{position:fixed;left:10px;top:10px;z-index:5;background:#0d1420cc;padding:8px 10px;border:1px solid #2b3f57;white-space:pre}
+  canvas{display:block}
+</style>
+<script type="importmap">
+{"imports":{"three":"./vendor/build/three.module.js"}}
+</script>
+</head>
+<body>
+<div id="hud">booting…</div>
+<script type="module">
+import * as THREE from 'three';
+import { buildWorld } from './world.mjs';
+import { cameras } from './cameras.mjs';
+
+const qs = new URLSearchParams(location.search);
+const W = parseInt(qs.get('w') || '0', 10) || Math.min(1600, innerWidth);
+const H = parseInt(qs.get('h') || '0', 10) || Math.min(900, innerHeight);
+const still = qs.has('still');
+const hud = document.getElementById('hud');
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.setSize(W, H);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFShadowMap;
+document.body.appendChild(renderer.domElement);
+
+const world = await buildWorld(THREE, {});
+const cams = cameras(world);
+const camera = new THREE.PerspectiveCamera(60, W / H, 0.25, 30000);
+camera.up.set(0, 0, 1);
+
+const name = qs.get('cam') || 'hero-palisades';
+function applyCam(c) {
+  camera.fov = c.fov || 60;
+  camera.up.set(...(c.up || [0, 0, 1]));
+  camera.position.set(...c.pos);
+  camera.lookAt(...c.target);
+  camera.updateProjectionMatrix();
+}
+if (cams[name]) applyCam(cams[name]);
+
+const orbA = qs.get('orbit');
+if (orbA !== null) {
+  const a = parseFloat(orbA) * Math.PI / 180;
+  const R = parseFloat(qs.get('r') || '1500');
+  const alt = parseFloat(qs.get('alt') || '740');
+  const cx = -120, cy = -110;
+  const cz = world.terrainHeight(cx, cy);
+  camera.up.set(0, 0, 1);
+  camera.fov = 46;
+  camera.position.set(cx + Math.cos(a) * R, cy + Math.sin(a) * R, cz + alt);
+  camera.lookAt(cx, cy, cz + 20);
+  camera.updateProjectionMatrix();
+}
+
+const s = world.report.stats;
+hud.textContent = `Siberia / the Palisades   cam=${name}
+draws ${s.drawCalls}  tris ${(s.triangles / 1000).toFixed(0)}k  collidable ${(s.collidableTriangles / 1000).toFixed(0)}k
+trees ${s.trees}  rocks ${s.rocks}  talus ${s.talus}  build ${s.buildMs}ms`;
+if (qs.has('nohud')) hud.style.display = 'none';
+
+let t = parseFloat(qs.get('t') || '0');
+world.update(t);
+renderer.render(world.scene, camera);
+window.__ready = true;
+window.__world = world;
+window.__THREE = THREE;
+window.__cams = cams;
+window.__stats = s;
+function frame() {
+  if (!still) { t += 1 / 60; world.update(t); }
+  renderer.render(world.scene, camera);
+  if (!still) requestAnimationFrame(frame);
+}
+if (!still) requestAnimationFrame(frame);
+</script>
+</body>
+</html>
