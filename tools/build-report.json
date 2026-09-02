@@ -2,8 +2,8 @@
   "generator": "poi-lab tools/export-red-dog/build.mjs",
   "spec": "specs/0001-ski-red-dog-face-architecture.md",
   "world": "siberia",
-  "pin": "6a7a2b9a8b39367caded3c01d651ab1fb019d844",
-  "builtAt": "2026-09-02T01:17:27.049Z",
+  "pin": "9d2545ee00037c99acda5ae1c5bdd393a937cab5",
+  "builtAt": "2026-09-02T06:13:59.991Z",
   "tier": "A",
   "crop": {
     "$doc": [
@@ -58,12 +58,12 @@
     "mode": "source",
     "note": "the run's own authored spawn, shipped unchanged — world.mjs derives it at runtime from the lift top terminal"
   },
-  "files": 52,
+  "files": 54,
   "sizes": {
-    "n": 52,
-    "raw": 6540676,
-    "gz": 2672674,
-    "br": 1938058,
+    "n": 53,
+    "raw": 6597034,
+    "gz": 2693633,
+    "br": 1955836,
     "byGroup": {
       "css": {
         "n": 4,
@@ -73,15 +73,15 @@
       },
       "html": {
         "n": 1,
-        "raw": 9655,
-        "gz": 4493,
-        "br": 3636
+        "raw": 10991,
+        "gz": 4898,
+        "br": 3972
       },
       "player": {
-        "n": 29,
-        "raw": 1101412,
-        "gz": 387730,
-        "br": 332002
+        "n": 30,
+        "raw": 1156434,
+        "gz": 408284,
+        "br": 349444
       },
       "scene:data": {
         "n": 2,
@@ -129,9 +129,15 @@
       },
       {
         "file": "js/play/ski.js",
-        "raw": 121143,
-        "gzip": 40511,
-        "brotli": 34524
+        "raw": 130205,
+        "gzip": 43825,
+        "brotli": 37226
+      },
+      {
+        "file": "js/play/fx.js",
+        "raw": 112980,
+        "gzip": 40018,
+        "brotli": 33284
       },
       {
         "file": "js/play/guide.js",
@@ -144,12 +150,6 @@
         "raw": 99611,
         "gzip": 34718,
         "brotli": 29763
-      },
-      {
-        "file": "js/play/fx.js",
-        "raw": 93655,
-        "gzip": 33322,
-        "brotli": 27766
       },
       {
         "file": "js/play/markers.js",
@@ -165,15 +165,15 @@
       },
       {
         "file": "js/play/inventory.js",
-        "raw": 64280,
-        "gzip": 20598,
-        "brotli": 17899
+        "raw": 64402,
+        "gzip": 20668,
+        "brotli": 17931
       },
       {
         "file": "js/play/hud.js",
-        "raw": 47457,
-        "gzip": 16486,
-        "brotli": 14217
+        "raw": 47634,
+        "gzip": 16546,
+        "brotli": 14276
       }
     ],
     "perFile": [
@@ -203,9 +203,15 @@
       },
       {
         "file": "js/play/ski.js",
-        "raw": 121143,
-        "gzip": 40511,
-        "brotli": 34524
+        "raw": 130205,
+        "gzip": 43825,
+        "brotli": 37226
+      },
+      {
+        "file": "js/play/fx.js",
+        "raw": 112980,
+        "gzip": 40018,
+        "brotli": 33284
       },
       {
         "file": "js/play/guide.js",
@@ -218,12 +224,6 @@
         "raw": 99611,
         "gzip": 34718,
         "brotli": 29763
-      },
-      {
-        "file": "js/play/fx.js",
-        "raw": 93655,
-        "gzip": 33322,
-        "brotli": 27766
       },
       {
         "file": "js/play/markers.js",
@@ -239,21 +239,15 @@
       },
       {
         "file": "js/play/inventory.js",
-        "raw": 64280,
-        "gzip": 20598,
-        "brotli": 17899
+        "raw": 64402,
+        "gzip": 20668,
+        "brotli": 17931
       },
       {
         "file": "js/play/hud.js",
-        "raw": 47457,
-        "gzip": 16486,
-        "brotli": 14217
-      },
-      {
-        "file": "js/play/surprise.js",
-        "raw": 46558,
-        "gzip": 16180,
-        "brotli": 13938
+        "raw": 47634,
+        "gzip": 16546,
+        "brotli": 14276
       },
       {
         "file": "js/play/snowmobile.js",
@@ -268,22 +262,28 @@
         "brotli": 12434
       },
       {
+        "file": "js/play/surprise.js",
+        "raw": 41555,
+        "gzip": 14345,
+        "brotli": 12383
+      },
+      {
         "file": "js/play/snowball.js",
-        "raw": 38564,
-        "gzip": 13144,
-        "brotli": 11438
+        "raw": 38574,
+        "gzip": 13167,
+        "brotli": 11455
+      },
+      {
+        "file": "js/play/controller.js",
+        "raw": 35612,
+        "gzip": 12849,
+        "brotli": 11229
       },
       {
         "file": "js/play/sled.js",
         "raw": 31406,
         "gzip": 11630,
         "brotli": 10143
-      },
-      {
-        "file": "js/play/controller.js",
-        "raw": 28333,
-        "gzip": 10098,
-        "brotli": 8827
       },
       {
         "file": "scene/world.mjs",
@@ -302,6 +302,12 @@
         "raw": 25771,
         "gzip": 9641,
         "brotli": 8418
+      },
+      {
+        "file": "js/play/touch.js",
+        "raw": 24217,
+        "gzip": 9292,
+        "brotli": 7985
       },
       {
         "file": "js/play/lift.js",
@@ -346,16 +352,16 @@
         "brotli": 6402
       },
       {
-        "file": "js/play/touch.js",
-        "raw": 18300,
-        "gzip": 6993,
-        "brotli": 5984
-      },
-      {
         "file": "js/play/audio.js",
         "raw": 19881,
         "gzip": 6455,
         "brotli": 5580
+      },
+      {
+        "file": "js/play/collision.js",
+        "raw": 16867,
+        "gzip": 6396,
+        "brotli": 5562
       },
       {
         "file": "scene/kit.mjs",
@@ -370,6 +376,12 @@
         "brotli": 4620
       },
       {
+        "file": "js/play/solids.js",
+        "raw": 12236,
+        "gzip": 4810,
+        "brotli": 4219
+      },
+      {
         "file": "css/te.css",
         "raw": 21769,
         "gzip": 4702,
@@ -382,28 +394,22 @@
         "brotli": 3986
       },
       {
+        "file": "index.html",
+        "raw": 10991,
+        "gzip": 4898,
+        "brotli": 3972
+      },
+      {
         "file": "js/play/rocket.js",
         "raw": 10793,
         "gzip": 4426,
         "brotli": 3793
       },
       {
-        "file": "index.html",
-        "raw": 9655,
-        "gzip": 4493,
-        "brotli": 3636
-      },
-      {
         "file": "scene/lift.mjs",
         "raw": 12118,
         "gzip": 4111,
         "brotli": 3622
-      },
-      {
-        "file": "js/play/collision.js",
-        "raw": 10970,
-        "gzip": 4030,
-        "brotli": 3515
       },
       {
         "file": "js/play/loader.js",

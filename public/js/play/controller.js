@@ -52,12 +52,38 @@ export const TUNING = {
   maxFall: 60,          // m/s terminal
   voidDrop: 90,         // m below spawn before we respawn you
   snapDown: 0.45,       // m — stay glued to ground walking downhill
+  // ---- specs/0012: the world is allowed to hurt you.
+  // Trees were decor in every one of these maps — surprise.js quipped when you
+  // rode THROUGH one. A trunk is now a solid vertical cylinder (solids.js) and
+  // meeting it at speed is a wipeout on the same path a bad landing takes.
+  treeWipeV: 4.0,       // m/s — at or above this, a trunk is a wipeout; below it
+                        // you slide off and can nudge past at walking pace
+  // ...and rock is rock. `groundClass()` (collision.js) says what is under the
+  // feet; a rock face steeper than 35 deg is stone, flatter is the snow cap
+  // sitting on it and skis like snow.
+  rockWipeV: 6.0,       // m/s — grounded on stone above this is a wipeout
+  rockLandV: 3.0,       // m/s — landing onto stone harder than this is a wipeout
+                        // whatever the horizontal speed
 };
 
 const clamp = (v, a, b) => v < a ? a : (v > b ? b : v);
 
+// collision.js's surface classes, spelled out here so this file does not import
+// a constant it only compares against.
+const CLASS_ROCK = 1;
+
 export function createController(THREE, collision, spawn, tuning = {}) {
   const T = { ...TUNING, ...tuning };
+  // THE SCENE'S UNIT, recovered rather than passed. main.js scales a FIXED list
+  // of tuning keys by unitScale before it gets here and `walk` is on that list;
+  // the specs/0012 thresholds are not, and a scene where 1 unit is 4 m would
+  // otherwise get metre-sized numbers. Recovering it from a length the caller
+  // did scale keeps the seam where it already is instead of adding another
+  // argument to a call site this spec may not touch.
+  const U = (T.walk > 0 && TUNING.walk > 0) ? T.walk / TUNING.walk : 1;
+  for (const k of ['treeWipeV', 'rockWipeV', 'rockLandV']) {
+    if (tuning[k] === undefined) T[k] = TUNING[k] * U;
+  }
   // ride-gear registry — tunings already scaled by the caller
   const GEARS = {
     skis: {
@@ -173,6 +199,7 @@ export function createController(THREE, collision, spawn, tuning = {}) {
   let wipeT = 0;                 // s left of wipeout (camera tumble; speed already scrubbed)
   let lastTrick = null;          // { name, deg } — '360' | '720' | '1080' | 'wipeout'
   let trickJudge = null;         // tricks.js's landing-window verdict, if wired
+  let treeHits = 0, rockWipes = 0;   // specs/0012 counters, for the test handle
   const events = { land: 0, trick: null, wipe: null, pop: null };   // drained by main.js each frame
 
   const TWO_PI = Math.PI * 2;
@@ -238,6 +265,60 @@ export function createController(THREE, collision, spawn, tuning = {}) {
       len = Math.hypot(mx, mz);
     }
     return [mx, mz];
+  }
+
+  // THE ONE PLACE A WIPEOUT IS SPENT. Every source — skis crossed on a landing,
+  // a rotation left open, a trunk, a rock band — pays exactly the same price, so
+  // "you ate it" reads the same however you got there. `why` is what the HUD's
+  // WIPEOUT card prints. Zeroing the air is part of the price: whatever you were
+  // in the middle of is over, and it also stops a landing judged later in the
+  // same frame from overwriting this verdict with its own.
+  function wipeout(why, spinDeg = 0) {
+    vel.x *= 0.30; vel.z *= 0.30;
+    wipeT = 0.9;
+    lastTrick = { name: 'wipeout', deg: Math.round(spinDeg), why };
+    events.wipe = { ...lastTrick };
+    airSpin = 0; airTime = 0;
+  }
+
+  // ---- specs/0012 §A: TREES ARE SOLID.
+  //
+  // A trunk is not in the triangle soup and should not be: a fir is 30 m of
+  // needles around a 60 cm stem, and putting the canopy in the soup would make
+  // it a floor you could stand on. solids.js keeps the stems in their own 8 m
+  // hash instead, so this query is O(cell) — at most four cells read, however
+  // many firs the world placed — and not O(trees).
+  //
+  // Run on EVERY step, grounded or airborne. Skipping it in the air would let
+  // you clear a glade by hopping, which is the opposite of what a glade is.
+  function stemGuard() {
+    if (wipeT > 0) return;                        // no double hits in the tumble
+    if (!collision.stemHit) return;               // host with no stem index
+    // Up to three passes. `stemHit` answers with the DEEPEST overlap, and in a
+    // tight glade two trunks can hold you at once — pushing out of one can put
+    // you into the other, and a body left standing inside a trunk is the one
+    // state there is no way back out of. Three is enough for any real placement
+    // and is bounded, which a while-loop against float geometry would not be.
+    // the verdict is on the speed you ARRIVED with, not on the tangential
+    // remainder the push-out is about to leave you holding
+    const arrival = Math.hypot(vel.x, vel.z);
+    let touched = false;
+    for (let pass = 0; pass < 3; pass++) {
+      const h = collision.stemHit(pos.x, pos.y, pos.z, T.radius, U);
+      if (!h) break;
+      touched = true;
+      // the extra millimetre is not decoration: pushing out by exactly `pen`
+      // lands the body ON the cylinder, where float rounding leaves it inside
+      // as often as out, and "outside the trunk" has to be true every time
+      pos.x += h.nx * (h.pen + 1e-3); pos.z += h.nz * (h.pen + 1e-3);
+      // ...and stop driving into the wood. Below the wipe speed this IS the
+      // whole event: you slide off, and can nudge past a tree at a walk.
+      const into = vel.x * h.nx + vel.z * h.nz;   // < 0 = still heading at it
+      if (into < 0) { vel.x -= h.nx * into; vel.z -= h.nz * into; }
+    }
+    if (!touched) return;
+    treeHits++;
+    if (arrival >= T.treeWipeV) wipeout('tree');
   }
 
   function accelerate(wx, wz, target, rate, dt) {
@@ -316,6 +397,10 @@ export function createController(THREE, collision, spawn, tuning = {}) {
       pos.z = clamp(pos.z, b.z0 + 1, b.z1 - 1);
       vel.x = 0; vel.z = 0;
     }
+
+    // trunks, before the ground probe — so the height we sample is the height
+    // at the place the body actually ended up
+    stemGuard();
 
     // ---- vertical
     const wasGrounded = grounded;
@@ -427,6 +512,11 @@ export function createController(THREE, collision, spawn, tuning = {}) {
       vel.x = 0; vel.z = 0;
     }
 
+    // trunks. Before the ground probe and before the landing is judged: a tree
+    // zeroes the air, so hitting one on the way down is a TREE, not a bad
+    // landing that happened to be next to one.
+    stemGuard();
+
     // ---- vertical
     const wasGrounded = grounded;
     const impact = -vel.y;
@@ -441,6 +531,11 @@ export function createController(THREE, collision, spawn, tuning = {}) {
     let snap = Math.max(T.snapDown, Math.hypot(vel.x, vel.z) * dt * S.snapMul);
     if (G.snapRelease) snap = G.snapRelease(S, snap);
     const gy = collision.groundAt(pos.x, pos.z, pos.y + T.stepUp);
+    // ---- specs/0012 §B: WHAT IS UNDER THE FEET.
+    // Read here and nowhere else, because groundClass() reports the last
+    // groundAt() that HIT, exactly as groundNormal() does — and nothing between
+    // this line and the landing block below probes the ground again.
+    const gCls = (gy !== null && collision.groundClass) ? collision.groundClass() : 0;
     if (gy !== null && pos.y <= gy + 1e-3) {
       pos.y = gy; vel.y = 0; grounded = true;
     } else if (gy !== null && wasGrounded && vel.y <= 0 && pos.y - gy <= snap) {
@@ -448,6 +543,21 @@ export function createController(THREE, collision, spawn, tuning = {}) {
     } else {
       grounded = false;
     }
+
+    // ---- ROCK. The class is the MESH's, gated by the face: a granite bluff's
+    // plate tops lie flat enough that this world's snow has covered them, and a
+    // snow cap on rock skis like snow (collision.js ROCK_SLOPE_COS). What is
+    // left is stone, and stone has two rules:
+    //   * arriving out of the air onto it above rockLandV is a wipeout at any
+    //     horizontal speed — that is what makes a cliff band a cliff band and
+    //     not a ramp;
+    //   * riding across it at or above rockWipeV is a wipeout too, and below
+    //     that it is simply hard ground you can walk, skate or scramble over.
+    // Deliberately NOT gated on airTime: a rock band re-grounds every few frames
+    // with a hop far too short to judge, and "that landing was too short to
+    // count" must not add up to "granite is free".
+    const rockWipe = grounded && wipeT <= 0 && gCls === CLASS_ROCK
+      && ((!wasGrounded && impact >= T.rockLandV) || Math.hypot(vel.x, vel.z) >= T.rockWipeV);
 
     if (grounded && !wasGrounded) {
       const q = collision.groundNormal();
@@ -485,16 +595,18 @@ export function createController(THREE, collision, spawn, tuning = {}) {
           if (v && v.wipe) { wiped = true; why = v.why || 'rotation'; }
           if (v && typeof v.snapYaw === 'number') yaw = v.snapYaw;
         }
-        if (wiped) {
-          vel.x *= 0.30; vel.z *= 0.30;      // scrub — spins have stakes
-          wipeT = 0.9;
-          lastTrick = { name: 'wipeout', deg: Math.round(spinDeg), why };
-          events.wipe = { ...lastTrick };
-        } else if (G.spinTrick !== false && spinDeg >= 330) {
-          const n360 = Math.min(4, Math.floor((spinDeg + 30) / 360));
-          lastTrick = { name: String(n360 * 360), deg: Math.round(spinDeg) };
-          events.trick = { ...lastTrick };
-        }
+      }
+      // ...and the ground itself gets the last word. Stone beats a clean
+      // landing: closing a 720 perfectly onto a granite slab is still a 720 into
+      // a granite slab. It is checked outside the airTime gate above, so a
+      // micro-hop onto rock counts.
+      if (!wiped && rockWipe) { wiped = true; why = 'rock'; rockWipes++; }
+      if (wiped) {
+        wipeout(why, spinDeg);               // scrub — spins and stone have stakes
+      } else if (airTime > 0.3 && G.spinTrick !== false && spinDeg >= 330) {
+        const n360 = Math.min(4, Math.floor((spinDeg + 30) / 360));
+        lastTrick = { name: String(n360 * 360), deg: Math.round(spinDeg) };
+        events.trick = { ...lastTrick };
       }
       if (!wiped) {
         G.land(vel, impact, gnorm, S);          // land on a pitch, keep going
@@ -505,6 +617,11 @@ export function createController(THREE, collision, spawn, tuning = {}) {
       airSpin = 0; airTime = 0;
     } else if (!grounded && wasGrounded && G.launch) {
       G.launch(vel, S);   // rolled off a lip without jumping — carry the vertical
+    } else if (rockWipe) {
+      // never left the ground, but the ground turned to stone under you at
+      // speed. There is no landing to judge here — the band itself is the event.
+      rockWipes++;
+      wipeout('rock');
     }
 
     if (gy === null && pos.y < home.position.y - T.voidDrop) respawn();
@@ -546,6 +663,13 @@ export function createController(THREE, collision, spawn, tuning = {}) {
     get airTime() { return airTime; },
     get wipeT() { return wipeT; },
     get lastTrick() { return lastTrick; },
+    // specs/0012 — how many trunks the body has actually touched and how many
+    // rock bands have ended a run. Counters, not events: a gate asserts on the
+    // delta across a stepFixed() run.
+    get treeHits() { return treeHits; },
+    get rockWipes() { return rockWipes; },
+    // what is under the feet right now: 0 snow, 1 rock (collision.js)
+    groundClass() { return collision.groundClass ? collision.groundClass() : 0; },
     // one-shot event drain: landing impact + any trick/wipe since the last call
     takeEvents() {
       const out = { land: events.land, trick: events.trick, wipe: events.wipe, pop: events.pop };

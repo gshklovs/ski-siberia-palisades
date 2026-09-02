@@ -529,7 +529,8 @@ const LOCKER_CSS = `
   display: grid; gap: 3px; padding: 10px 12px;
   border: 1px solid var(--lk-line); border-radius: 10px;
   background: linear-gradient(180deg, var(--lk-panel-2), var(--lk-panel));
-  border-left: 3px solid var(--lk-acc);
+  /* specs/0012 §C — no left stripe. The brand line above the name is already
+     accent-coloured; the plate did not need a second one turned on its side. */
 }
 .lk__plate-brand {
   font-family: var(--lk-mono); font-size: 9.5px; font-weight: 700;

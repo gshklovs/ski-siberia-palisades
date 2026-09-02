@@ -769,8 +769,12 @@ export function createHud({ poi, run, adapter, onResume, onRespawn }) {
     trick(t) {
       const wipe = t.name === 'wipeout';
       trickBig.textContent = wipe ? 'WIPEOUT' : t.name + '!';
+      // ...'tree' / 'rock' are the solids (specs/0012): you hit something.
       trickSub.textContent = wipe
-        ? (t.why === 'landing' ? 'came in too hot' : (t.deg ? t.deg + '° · unfinished' : 'skis crossed'))
+        ? (t.why === 'landing' ? 'came in too hot'
+          : t.why === 'tree' ? 'met a tree'
+          : t.why === 'rock' ? 'that was rock'
+          : (t.deg ? t.deg + '° · unfinished' : 'skis crossed'))
         : t.deg + '°';
       trick.classList.toggle('is-wipe', wipe);
       trick.hidden = false;

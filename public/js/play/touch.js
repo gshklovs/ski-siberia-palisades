@@ -86,7 +86,18 @@ function start() {
                               // discriminator between a trick and a look-drag, and
                               // it is a speed rather than a distance because a look
                               // that crosses the screen slowly is still a look.
-  const LOOK = 0.00022;   // 10x down from 0.0022 — phone drag-look was far too hot (Greg)
+  // MOUSE-EQUAL, and back where it started. `920da79` ("touch look fix") fixed
+  // two things for one complaint: the real bug — `window.__player.look` was
+  // declared twice in main.js and the winning definition dropped the `sens`
+  // argument, so every phone drag turned at ctrl.look's own `sens = 1`, one
+  // radian per pixel — and, belt-and-braces, it also cut this constant 10x. With
+  // the duplicate gone the 10x is a 10x over-correction: at 0.00022 a full-screen
+  // swipe on a 390 px phone turns 5°, which is what "it lost the sens I liked for
+  // turning" is. The finger drags the world at the same rate the mouse does.
+  const LOOK = 0.0022;
+  // STICK_YAW is stated in rad/s and tick() divides it BY LOOK before handing it
+  // to the same look() — so the stick's grounded look-yaw is 0.40 rad/s hard over
+  // no matter what LOOK is. Changing LOOK moves the drag and nothing else.
 
   const K = {};               // what we are currently asserting
   const set = (k, v) => { if (K[k] !== v) { K[k] = v; P.keys({ [k]: v }); } };
@@ -170,15 +181,70 @@ function start() {
   }
 
   // -------------------------------------------------------------------- state
-  const touches = new Map();  // id -> { side, x0, y0, x, y, t0, tLast, moved }
+  const touches = new Map();  // id -> { side, x0, y0, x, y, t0, tLast, moved, mates }
   let stick = null;           // { id, x0, y0, ax, ay } — the planted anchor
   let lastTap = null;         // { t, x, y } — for the double
-  let multi = false;          // more than one finger has been down this gesture
   let spinTimer = null;
   let raf = 0;
   let rafLast = 0;
+  let ghostsPruned = 0;       // how many dead ids reconcile() has swept — see GHOSTS
 
   const side = (x) => (x < innerWidth / 2 ? 'L' : 'R');
+
+  // The level jump input is a PROPERTY OF THE MAP, never an increment: recompute
+  // it from whoever is actually on the right half. Every path that adds, removes
+  // or sweeps a touch ends here, so there is no way to leak a stuck `jumpHeld`.
+  const syncHeld = () => set('jumpHeld', [...touches.values()].some((v) => v.side === 'R'));
+
+  // MATES — the fix for "I cannot jump while I am holding the stick" (specs/0009
+  // §2). The old gate was a single `multi` flag: ANY second finger anywhere on
+  // the glass disqualified every tap for the rest of the gesture. But the left
+  // thumb is on the stick for the whole run, so on a phone that flag was simply
+  // always true and the jump EDGE never fired once. (`jumpHeld` did assert, which
+  // is why it looked like the tap was being seen and ignored.)
+  //
+  // A tap is disqualified by a finger it could be HALF OF — a second finger on
+  // the SAME half, i.e. a pinch or a two-finger camera toggle. A finger on the
+  // other half is a different control entirely. So the flag is per touch and it
+  // counts only same-half company at the moment of landing, and both the jump and
+  // the double-tap reset read the same number.
+  const mateCount = (id, s) => {
+    let n = 0;
+    for (const [k, v] of touches) if (k !== id && v.side === s) n++;
+    return n;
+  };
+
+  // GHOSTS — the fix for "after I skip the tutorial, jump is dead" (specs/0009
+  // §3). guide.js's skip chip sits bottom-right, is held for 900 ms and then
+  // REMOVES ITSELF while the finger is still on it. Chrome dispatches that
+  // finger's `touchend` to the touch's original target, and a detached node does
+  // not bubble to `window`, so this file never hears the lift: the map keeps a
+  // RIGHT-half entry forever, `jumpHeld` stays asserted, and every later tap is
+  // rejected for having a mate that is not there.
+  //
+  // The cure is not to know about the skip chip. `e.touches` is the browser's own
+  // list of the fingers that are DOWN RIGHT NOW, on every touch event — so any id
+  // in our map that is not in it is, by definition, a finger that is up, whatever
+  // swallowed its end. Reconciling on every event makes the map self-healing for
+  // the next element that is removed under a thumb (pause panel, locker, boot
+  // cards) with nothing to remember.
+  //
+  // On end/cancel the ids being ended are already out of `e.touches` and only in
+  // `e.changedTouches`, so both lists count as alive for that one event.
+  function reconcile(e, endLike) {
+    const live = new Set();
+    for (const t of e.touches) live.add(t.identifier);
+    if (endLike) for (const t of e.changedTouches) live.add(t.identifier);
+    let swept = 0;
+    for (const id of [...touches.keys()]) {
+      if (live.has(id)) continue;
+      touches.delete(id);
+      ghostsPruned++; swept++;
+      if (stick && stick.id === id) release();
+    }
+    if (swept) syncHeld();
+    return swept;
+  }
 
   // --------------------------------------------------------------- the stick
   function plant(t) {
@@ -229,24 +295,33 @@ function start() {
 
   // ----------------------------------------------------------------- listeners
   addEventListener('touchstart', (e) => {
+    // BEFORE the blocked() gate: a finger that died under a removed node is dead
+    // whether or not a panel is up, and the sweep is what stops the map wedging.
+    reconcile(e, false);
     if (blocked()) return;
     const now = performance.now();
     for (const t of e.changedTouches) {
       const s = side(t.clientX);
       touches.set(t.identifier, {
         side: s, x0: t.clientX, y0: t.clientY,
-        x: t.clientX, y: t.clientY, t0: now, tLast: now, moved: 0,
+        x: t.clientX, y: t.clientY, t0: now, tLast: now, moved: 0, mates: 0,
       });
       // first finger on the left half plants the stick where it landed
       if (s === 'L' && !stick) plant(t);
     }
-    if (touches.size > 1) multi = true;
+    // ...and only once every finger of THIS event is in the map, so two fingers
+    // that land in the same event are mates of each other.
+    for (const t of e.changedTouches) {
+      const s = touches.get(t.identifier);
+      if (s) s.mates = mateCount(t.identifier, s.side);
+    }
     // hold on the right half is the level jump input (preload / flare)
-    if ([...touches.values()].some((v) => v.side === 'R')) set('jumpHeld', true);
+    syncHeld();
     e.preventDefault();
   }, { passive: false });
 
   addEventListener('touchmove', (e) => {
+    reconcile(e, false);
     if (blocked()) return;
     const now = performance.now();
     for (const t of e.changedTouches) {
@@ -276,6 +351,7 @@ function start() {
   }, { passive: false });
 
   const end = (e) => {
+    reconcile(e, true);
     const now = performance.now();
     for (const t of e.changedTouches) {
       const s = touches.get(t.identifier);
@@ -289,7 +365,10 @@ function start() {
       const quick = now - s.t0 < TAP_MS
         && s.moved < TAP_PX
         && Math.hypot(s.x - s.x0, s.y - s.y0) < TAP_PX;
-      if (!quick || multi) continue;
+      // ...and it is disqualified only by SAME-HALF company (see MATES above).
+      // The stick under the other thumb is a different control, not half of this
+      // gesture, so it can no longer eat the jump or the reset.
+      if (!quick || s.mates) continue;
 
       // DOUBLE-TAP, either half, is the reset. It is checked FIRST so the second
       // tap of a double on the right half resets instead of also jumping — one
@@ -319,20 +398,36 @@ function start() {
         setTimeout(drop, JUMP_MS);
       }
     }
-    if (![...touches.values()].some((v) => v.side === 'R')) set('jumpHeld', false);
-    if (!touches.size) { multi = false; if (!stick) clearMove(); }
+    syncHeld();
+    if (!touches.size && !stick) clearMove();
     e.preventDefault();
   };
   addEventListener('touchend', end, { passive: false });
   addEventListener('touchcancel', end, { passive: false });
 
-  // two fingers down at once = camera toggle, the same call C makes
+  // TWO FINGERS DOWN AT ONCE = camera toggle, the same call C makes — and "at
+  // once" is now checked at BOTH ends of the gesture. It used to be checked only
+  // at the lift ("two were down, then none were, inside 300 ms"), which is also a
+  // perfect description of "the stick has been held for forty seconds, you tapped
+  // the right half, and then you let go of the stick": the camera flipped every
+  // time you put the joystick down after a jump. So the pair has to have LANDED
+  // together too — within CAM_LAND_MS of each other — and the 300 ms window is
+  // measured from the FIRST of the two landings rather than from the second.
+  const CAM_LAND_MS = 120;
+  const CAM_LIFT_MS = 300;
   let twoAt = 0;
   addEventListener('touchstart', (e) => {
-    if (e.touches.length === 2) twoAt = performance.now();
+    if (e.touches.length !== 2) { twoAt = 0; return; }
+    const a = touches.get(e.touches[0].identifier);
+    const b = touches.get(e.touches[1].identifier);
+    // Not in the map means blocked() swallowed it — a finger on a panel is not
+    // half of a camera toggle either.
+    twoAt = (a && b && Math.abs(a.t0 - b.t0) <= CAM_LAND_MS) ? Math.min(a.t0, b.t0) : 0;
   }, { passive: true });
   addEventListener('touchend', (e) => {
-    if (twoAt && e.touches.length === 0 && performance.now() - twoAt < 300) { P.toggleCam(); twoAt = 0; }
+    if (e.touches.length !== 0) return;
+    if (twoAt && performance.now() - twoAt < CAM_LIFT_MS) P.toggleCam();
+    twoAt = 0;
   }, { passive: true });
 
   function spin(which) {
@@ -364,6 +459,15 @@ function start() {
     el: () => stickEl,
     keys: () => ({ ...K }),
     blocked: () => blocked(),
-    consts: { RING, CARVE, PITCH, STICK_YAW, TAP_MS, TAP_PX, DBL_MS, DBL_PX, JUMP_MS, FLICK_PX, FLICK_V, LOOK },
+    // specs/0009 §3 — the map, so a gate can tell "no finger is down" from "no
+    // finger is down and this file still thinks one is". Both are FUNCTIONS: a
+    // plain number would be a snapshot taken at boot and would read 0 forever.
+    touches: () => touches.size,
+    ghostsPruned: () => ghostsPruned,
+    // specs/0009 §2 — the live fingers and their mate counts, so a gate can see
+    // WHY a tap was not a jump. Never the Touch objects: this is a copy of our
+    // own bookkeeping.
+    live: () => [...touches.entries()].map(([id, v]) => ({ id, side: v.side, mates: v.mates })),
+    consts: { RING, CARVE, PITCH, STICK_YAW, TAP_MS, TAP_PX, DBL_MS, DBL_PX, JUMP_MS, FLICK_PX, FLICK_V, LOOK, CAM_LAND_MS, CAM_LIFT_MS },
   };
 }

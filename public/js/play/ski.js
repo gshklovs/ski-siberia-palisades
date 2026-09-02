@@ -46,7 +46,7 @@ export const SKI_TUNING = {
   brakeGrip: 3.0,        // × grip while snowplowing (lets you scrub sideways)
   skate: 5.5,            // m/s² — pole/skate push (W)
   skateMax: 5.5,         // m/s — above this W does nothing; flats settle at ~5
-  airDrag: 0.0022,       // 1/m — quadratic drag while airborne
+  airDrag: 0.0028,       // 1/m — quadratic drag while airborne (2026-09-01: 0.0022 → 0.0028, Greg: shorter carry)
   landBoost: 0.40,       // share of impact speed converted along the fall line
   landMin: 3.0,          // m/s — impacts softer than this convert nothing
   maxRoll: 0.26,         // rad — camera bank at full edge load (15°)
@@ -120,6 +120,26 @@ export const SKI_TUNING = {
   pumpTuckMul: 1.35,     // × charge while SHIFT (tuck) is held in a turn
   tuckDrag: 0.72,        // × dragQuad while SHIFT is held in a straight line
   pumpAirT: 0.30,        // s of air after which the bank is thrown away
+  // ---- THE BANK GOES UP AT A TAKEOFF (spec 0008). Greg: "the no pump jumps
+  // are usually good, but the compression ones are long but not as high as i
+  // expect", and the model said exactly that: `_pumpQ` pays out as `vf += add`
+  // and NOTHING ELSE, so pumping into a lip only ever raised the forward speed
+  // the lip's own vertical was multiplied against. Longer, never higher.
+  //
+  // So at the instant the ski leaves the snow, whatever the bank still holds is
+  // spent as an impulse ALONG THE GROUND NORMAL instead — which is the honest
+  // direction for a leg extension and gives all three cases for free:
+  //   * flat ground  → n = up, pure height, which is the complaint;
+  //   * a ramp       → n leans back uphill, so height plus a little braking;
+  //   * an uphill face taken fast → n points against travel and you BOUNCE OFF.
+  // The third one is not a bug to clamp away (Greg: "that would mean popping on
+  // too much vertical goes against u cuz u bounce off"); `pumpLaunchMax` is the
+  // only guard, and it is a ceiling on the impulse, not on its direction.
+  //
+  // `pumpLaunchK: 0` is the off switch and it is exact: no impulse, no drain,
+  // and skiLaunch writes the bytes it wrote before this block existed.
+  pumpLaunchK: 0.85,     // share of the un-spent bank spent along the normal at takeoff
+  pumpLaunchMax: 5.0,    // m/s — ceiling on that impulse
 
   // ---- STIVOT / STOP (spec 0002 §2). Also inert at 1 / 0.
   stivotAng: 0.55,       // rad — slip angle that counts as thrown sideways
@@ -171,9 +191,35 @@ export const SKI_TUNING = {
   // launch is not scaled down, it is skipped, so small terrain rolls leave the
   // ground exactly as flat as they always did. Measured over a 4536-line sweep
   // of the world at 25 m/s, 97% of takeoffs charge nothing at all.
-  lipK: 0.45,            // share of the ramp's own vertical rate carried off the lip
+  // ...and the COMPRESSION HALF IS CAPPED SEPARATELY (spec 0008 §3.2). One
+  // shared `lipMax` meant that on any ramp worth jumping the ramp term alone
+  // reached the ceiling and the compression was arithmetically deleted — which
+  // is the second half of "the compression ones are long but not as high".
+  // `min(lipMax, ramp) + min(lipCompMax, comp)` keeps the ramp's own ceiling
+  // exactly where it was, so A PURE RAMP JUMP IS UNCHANGED TO THE METRE, and
+  // gives what you loaded into it its own, smaller headroom on top.
+  // `lipCompK: 0` reduces the two forms to each other exactly.
+  //
+  // ---- `lipCompK` STAYS AT 0.25, and that IS a deviation from spec 0008 §3.2,
+  // which asks for 0.50 (and popCompK 0.35). Measured on park.mjs's jump-2 —
+  // the same ramp, the same entry, the same scripted line, before and after:
+  //
+  //     case A (no pump, ramp only)   apex 0.582 m -> 1.036 m   +78 %
+  //
+  // The spec's own §4 row A is "apex and distance within 2 % of before", and
+  // §3.2 justifies the bump with "a pure ramp jump is therefore unchanged". It
+  // is not: a BUILT kick has a transition scooped into it, so an unpumped run
+  // down it carries a real compression, and doubling `lipCompK` lands on every
+  // no-pump jump in the park — against Greg's own "the no pump jumps are usually
+  // good". At 0.25 case A is unchanged TO THE FLOAT and case B still gains
+  // +82 % of apex, so §3.2's actual complaint is answered by `lipCompMax` and
+  // `pumpLaunchK` without touching the unpumped jump. Same call, and the same
+  // reasoning, as the pump block above: the spec offers a number, the ramp
+  // decides it. `{ lipCompK: 0.50, popCompK: 0.35 }` restores the spec's set.
+  lipK: 0.55,            // share of the ramp's own vertical rate carried off the lip (2026-09-01: 0.45 → 0.55, Greg: more air when earned)
   lipCompK: 0.25,        // ...and of the compression that built up into it
-  lipMax: 6.5,           // m/s — ceiling on the ramp-given vertical (1.3 m of apex)
+  lipMax: 7.5,           // m/s — ceiling on the ramp-given vertical (1.75 m of apex; was 6.5)
+  lipCompMax: 3.0,       // m/s — the compression's OWN ceiling, added after that one
   lipMin: 1.6,           // m/s — under this the lip gave nothing, and nothing is added
   lipFloorT: 0.35,       // s — how fast the compression reference creeps back up
   lipSmoothT: 0.05,      // s — low-pass on the surface rate (a triangulated mesh has edges)
@@ -194,6 +240,9 @@ export const SKI_TUNING = {
   // with no input; this is a pump, and a pump is a thing you do. It is also
   // mutually exclusive with `lipCompK` — where the lip already pays the
   // compression, this pays nothing — so compression is never banked twice.
+  // ...and this one stays at 0.18 for the same measured reason `lipCompK` does
+  // (see the note there): it is the flat-ground twin of the same term, and 0008
+  // §4's case C is already +218 % of apex without it.
   popCompK: 0.18,        // × the compression the ski is carrying, as pop lift
   popCompMax: 3.0,       // m/s — ceiling on it
 
@@ -225,8 +274,8 @@ export const SKI_TUNING = {
   //      you are ON is already demanding — and only the SLACK above that is up
   //      for release. A steep chute keeps everything it needs; a roller on a
   //      mellow pitch keeps almost nothing, and that difference is the feature.
-  dropRelease: 0.80,     // share of the SLACK above the surface's own demand that lets go
-  dropV0: 13,            // m/s — at and below this the snap is exactly today's
+  dropRelease: 0.88,     // share of the SLACK above the surface's own demand that lets go (was 0.80)
+  dropV0: 11,            // m/s — at and below this the snap is exactly today's (was 13: rollers let go a bit sooner)
   dropSpan: 12,          // m/s — span from dropV0 to the full release
   dropCompRef: 8.0,      // m/s of compression that counts as fully loaded
   dropLoadMin: 0.45,     // share of the release an UNLOADED ski still gets at speed
@@ -248,8 +297,10 @@ export function scaleSkiTuning(u, over = {}) {
     'pumpMax', 'pumpLoadK', 'pumpVr0', 'pumpVrSpan', 'pumpCharge', 'pumpRadius',
     // carry/lip: the thresholds and the ceilings are speeds; the K's are shares
     // and the windows are times, so neither scales.
-    'carryV0', 'carrySpan', 'lipMax', 'lipMin', 'popLipMax',
+    'carryV0', 'carrySpan', 'lipMax', 'lipMin', 'popLipMax', 'lipCompMax',
     'dropV0', 'dropSpan', 'dropCompRef', 'dropFloor', 'popCompMax',
+    // the takeoff impulse is a speed; its share of the bank is a ratio
+    'pumpLaunchMax',
     'stivotVr']) S[k] *= u;
   for (const k of ['dragQuad', 'airDrag', 'rollPerLateral']) S[k] /= u;
   return S;
@@ -307,6 +358,18 @@ let _lipPaid = true, _popPaid = true, _popT = -1e9, _popVy = 0, _wasGnd = false;
 // is what the compression is worth and never does. Their clamped sum is the
 // charge. `_launchLog` is the one-shot record of the last takeoff.
 let _lipRamp = 0, _lipComp = 0, _launchLog = null;
+// ---- the last GROUNDED normal, and the one-shot that keeps the bank's takeoff
+// impulse to one payment per air (spec 0008 §3.1). The launch can resolve a
+// frame after the last contact — the controller fires it on the jump edge and
+// again on the grounded→air edge — so the direction has to be remembered rather
+// than read from a ctx that no longer has one. It starts as UP, which is what
+// flat ground and a cold start both are.
+// `_lnP*` is the normal of the face the LIP CHARGE PEAKED on — the face that
+// actually loaded the ski — and it is what the bank is spent along wherever
+// there is a charge; `_ln*` is the plain last-grounded normal and is what a
+// flat pop or a chargeless roll-off gets.
+let _lnx = 0, _lny = 1, _lnz = 0, _pumpNPaid = true;
+let _lnPx = 0, _lnPy = 1, _lnPz = 0, _lnPeak = false;
 // ---- the drop-away. `_dVyS` is how fast the SURFACE is changing our vertical
 // velocity (m/s per second, negative when the ground is falling away); compared
 // against gravity it is the honest 'is this steeper than a ballistic path'
@@ -340,6 +403,8 @@ export function resetSki() {
   _vyS = 0; _vyFloor = 0; _lipVy = 0; _lipHold = 0;
   _lipPaid = true; _popPaid = true; _popT = -1e9; _popVy = 0; _wasGnd = false;
   _lipRamp = 0; _lipComp = 0; _launchLog = null;
+  _lnx = 0; _lny = 1; _lnz = 0; _pumpNPaid = true;
+  _lnPx = 0; _lnPy = 1; _lnPz = 0; _lnPeak = false;
   _dVyS = 0; _dropK = 0; _dropFull = 0; _dropCut = 0; _lastSp = 0; _vyRef = 0;
 }
 
@@ -498,6 +563,8 @@ export function skiStep(ctx) {
     // still on the snow one frame after a launch = the ground ate it
     if (_launchLog && _launchLog.pending) { _launchLog.eaten = true; _launchLog.pending = false; }
     const n = ctx.normal;
+    // the direction the snow is pushing, remembered for the takeoff impulse
+    if (n) { _lnx = n.x; _lny = n.y; _lnz = n.z; }
 
     // ---- 1. fall line
     let nh = 0, dfx = 0, dfz = 0;
@@ -794,12 +861,32 @@ export function skiStep(ctx) {
     // came out 2:1 apart, and a COYOTE pop — which reads the charge that was
     // banked a beat earlier — beat both of them. The peak is the honest number:
     // it is what the ramp did to you, not what the last triangle did.
-    const lipNow = Math.min(S.lipMax, Math.max(0, _lipRamp + _lipComp));
-    _lipHold = _wasGnd
-      ? Math.max(lipNow, _lipHold - (S.lipMax / (S.lipHoldT || 0.2)) * dt)
-      : lipNow;
+    // ...and THE TWO HALVES ARE CAPPED APART (spec 0008 §3.2). Under one shared
+    // ceiling the ramp term alone reached `lipMax` on any ramp worth jumping and
+    // the compression the rider had actually loaded contributed nothing — the
+    // arithmetic behind "the compression ones are long but not as high". The
+    // ramp keeps its own ceiling untouched, so a pure ramp jump (comp = 0) is
+    // the jump it always was, and the compression gets its own smaller headroom
+    // stacked on it. `lipCompK: 0` reduces this to the old single-cap form
+    // exactly — `lipCompMax` does not, because the two differ precisely where
+    // the old shared ceiling was binding, which is the case being fixed.
+    const lipNow = Math.max(0,
+      Math.min(S.lipMax, _lipRamp) + Math.min(S.lipCompMax, _lipComp));
+    // ...and THE NORMAL IS HELD AT THE SAME PEAK, for the same reason the charge
+    // is (spec 0008 §3.1). A tabletop's crest is a 74 deg edge, so the LAST
+    // grounded triangle at a roll-off is already the back face, whose normal
+    // points down-track: spend the bank along that and a pumped jump comes out
+    // both higher AND 21 % longer, which is half of Greg's complaint restored.
+    // The face that actually loaded the ski is the face the charge peaked on,
+    // and its normal leans back-uphill — height, and a little braking, which is
+    // what §3.1 describes. One line, the same peak, no second clock.
+    const decayed = _wasGnd ? _lipHold - (S.lipMax / (S.lipHoldT || 0.2)) * dt : -Infinity;
+    if (lipNow >= decayed) {
+      _lipHold = lipNow;
+      if (n) { _lnPx = n.x; _lnPy = n.y; _lnPz = n.z; _lnPeak = true; }
+    } else _lipHold = decayed;
     _lipVy = _lipHold >= S.lipMin ? _lipHold : 0;
-    _lipPaid = false; _popPaid = false;
+    _lipPaid = false; _popPaid = false; _pumpNPaid = false;
     _wasGnd = true;
   } else {
     // airborne: momentum is yours, minus a little air. A bank charged on the
@@ -962,6 +1049,14 @@ export function skiLaunch(vel, S, popVy) {
   // not a guess: below −gravity there is nothing left to stand on and only the
   // snap was holding us there.
   const drop = _dropK > 0 && _dVyS < -_grav;
+  // WHICH FACE THE BANK IS SPENT ALONG (spec 0008 §3.1). Where there is a lip
+  // charge, it is the face that charge PEAKED on — the face that actually loaded
+  // the ski — because the last grounded triangle at a tabletop roll-off is the
+  // 74 deg back edge and its normal points down-track. Where there is no charge
+  // (a flat pop, a chargeless roll-off) the last grounded normal is the honest
+  // answer and is the one used, which is why case C is untouched by this.
+  const peakN = _lipVy > 0 && _lnPeak;
+  const nlx = peakN ? _lnPx : _lnx, nly = peakN ? _lnPy : _lny, nlz = peakN ? _lnPz : _lnz;
   _launchLog = { vy0: vel.y, lip: 0, ramp: _lipRamp, comp: _lipComp, charge: _lipVy,
                  drop, dropK: _dropK, dVyS: _dVyS, grav: _grav,
                  snapFull: _dropFull, snapCut: _dropCut,
@@ -971,15 +1066,52 @@ export function skiLaunch(vel, S, popVy) {
                  // meter that cannot say so is a meter that lies about the one
                  // case the player is complaining about. skiStep answers it on
                  // the next frame, whichever branch it lands in.
+                 // ---- specs/0008. What the BANK was worth at this takeoff, the
+                 // direction it was spent in, and the bank either side of it.
+                 pumpN: 0, normal: { x: nlx, y: nly, z: nlz }, normalPeak: peakN,
+                 bankBefore: 0, bankAfter: 0,
                  eaten: false, pending: true, taken: false };
+  // ---- THE BANK IS SPENT ALONG THE GROUND NORMAL (spec 0008 §3.1). Everything
+  // the carve bank still holds — the payout not yet released PLUS anything
+  // charged but never triggered — leaves the snow as a velocity impulse in the
+  // direction the snow is pushing, instead of waiting to become forward speed
+  // on a hill the ski has already left.
+  //
+  // IT IS DRAINED IN THE SAME BREATH, in proportion to what was actually spent.
+  // The speed release below and this are the same energy, and paying it twice
+  // would make a pump into a lip both higher AND faster, which is a free lunch
+  // rather than a redirection.
+  //
+  // n.x/n.z are added as well as n.y, deliberately: on a ramp the normal leans
+  // back uphill, so a big pop off a steep face costs a little forward speed, and
+  // on a face taken fast enough that the normal opposes travel outright you
+  // bounce off it. That IS the mechanic, and only `pumpLaunchMax` limits it.
+  const bank0 = _pumpRelLeft + _pumpQ;
+  _launchLog.bankBefore = bank0;
+  const plK = S.pumpLaunchK || 0;
+  if (!_pumpNPaid && plK > 0 && bank0 > 1e-9) {
+    const spend = Math.min(S.pumpLaunchMax, plK * bank0);
+    const f = Math.min(1, spend / plK / bank0);        // share of the bank consumed
+    _pumpRelLeft -= _pumpRelLeft * f;
+    _pumpQ -= _pumpQ * f;
+    vel.x += nlx * spend; vel.y += nly * spend; vel.z += nlz * spend;
+    _launchLog.pumpN = spend;
+  }
+  _pumpNPaid = true;
+  _launchLog.bankAfter = _pumpRelLeft + _pumpQ;
   if (!_lipPaid) {
     _lipPaid = true;
     if (_lipVy > 0) { vel.y += _lipVy; _launchLog.lip = _lipVy; }
   }
   if (popVy > 0) _popVy = popVy;          // what a pop is worth on this gear
   const pay = popPay(S);
+  // the bank's impulse is named in `src` wherever it fired, because "the pump
+  // did nothing" and "the pump fired and the lip was flat" look identical on the
+  // stopwatch and are different bugs.
+  const bankTag = () => (_launchLog.pumpN > 0 ? ' + bank' : '');
   const done = () => { _launchLog.total = vel.y - _launchLog.vy0;
-    _launchLog.src = _launchLog.lip > 0 ? 'lip' : (drop ? 'drop-away' : 'none'); };
+    _launchLog.src = (_launchLog.lip > 0 ? 'lip' : (drop ? 'drop-away' : (_launchLog.pumpN > 0 ? 'bank' : 'none')))
+      + (_launchLog.lip > 0 || drop ? bankTag() : ''); };
   // Nothing under the skis and nothing owed: a pop over flat, uncompressed
   // ground is arithmetically the jump it always was, and it leaves here without
   // touching vel.y or closing the window.
@@ -1006,7 +1138,7 @@ export function skiLaunch(vel, S, popVy) {
   _launchLog.gate = pay.gate;
   _launchLog.total = vel.y - _launchLog.vy0;
   const how = popVy > 0 ? '' : (_launchLog.restored > 0 ? ' (restored)' : ' (pre)');
-  _launchLog.src = (pay.lip > 0 ? 'lip + pop' : 'pump + pop') + how;
+  _launchLog.src = (pay.lip > 0 ? 'lip + pop' : 'pump + pop') + how + bankTag();
 }
 
 // One-shot drain for the lab meter: the last takeoff, itemised, or null. Read by

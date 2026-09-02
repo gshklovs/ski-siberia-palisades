@@ -816,36 +816,84 @@ const AU = {
   SWAY: 0.030,         // lateral lick, metres
   WIND_AT: 26,         // m/s where the wind terms saturate
 
-  // ---- THE TRAIL, third person only (spec §2.3). Metres.
-  // The chase camera sits 4.3 + 2.2·spN m behind the rider, and the trail runs
-  // straight at it — so its length is capped SHORT of that on purpose. Run it
-  // out to seven metres and the wide hot end is behind the lens, the near-fade
-  // eats it, and all that is left on screen is the thin bit by the boots.
-  TR_LEN: 4.20,        // trail length at p = 1 and full speed
+  // ---- THE TRAIL, third person only (spec §2.3, reshaped by spec 0010 §1b).
+  // Metres.
+  //
+  // It is the rider's own TRACK, on fire. Greg, on the two cuts before this one:
+  // "Not rocket cone, more-so leaving a fire trail behind me. Like the last X ft
+  // of railroad tracks behind me have a flame. The flame already looks good,
+  // it's just all over the place horizontally instead of fore-aft starting from
+  // the player and projected behind."
+  //
+  // Both earlier shapes were a straight bar aimed along −v̂ and sized to fight
+  // the foreshortening of a camera looking down that same bar: first a 3.4 m
+  // wide, 2 m tall slab hung 55 cm over the boots, which from the chase camera
+  // projects as a horizontal band ACROSS the rider at hip height (up-screen is
+  // downhill, so a band at hip height reads as fire in FRONT of him); then a
+  // cone, which is the same bar with a taper. The width was the bug in both.
+  //
+  // The fix is not another envelope. It is to stop extruding a shape and start
+  // drawing WHERE HE HAS BEEN: a ring buffer of ski-tail anchors on the snow,
+  // distance-spaced, TR_SEG stations covering the last TR_LEN metres of PATH.
+  // In a carve it bends with the tracks, because it IS the tracks. Nothing is
+  // wide — the ribbon is one ski stance across for its whole length — so there
+  // is nothing left to read as horizontal, and the foreshortening that the
+  // width was paying for is the shot rather than a problem: the chase camera
+  // sits ~2.4 m above the rider looking down, so the track behind him projects
+  // BELOW his boots, running away toward the bottom of the frame.
+  TR_LEN: 8.00,        // metres of PATH alight at p = 1 and full speed ("the
+                       // last X ft" — about 26). No camera cap: the near end is
+                       // allowed to run under the lens and TR_NEAR0/1 handle it.
   TR_LEN0: 0.30,       // ...as a fraction of that, standing still: a lick at the
                        // heels rather than a banner, because a flame with no
                        // wind on it does not stream
-  // ...and WIDE, for the same reason it is short. The chase camera looks down
-  // the trail's own axis, so its LENGTH is the one dimension that is foreshortened
-  // to nothing there — what actually reaches the screen is how wide and how tall
-  // it opens out behind the rider. Sized so a full bank fills the snow between
-  // the rider and the lens rather than drawing a stripe on his back.
-  TR_W: 1.40,          // half-width of the plume at its widest
-  TR_HGT: 1.70,        // height of the fin at its tallest
-  TR_GAIN: 1.35,       // the trail runs brighter than the ski flame: it is much
-                       // further from the lens and it has snow behind all of it
-  TR_TILT: 0.62,       // how far the whole trail leans up out of the track
-  TR_RISE: 0.85,       // how far the tail floats above that line (hot gas rises,
-                       // and it is also what lifts the plume out of the exact
-                       // line the chase camera is looking down)
-  // ...and it FLOATS. The plume is nearly three metres wide at its back end and
-  // it streams up-slope over ground that rolls: anchored at boot height it spent
-  // most of its length inside the snow, z-buffered away, and what reached the
-  // screen was the thin bit between the rider's ankles. Anchored at hip height
-  // and rising hard, the whole thing is above the surface it is trailing over.
-  TR_UP: 0.62,         // anchor height above the boots
-  TR_TAU: 0.09,        // seconds — direction smoothing, so it swings not snaps
+  TR_MIN: 1.05,        // ...but never shorter than a lick at the heels
+  TR_STEP: 0.18,       // metres between stations. DISTANCE-spaced, not time-
+                       // spaced: a rider at 4 m/s and a rider at 30 m/s lay the
+                       // same track, they just lay it at different rates, and a
+                       // time-spaced buffer would bunch forty stations into one
+                       // metre the moment he slowed down. 44 × 0.18 = 7.9 m.
+  TR_JUMP: 3.00,       // ...and a gap bigger than this between two samples is
+                       // not skiing, it is a respawn or a teleport. Clear the
+                       // buffer rather than drawing a burning line across the
+                       // mountain from wherever he used to be.
+
+  // ---- HOW BIG. Constant width, the whole length: this is the correction.
+  TR_HW: 0.24,         // half-width — one ski stance, and it does not open out
+  TR_H0: 0.60,         // flame height at the rider's heels...
+  TR_H1: 0.35,         // ...and at the oldest end, where it has burned down
+  TR_UP: 0.10,         // anchor clearance above the SKI TAILS, along the CONTACT
+                       // NORMAL rather than world up. The anchor's xz is the
+                       // mean of the two third-person ski tails: a trail leaves
+                       // the machine where the machine touches the ground, which
+                       // on a skier is the back of the skis, not a point
+                       // floating over his belt buckle.
+  TR_RISE: 0.06,       // how far a station floats off the snow as it ages — hot
+                       // gas rises, and that is the whole of it now. The 32° of
+                       // sky-lean this number used to carry is what put the
+                       // first cut above the chase camera's eye line.
   TR_WHIP: 1.25,       // extra rise while the pop drains it: the trail whips up
+  TR_GAIN: 0.82,       // additive gain per surface. Lower than the ski flame's
+                       // because forty-five cross-sections stack end-on down the
+                       // track and the ski's gain clips the near stations to
+                       // white, taking the ski's colour with them.
+  TR_HOT: 0.12,        // fraction of the length that burns white-hot at the
+                       // rider before it settles into the ski's accent
+  TR_DIE: 0.30,        // ...and the oldest fraction, over which it dissolves to
+                       // nothing rather than ending on a straight card edge
+  TR_NEAR0: 0.35,      // metres — the trail is invisible closer than this to the
+  TR_NEAR1: 1.00,      // lens and full past this. Its OWN pair, not the ski
+                       // flame's (AU.NEAR0/NEAR1): the ski ribbon is frozen and
+                       // its uniforms have to stay byte-identical.
+
+  // ---- WHEN HE STOPS. The buffer is distance-spaced, so a stationary rider
+  // stops laying stations and the track simply sits where it is. It must not
+  // snap off: a fire on the snow burns down.
+  TR_STOP: 0.60,       // m/s below which the rider counts as stopped
+  TR_TAU_OUT: 0.60,    // seconds to burn out in place once he has
+                       // (there is no TR_TAU any more — direction smoothing was
+                       // a property of a bar aimed along a vector, and a path
+                       // ribbon has no aim to smooth. The path IS the smoothing.)
 
   // ---- THE DRAIN. Spent power empties tail → tip, the reverse of the fill.
   DRAIN_T: 0.15,       // seconds (spec §2.2)
@@ -918,10 +966,13 @@ const AU_RIB_S = [0.07, 0.37, 0.91, 0.53, 0.23];           // ...and their seeds
 // somebody actually looks like. One presentation is live at a time, chosen off
 // the camera mode main.js hands over with the ski rigs.
 //
-// The cross-section is normalised (x = ±1, y = 0..1) and swept along -Z from
-// the anchor to z = -1; the shader scales it into metres, so the trail's length,
-// width, height and rise are four uniforms and the geometry is built once.
-// Two WINGS make a flat plume — the chase camera looks down on the rider, so
+// The cross-section is normalised (x = ±1, y = 0..1) and swept along the
+// rider's PATH — not along an axis. Every station carries its own world-space
+// frame (centre, side, up) as three vertex attributes rewritten each frame, so
+// the ribbon bends through a carve exactly the way the ski tracks under it do.
+// The mesh itself lives at the world origin with an identity rotation; there is
+// no model matrix to aim, because there is no single direction to aim it in.
+// Two WINGS make the flat body — the chase camera looks down on the rider, so
 // that is the face it sees — and one FIN stands up through them for the side-on
 // view a hard carve swings the camera into.
 const TR_PROFILE = [
@@ -933,7 +984,28 @@ const TR_PROFILE = [
   [ 0.00, 1.00, 1, 0.77],
 ];
 const TR_LINK = [[0, 1], [1, 2], [3, 4]];    // which profile pairs are strips
-const TR_SEG = 44;                            // stations down the trail
+const TR_SEG = 44;                            // segments of path...
+const TR_NST = TR_SEG + 1;                    // ...so this many stations, and
+                                              // TR_SEG × TR_STEP = 7.9 m of it
+
+// ---- AND RIBS ACROSS IT, for exactly the reason the ski ribbon has them, only
+// more so. Every strip above runs ALONG the trail, and the trail runs along the
+// track — which is the line the chase camera is looking straight down. From
+// there the wings are horizontal planes seen edge-on and the fin is a vertical
+// plane seen edge-on, so the entire plume projects into a bright thread lying on
+// the snow. That is not a subtle loss: it is the whole effect, and it is what
+// made the first cut of the backward trail read as a smear at the rider's heels.
+//
+// ONE CROSS-SECTION PER STATION, square to the LOCAL PATH TANGENT — which is
+// the part that matters now the ribbon bends: through a carve each rib turns
+// with its own bit of track rather than all forty-five facing the same way.
+// Each is a flame-shaped slice of the ribbon's envelope (arched, so the middle
+// stands taller than the edges) with its own seed, so what a player behind the
+// rider sees is a stack of glowing sleepers receding up his own track. Same
+// geometry, same material, same draw call.
+const TR_RIBS = TR_NST;
+const TR_RIB_X = [-1.00, -0.55, 0.00, 0.55, 1.00];
+const TR_RIB_S = [0.09, 0.41, 0.87, 0.57, 0.29];
 
 const FL_CAP = 96;               // flame-line pool ceiling
 const FL_ST = 5;                 // stations along one flame line
@@ -945,6 +1017,19 @@ const A = {
   rigs: null, skiId: null, camMode: null,   // handed over by main.js (one hook)
   geo: null, mat: null, meshes: [],
   trail: null, trailMat: null, tdx: 0, tdy: 0, tdz: 1,
+  tpMeshes: [],                  // the third-person skis, for the tail anchor
+  // ---- THE PATH RING (spec 0010 §1b). Newest sample first: `trkN` entries
+  // live, `trk[0..2]` is station 0 = the rider's heels, and a station is only
+  // ever pushed once he has moved TR_STEP since the last one. Positions and
+  // contact normals are stored raw in world metres; everything the shader needs
+  // (centre / side / up per station) is derived from them each frame.
+  trk: new Float32Array(TR_NST * 3), trkN: new Float32Array(TR_NST * 3),
+  trkCount: 0, trkLive: 0, trkUse: 0, trkIdx: null, trkV: null,
+  // ...and the per-station frame the ring is turned into each frame, kept here
+  // rather than allocated in trailPath() — this runs every frame of every ride
+  frCtr: new Float32Array(TR_NST * 3),
+  frSide: new Float32Array(TR_NST * 3),
+  frUp: new Float32Array(TR_NST * 3),
   id: null, colour: 0xfff0e0,
   p: 0, e: 0, drain: 0, drainT: 0, hold: 0, time: 0,
   forced: null,                  // test-only p override (__aura.force)
@@ -1144,7 +1229,8 @@ function auraBuild() {
   });
 
   A.geo = geo; A.mat = mat;
-  for (const rig of A.rigs) {
+  for (let i = 0; i < A.rigs.length; i++) {
+    const rig = A.rigs[i];
     if (!rig) continue;
     const m = new THREE.Mesh(geo, mat);
     m.name = 'fx:aura';
@@ -1153,28 +1239,44 @@ function auraBuild() {
     m.visible = false;               // a hidden parent cost nothing either way
     rig.add(m);
     A.meshes.push(m);
+    // main.js hands over [fpSkiL, fpSkiR, mSkiL, mSkiR] — the last two are the
+    // ones on the third-person body, and their TAILS are where the trail leaves
+    // the machine. Reading the ribbon mesh rather than the rig means the
+    // per-ski length scale (auraDress sets scale.z) is already in the matrix.
+    if (i >= 2) A.tpMeshes.push(m);
   }
+  if (!A.tpMeshes.length) A.tpMeshes = A.meshes.slice();
   A.built = A.meshes.length > 0;
   if (A.built) trailBuild();
 }
 
 // ---------------------------------------------------------------- the trail
-// One mesh, world-space, aimed backward along the track every frame. It is NOT
-// parented to anything: the rider's rig turns with the LOOK and a fire trail
-// hangs off where you have BEEN, which are different directions in every carve.
+// One mesh, WORLD SPACE, at the origin with an identity rotation, and it is not
+// parented to anything and never aimed. The rider's rig turns with the LOOK, a
+// straight trail would have to be aimed along −v̂, and neither is where he has
+// actually BEEN — which through a carve is a curve. So the vertices carry the
+// path instead of the matrix carrying a direction.
+//
+// The STATIC half of the buffer, built once: which profile point a vertex is
+// (`position.xy`, normalised — x = ±1 across, y = 0..1 up), which STATION it
+// belongs to (`aI`, an integer 0 at the rider), and its flicker seed. The
+// per-frame half — the station's world centre, its side vector and its up
+// vector, all three already scaled into metres — is written by trailPath()
+// into aCtr/aSide/aUp below.
 function trailBuild() {
   const THREE = R.THREE, u = R.u;
-  const P = TR_PROFILE, NP = P.length, NS = TR_SEG + 1, n = NP * NS;
+  const P = TR_PROFILE, NP = P.length, NS = TR_NST;
+  const NC = TR_RIB_X.length;
+  const n = NP * NS + TR_RIBS * NC * 2;
   const pos = new Float32Array(n * 3);
   const aT = new Float32Array(n), aH = new Float32Array(n), aS = new Float32Array(n);
+  const aI = new Float32Array(n);
+  const aCtr = new Float32Array(n * 3), aSide = new Float32Array(n * 3), aUp = new Float32Array(n * 3);
   for (let j = 0; j < NS; j++) {
-    const t = j / TR_SEG;
     for (let i = 0; i < NP; i++) {
       const k = j * NP + i, o = k * 3;
-      // normalised: the shader turns x/y/z into metres, so length, width, height
-      // and rise are four live uniforms and this buffer is built exactly once
-      pos[o] = P[i][0]; pos[o + 1] = P[i][1]; pos[o + 2] = -t;
-      aT[k] = t; aH[k] = P[i][2]; aS[k] = P[i][3];
+      pos[o] = P[i][0]; pos[o + 1] = P[i][1]; pos[o + 2] = 0;
+      aI[k] = j; aT[k] = j / TR_SEG; aH[k] = P[i][2]; aS[k] = P[i][3];
     }
   }
   const idx = [];
@@ -1184,48 +1286,99 @@ function trailBuild() {
       idx.push(a0, a1, b1, a0, b1, b0);
     }
   }
+  // ---- the cross-sections, ONE PER STATION (see TR_RIBS), sharing that
+  // station's frame, so a rib is square to the local path tangent by
+  // construction and can never disagree with the strips it sits inside.
+  let k = NP * NS;
+  for (let r = 0; r < TR_RIBS; r++) {
+    const base = k;
+    for (let i = 0; i < NC; i++) {
+      const x = TR_RIB_X[i];
+      const arch = 1 - 0.55 * x * x;      // a flame slice, not a fence panel
+      let o = k * 3;
+      pos[o] = x; pos[o + 1] = 0.02; pos[o + 2] = 0;
+      aI[k] = r; aT[k] = r / TR_SEG; aH[k] = 0; aS[k] = TR_RIB_S[i]; k++;
+      o = k * 3;
+      pos[o] = x * 0.86; pos[o + 1] = arch; pos[o + 2] = 0;
+      aI[k] = r; aT[k] = r / TR_SEG; aH[k] = 1; aS[k] = TR_RIB_S[i] + 0.13; k++;
+    }
+    for (let i = 0; i < NC - 1; i++) {
+      const a0 = base + i * 2, a1 = a0 + 1, b0 = a0 + 2, b1 = a0 + 3;
+      idx.push(a0, a1, b1, a0, b1, b0);
+    }
+  }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   geo.setAttribute('aT', new THREE.BufferAttribute(aT, 1));
   geo.setAttribute('aH', new THREE.BufferAttribute(aH, 1));
   geo.setAttribute('aS', new THREE.BufferAttribute(aS, 1));
+  geo.setAttribute('aI', new THREE.BufferAttribute(aI, 1));
+  geo.setAttribute('aCtr', new THREE.BufferAttribute(aCtr, 3).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('aSide', new THREE.BufferAttribute(aSide, 3).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('aUp', new THREE.BufferAttribute(aUp, 3).setUsage(THREE.DynamicDrawUsage));
   geo.setIndex(idx);
+  // the station each vertex belongs to, kept as a plain typed array too: the
+  // per-frame write below walks vertices, not stations, and reading it out of
+  // the attribute every time would be the same array with a property lookup.
+  A.trkIdx = aI;
 
   const mat = new THREE.ShaderMaterial({
     uniforms: {
       uColor: { value: A.mat.uniforms.uColor.value },   // one colour, one source
       uP: { value: 0 }, uFlare: { value: 0 }, uWind: { value: 0 }, uTime: { value: 0 },
-      uGain: { value: AU.GAIN }, uLen: { value: 1 }, uW: { value: AU.TR_W * u },
-      uHgt: { value: AU.TR_HGT * u }, uRise: { value: AU.TR_RISE * u },
-      uNear0: { value: AU.NEAR0 * u }, uNear1: { value: AU.NEAR1 * u },
+      uGain: { value: AU.GAIN }, uLen: { value: 0 },
+      // how many station-gaps are actually alight right now: the ring holds 45
+      // stations but a short trail (low p, low speed) only lights the first few,
+      // and vT — age, colour, dissolve — is measured against THAT, not against
+      // the buffer, so a two-metre trail is a whole two-metre trail rather than
+      // the first quarter of an eight-metre one.
+      uSpan: { value: TR_SEG },
+      uLive: { value: 1 },        // the burn-down when he stops (TR_TAU_OUT)
+      uHot: { value: AU.TR_HOT }, uDie: { value: AU.TR_DIE },
+      uNear0: { value: AU.TR_NEAR0 * u }, uNear1: { value: AU.TR_NEAR1 * u },
     },
     vertexShader: `
-      attribute float aT; attribute float aH; attribute float aS;
-      uniform float uP, uFlare, uWind, uTime, uLen, uW, uHgt, uRise;
+      attribute float aT; attribute float aH; attribute float aS; attribute float aI;
+      attribute vec3 aCtr; attribute vec3 aSide; attribute vec3 aUp;
+      uniform float uP, uFlare, uWind, uTime, uSpan;
       varying float vT, vH, vS, vD;
       void main() {
-        vT = aT; vH = aH; vS = aS;
+        // AGE, not position along an axis. 0 at the rider's heels, 1 at the
+        // oldest station still alight.
+        vT = clamp(aI / max(uSpan, 1.0), 0.0, 1.0);
+        vH = aH; vS = aS;
         // the same ragged-outline trick the ski ribbon uses, and for the same
         // reason: from the chase camera the fin is edge-on and only its top
-        // edge is visible, so the licks have to be cut into the edge itself
+        // edge is visible, so the licks have to be cut into the edge itself.
+        // Phased on aT — the STATION's own fixed index — so the flicker stays
+        // attached to a place in the queue instead of resampling every time the
+        // trail changes length.
         float w = sin(aT *  6.0 + uTime * 4.1 + aS * 3.3) * 0.56
                 + sin(aT * 15.0 - uTime * 8.2 + aS * 9.1) * 0.30
                 + sin(aT * 31.0 + uTime * 12.4 + aS * 15.7) * 0.14;
-        float lick = 0.28 + 1.00 * clamp(w * 0.70 + 0.48, 0.0, 1.0);
-        // the plume opens out behind the rider and floats as it goes, because
-        // hot gas does; the anchor end stays pinned to the boots
-        float spread = (0.26 + 0.92 * aT) * lick;
-        vec3 p;
-        p.x = position.x * uW * spread;
-        p.y = position.y * uHgt * spread + pow(aT, 1.35) * uRise;
-        p.z = position.z * uLen;
+        // centred on 1.0 rather than the old 0.72, because TR_HW is now a real
+        // half-width in metres and not a slab to be tapered: the licks should
+        // ripple around the ski stance, not shrink it to two thirds of one.
+        float k = clamp(w * 0.74 + 0.46, 0.0, 1.0);
+        float lick = 0.30 + 1.40 * k;
+        // ...but the HEIGHT gets a much gentler one, and that is not a detail.
+        // There is a cross-rib at EVERY station — one every 18 cm — and driving
+        // their heights over the same 0.3..1.7 range makes neighbours alternate
+        // between a lick and a spike: side-on the trail reads as a zip fastener
+        // rather than a fire. Ragged top edge, yes; comb, no.
+        float hLick = 0.62 + 0.52 * k;
+        // ...and THIS is the whole geometry. No length, no width, no rise: the
+        // station's world frame arrives pre-scaled in metres from trailPath(),
+        // so a carve is a carve because the centres curve, not because anything
+        // here bends them.
+        vec3 p = aCtr + aSide * (position.x * lick) + aUp * (position.y * hLick);
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         vD = -mv.z;
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: `
       uniform vec3 uColor;
-      uniform float uP, uFlare, uWind, uTime, uGain, uNear0, uNear1;
+      uniform float uP, uFlare, uWind, uTime, uGain, uNear0, uNear1, uLive, uHot, uDie;
       varying float vT, vH, vS, vD;
       float h21(vec2 p) { return fract(sin(dot(p, vec2(41.37, 289.11))) * 43758.5453123); }
       float vn(vec2 p) {
@@ -1243,26 +1396,33 @@ function trailBuild() {
         float top = (0.18 + 1.15 * n) * (0.68 + 0.40 * uFlare);
         if (vH >= top) discard;
         float q = vH / top;
-        // It thins down its own length — a trail with a hard end is a ribbon —
-        // but it never goes to nothing before the end, and that floor is the
-        // whole thing. The plume OPENS OUT as it goes back, so alpha and width
-        // run in opposite directions: fade it out honestly and the only part
-        // left burning is the narrow throat at the boots, which from a chase
-        // camera looking straight down the trail is a smudge. The DARKENING
-        // toward the tail is spent on the colour instead, where it costs no
-        // area, and the alpha keeps a floor so the wide end still reads.
-        float fade = 0.34 + 0.66 * pow(1.0 - vT, 0.75);
-        // A GENTLER FALL-OFF ACROSS THE PLUME than the ski flame uses. On the
+        // AGE, honestly. The previous cut kept a floor under this because its
+        // plume opened out behind the rider — fade a cone out truthfully and all
+        // that is left burning is the narrow throat. A track does not open out,
+        // so there is nothing to protect: it is hottest under the skis, cools
+        // along its length, and the oldest uDie of it dissolves to nothing
+        // instead of ending on a straight card edge.
+        float fade = (0.22 + 0.78 * pow(1.0 - vT, 0.70)) * smoothstep(1.0, 1.0 - uDie, vT);
+        // A GENTLER FALL-OFF ACROSS THE RIBBON than the ski flame uses. On the
         // ski, alpha collapsing away from each tongue's root is what cuts the
-        // licks; on a trail three metres wide it would leave a bright thread
-        // down the centreline and nothing either side of it — which is exactly
-        // what a fire trail must not look like.
-        float a = pow(1.0 - q, 0.85) * fade * (0.25 + 0.75 * uP)
+        // licks; here it would leave a bright thread down the centreline of the
+        // track and nothing either side of it.
+        float a = pow(1.0 - q, 1.35) * fade * (0.25 + 0.75 * uP) * uLive
                 * smoothstep(uNear0, uNear1, vD);
-        // white-hot where it leaves the rider, the ski's colour through the
-        // middle, and burning down to a dark ember at the far end
-        vec3 col = mix(mix(uColor, vec3(1.0), 0.62), uColor, smoothstep(0.0, 0.24, vT));
-        col = mix(col, uColor * 0.34, smoothstep(0.42, 1.0, vT));
+        // white-hot for the first uHot of the length, the ski's colour along the
+        // middle, burning down to a dark ember at the oldest end
+        vec3 col = mix(mix(uColor, vec3(1.0), 0.68), uColor, smoothstep(0.0, uHot, vT));
+        col = mix(col, uColor * 0.30, smoothstep(0.45, 1.0, vT));
+        // ...and WHITE-HOT AT THE TIPS OF THE TONGUES, exactly the way the ski
+        // ribbon does it (half a mix to white past q = 0.55). Without it
+        // the accent is the only colour on the ribbon and additive red over
+        // blue-shadowed snow is a flat magenta stripe. With it the tips burn
+        // out and what is left reads as fire rather than as paint.
+        // ...and kept to a GARNISH, for the reason the ski ribbon's own comment
+        // gives: additive over a white mountain eats most of the saturation
+        // there is, and a trail that spends any more on white burns the same
+        // pale pink whatever ski is on the rack.
+        col = mix(col, mix(uColor, vec3(1.0), 0.34), smoothstep(0.66, 1.0, q));
         gl_FragColor = vec4(col * (uGain * (0.62 + 0.55 * uFlare)), clamp(a, 0.0, 1.0));
       }`,
     transparent: true,
@@ -1280,50 +1440,210 @@ function trailBuild() {
   R.scene.add(m);
   A.trail = m; A.trailMat = mat;
   A.tdx = 0; A.tdy = 0; A.tdz = 1;
+  A.trkCount = 0; A.trkLive = 0; A.trkUse = 0;
+  A.trkV = new THREE.Vector3();      // one scratch vector, reused every frame
 }
 
-// Aim it. `p` sizes it, the TRACK aims it, and the direction is smoothed so a
-// hard carve sweeps the trail round rather than snapping it.
+// ---- WHERE THE TRAIL LEAVES THE MACHINE. The mean of the two third-person ski
+// TAILS in world space, lifted TR_UP along the contact normal. Not the rider's
+// centre: a fire trail comes off the back of the skis where they touch the
+// snow, and anchoring it at c.position put it a body-width forward of the tails
+// and (with the old TR_UP) at belt height, which is most of why it read as fire
+// ON the rider rather than behind him. Returns the anchor in `o` and the
+// surface normal it was lifted along.
+function trailAnchor(o) {
+  const c = R.ctrl, u = R.u;
+  // WHICH WAY IS "OFF THE SNOW". Not world up: on a 30° face world up buries
+  // the ribbon in the hillside on a traverse. The contact normal means "away
+  // from the surface" everywhere on the mountain. Airborne there is no surface,
+  // so it relaxes back toward world up.
+  let nx = 0, ny = 1, nz = 0;
+  const gn = c.groundNormal ? c.groundNormal() : null;
+  if (gn) { nx = gn.x; ny = gn.y; nz = gn.z; }
+  if (!c.grounded) { nx *= 0.3; ny = ny * 0.3 + 0.7; nz *= 0.3; }
+  const nm = Math.hypot(nx, ny, nz) || 1;
+  nx /= nm; ny /= nm; nz /= nm;
+
+  let tx = 0, ty = 0, tz = 0, n = 0;
+  const v = A.trkV;
+  if (v) {
+    for (const sm of A.tpMeshes) {
+      if (!sm.parent) continue;
+      // main.js has already bobbed, rolled, splayed and tip-risen the rigs by
+      // the time auraStep runs (see the call site) — but nothing has asked for
+      // a world matrix yet this frame, so ask for this one.
+      sm.updateWorldMatrix(true, false);
+      v.set(0, 0, AU_Z1 * u).applyMatrix4(sm.matrixWorld);
+      tx += v.x; ty += v.y; tz += v.z; n++;
+    }
+  }
+  if (!n) { const q = c.position; tx = q.x; ty = q.y; tz = q.z; n = 1; }
+  o.x = tx / n + nx * AU.TR_UP * u;
+  o.y = ty / n + ny * AU.TR_UP * u;
+  o.z = tz / n + nz * AU.TR_UP * u;
+  o.nx = nx; o.ny = ny; o.nz = nz;
+  return o;
+}
+const _anch = { x: 0, y: 0, z: 0, nx: 0, ny: 1, nz: 0 };
+
+// ---- THE PATH RING. Distance-spaced, newest first.
+//
+// Slot 0 is the LIVE anchor and is rewritten every frame, so the near end of
+// the trail stays welded to the ski tails no matter what the frame rate is
+// doing. Slots 1.. are COMMITTED samples, and one is only committed once the
+// rider has actually moved TR_STEP from the last — which is what makes the
+// spacing a property of the TRACK rather than of the frame rate. Commit on
+// time instead and a rider at 4 m/s bunches forty stations into one metre
+// while a rider at 30 m/s stretches them over fifteen.
+function trailPush(a) {
+  const u = R.u, T = A.trk, N = A.trkN;
+  const step = AU.TR_STEP * u;
+  if (A.trkCount >= 2) {
+    let bx = T[3], by = T[4], bz = T[5];
+    let d = Math.hypot(a.x - bx, a.y - by, a.z - bz);
+    // a gap this big is not skiing, it is a respawn or a dev-fly teleport, and
+    // drawing through it would run a burning line across the mountain from
+    // wherever he used to be
+    if (d > AU.TR_JUMP * u) A.trkCount = 0;
+    else {
+      // ONE FRAME CAN BE WORTH MANY STATIONS, and this loop is the difference
+      // between distance spacing and a lie about it. At 30 m/s a 50 ms frame
+      // covers a metre and a half — eight stations — and committing only the
+      // newest would space the track by the frame time after all, which is the
+      // exact thing the buffer exists not to do. So walk the gap.
+      let guard = TR_NST;
+      while (d >= step && guard-- > 0) {
+        const f = step / d;
+        const px = bx + (a.x - bx) * f, py = by + (a.y - by) * f, pz = bz + (a.z - bz) * f;
+        T.copyWithin(6, 3); N.copyWithin(6, 3);   // everything older shifts back
+        T[3] = px; T[4] = py; T[5] = pz;
+        // the interpolated stations all take the live contact normal: they span
+        // at most one frame of terrain, which is less than the snow changes in
+        N[3] = a.nx; N[4] = a.ny; N[5] = a.nz;    // the width of one station
+        if (A.trkCount < TR_NST) A.trkCount++;
+        bx = px; by = py; bz = pz;
+        d = Math.hypot(a.x - bx, a.y - by, a.z - bz);
+      }
+    }
+  }
+  if (A.trkCount < 2) {
+    T[3] = a.x; T[4] = a.y; T[5] = a.z;
+    N[3] = a.nx; N[4] = a.ny; N[5] = a.nz;
+    A.trkCount = 2;
+    A.trkUse = 0;
+  }
+  T[0] = a.x; T[1] = a.y; T[2] = a.z;
+  N[0] = a.nx; N[1] = a.ny; N[2] = a.nz;
+}
+
+// ---- AND WRITE IT INTO THE MESH. Three vec3 attributes per vertex — the
+// station's world centre, its side vector and its up vector, both already in
+// metres — so the vertex shader only has to add them up. 675 vertices × 9
+// floats is 24 KB an upload, which is the price of a ribbon that can bend.
+function trailPath(p, wind) {
+  const u = R.u, T = A.trk, N = A.trkN, geo = A.trail.geometry;
+  const aCtr = geo.attributes.aCtr.array;
+  const aSide = geo.attributes.aSide.array;
+  const aUp = geo.attributes.aUp.array;
+  const idx = A.trkIdx, nv = idx.length;
+
+  // how much PATH is alight: the length ramp from 0006 §2.3, unchanged, but it
+  // now buys stations off the ring instead of stretching one bar.
+  let len = AU.TR_LEN * u * p * (AU.TR_LEN0 + (1 - AU.TR_LEN0) * wind);
+  if (len < AU.TR_MIN * u) len = AU.TR_MIN * u;
+  const want = Math.min(TR_NST, Math.max(2, Math.round(len / (AU.TR_STEP * u)) + 1));
+  const use = Math.min(want, A.trkCount);
+  A.trkUse = use;
+  const span = Math.max(1, use - 1);
+  const rise = (AU.TR_RISE + AU.TR_WHIP * A.drain) * u;
+  const hw = AU.TR_HW * u;
+
+  // per-station frame: centre (with its age-buoyancy), side, up
+  const cx = A.frCtr, sx = A.frSide, ux = A.frUp;
+  for (let j = 0; j < TR_NST; j++) {
+    const jj = Math.min(j, use - 1), o = jj * 3;
+    const t = j / span;                       // age, ≥ 1 past the live end
+    // TANGENT along the path — central difference, so a rib is square to the
+    // bit of track it stands on rather than to the chord of the whole trail.
+    const pj = Math.max(0, jj - 1) * 3, nj = Math.min(use - 1, jj + 1) * 3;
+    let tgx = T[pj] - T[nj], tgy = T[pj + 1] - T[nj + 1], tgz = T[pj + 2] - T[nj + 2];
+    let tm = Math.hypot(tgx, tgy, tgz);
+    if (tm < 1e-6) { tgx = 0; tgy = 0; tgz = 1; tm = 1; }
+    tgx /= tm; tgy /= tm; tgz /= tm;
+    let nx = N[o], ny = N[o + 1], nz = N[o + 2];
+    // side = normal × tangent, then the up is re-squared off the two so the
+    // frame stays orthonormal on a cross-slope
+    let sxv = ny * tgz - nz * tgy, syv = nz * tgx - nx * tgz, szv = nx * tgy - ny * tgx;
+    let sm = Math.hypot(sxv, syv, szv);
+    if (sm < 1e-6) { sxv = 1; syv = 0; szv = 0; sm = 1; }
+    sxv /= sm; syv /= sm; szv /= sm;
+    nx = tgy * szv - tgz * syv; ny = tgz * sxv - tgx * szv; nz = tgx * syv - tgy * sxv;
+    const um = Math.hypot(nx, ny, nz) || 1;
+    nx /= um; ny /= um; nz /= um;
+    // height: tallest at the heels, burned down by the oldest end (§1b)
+    const tc = t > 1 ? 1 : t;
+    const h = (AU.TR_H0 + (AU.TR_H1 - AU.TR_H0) * tc) * u;
+    const fl = Math.pow(tc, 1.35) * rise;     // hot gas rises as it ages
+    const q = j * 3;
+    cx[q] = T[o] + nx * fl; cx[q + 1] = T[o + 1] + ny * fl; cx[q + 2] = T[o + 2] + nz * fl;
+    sx[q] = sxv * hw; sx[q + 1] = syv * hw; sx[q + 2] = szv * hw;
+    ux[q] = nx * h; ux[q + 1] = ny * h; ux[q + 2] = nz * h;
+  }
+  // ...and fan it out to the vertices. Stations past `use` were collapsed onto
+  // the live end above, so their triangles are zero-area AND their vT is ≥ 1,
+  // which the dissolve takes to zero: two independent reasons to draw nothing.
+  for (let k = 0; k < nv; k++) {
+    const j = idx[k] * 3, o = k * 3;
+    aCtr[o] = cx[j]; aCtr[o + 1] = cx[j + 1]; aCtr[o + 2] = cx[j + 2];
+    aSide[o] = sx[j]; aSide[o + 1] = sx[j + 1]; aSide[o + 2] = sx[j + 2];
+    aUp[o] = ux[j]; aUp[o + 1] = ux[j + 1]; aUp[o + 2] = ux[j + 2];
+  }
+  geo.attributes.aCtr.needsUpdate = true;
+  geo.attributes.aSide.needsUpdate = true;
+  geo.attributes.aUp.needsUpdate = true;
+
+  // the chord, for the direction assertion and __aura.trailDir(): anchor → the
+  // oldest live station, which on a straight run IS −v̂ and in a carve is the
+  // secant of the arc, exactly as the tracks under it are.
+  const e = (use - 1) * 3;
+  const dx = T[e] - T[0], dy = T[e + 1] - T[1], dz = T[e + 2] - T[2];
+  const dm = Math.hypot(dx, dy, dz);
+  if (dm > 1e-4) { A.tdx = dx / dm; A.tdy = dy / dm; A.tdz = dz / dm; }
+  return { len: (use - 1) * AU.TR_STEP * u, span };
+}
+
+// One mesh, world space, never aimed: `p` and the speed buy how much of the
+// rider's own recent PATH is alight, and the path is where it goes.
 function trailPose(dt, p, wind, flare, tp) {
   const m = A.trail;
   if (!m) return;
   const c = R.ctrl, u = R.u;
   if (!tp || p <= AU.ON_AT) { m.visible = false; return; }
-  // where you have BEEN — the reverse of travel, falling back to the reverse of
-  // the ski axis when you are barely moving and there is no track to speak of
-  let bx = 0, by = 0, bz = 0;
+
+  const a = trailAnchor(_anch);
+  trailPush(a);
+
+  // ---- WHEN HE STOPS. The ring is distance-spaced, so a stationary rider
+  // simply stops laying stations and the track sits where it is. It must not
+  // snap off — a fire on the snow burns down — so alpha runs out over
+  // TR_TAU_OUT and comes straight back the moment he moves.
   const v = c.velocity;
-  const vm = v ? Math.hypot(v.x, v.y, v.z) : 0;
-  if (vm > 0.25 * u) { bx = -v.x / vm; by = -v.y / vm; bz = -v.z / vm; }
-  else { bx = Math.sin(c.yaw); by = 0; bz = Math.cos(c.yaw); }
-  // ...AND TILTED UP. Straight down the track, the trail runs along the exact
-  // line the chase camera is looking down, so its length foreshortens to nothing
-  // and all that reaches the screen is its cross-section around the rider's
-  // boots. Leaning it up out of that line is what makes it read as a LENGTH of
-  // fire — and it is also what fire does, because hot gas rises.
-  by += AU.TR_TILT;
-  const bm = Math.hypot(bx, by, bz) || 1;
-  bx /= bm; by /= bm; bz /= bm;
-  const k = 1 - Math.exp(-dt / AU.TR_TAU);
-  A.tdx += (bx - A.tdx) * k; A.tdy += (by - A.tdy) * k; A.tdz += (bz - A.tdz) * k;
-  const dm = Math.hypot(A.tdx, A.tdy, A.tdz) || 1;
-  const dx = A.tdx / dm, dy = A.tdy / dm, dz = A.tdz / dm;
-  const pos = c.position;
-  m.position.set(pos.x, pos.y + AU.TR_UP * u, pos.z);
-  // Object3D.lookAt (not Camera.lookAt) points +Z AT the target — the arguments
-  // to Matrix4.lookAt are swapped for anything that is not a camera or a light.
-  // The geometry runs down -Z, so the target goes on the far side of the anchor.
-  m.up.set(0, 1, 0);
-  m.lookAt(pos.x - dx, pos.y + AU.TR_UP * u - dy, pos.z - dz);
+  const sp = v ? Math.hypot(v.x, v.y, v.z) : 0;
+  if (sp > AU.TR_STOP * u) A.trkLive = 1;
+  else A.trkLive = Math.max(0, A.trkLive - dt / AU.TR_TAU_OUT);
+
+  const g = trailPath(p, wind);
+
   const U = A.trailMat.uniforms;
   U.uP.value = p;
   U.uFlare.value = flare;
   U.uWind.value = wind;
   U.uTime.value = A.time;
-  U.uLen.value = AU.TR_LEN * u * p * (AU.TR_LEN0 + (1 - AU.TR_LEN0) * wind);
-  U.uRise.value = (AU.TR_RISE + AU.TR_WHIP * A.drain) * u;
+  U.uLen.value = g.len;
+  U.uSpan.value = g.span;
+  U.uLive.value = A.trkLive;
   U.uGain.value = AU.GAIN * AU.TR_GAIN * (0.45 + 0.55 * p);
-  m.visible = true;
+  m.visible = A.trkUse >= 2 && A.trkLive > 0;
 }
 
 // The equipped ski, when it changes: one colour, one length. `len` matters
@@ -1973,9 +2293,39 @@ window.__aura = {
   view: () => (A.camMode && A.camMode() === 'tp' ? 'tp' : 'fp'),
   trail: () => (A.trail && A.trail.visible
     ? +(A.trailMat.uniforms.uLen.value / R.u).toFixed(2) : 0),
-  // the trail's own aim, so a test can assert it points down the TRACK rather
-  // than down the look — the two differ by tens of degrees in any real carve
+  // the trail's own aim — the chord from the rider's heels to the oldest lit
+  // station — so a test can assert it runs down the TRACK rather than down the
+  // look; the two differ by tens of degrees in any real carve
   trailDir: () => (A.trail ? { x: +A.tdx.toFixed(3), y: +A.tdy.toFixed(3), z: +A.tdz.toFixed(3) } : null),
+  // spec 0010 §1b — the path itself, in world metres, newest station first, so
+  // a test can hold it against __player's own position history and against the
+  // straight −v̂ line a carve is supposed to bend away from
+  trailPath: () => {
+    const n = A.trkUse || 0, o = [];
+    for (let j = 0; j < n; j++) {
+      o.push({ x: +A.trk[j * 3].toFixed(3), y: +A.trk[j * 3 + 1].toFixed(3), z: +A.trk[j * 3 + 2].toFixed(3) });
+    }
+    return o;
+  },
+  trailStations: () => A.trkUse,
+  // spec 0010 §3 is measured in SCREEN pixels ("below the hip line", "35 % of
+  // the frame height"), because that is what Greg is looking at, and nothing
+  // outside this module hands a test the live camera. Read-only, and the
+  // picture does not depend on it existing.
+  project: (x, y, z) => {
+    const c = R.camera, rn = R.renderer;
+    if (!c || !rn) return null;
+    const v = new R.THREE.Vector3(x, y, z);
+    c.updateMatrixWorld();
+    v.project(c);
+    const s = rn.getSize(new R.THREE.Vector2());
+    const e = c.position;
+    // z > 1 means the point is BEHIND the lens and the x/y beside it are a
+    // mirror, not a place — an 8 m trail on a 6 m chase runs past the camera,
+    // so a caller that does not check this will measure ghosts.
+    return { x: (v.x * 0.5 + 0.5) * s.x, y: (0.5 - v.y * 0.5) * s.y, z: v.z, w: s.x, h: s.y,
+      cam: { x: e.x, y: e.y, z: e.z, fov: c.fov } };
+  },
   // a name a screenshot can be filed under, on the tiers spec §2.1 describes
   tier: () => (A.p <= AU.ON_AT ? 'off' : A.p < 0.30 ? 'tips' : A.p < AU.FLARE_AT ? 'lit' : 'flare'),
   suppressed: () => slSuppressed(!!(R.hud && R.hud.isPaused && R.hud.isPaused())),

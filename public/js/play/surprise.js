@@ -8,16 +8,14 @@
 //
 // Two features, both hardened no-ops on failure:
 //
-//   1. TREE QUIPS (every map). At init the scene graph is scanned for tree-ish
-//      meshes — named InstancedMeshes ('firs-big', 'pines-alpine', 'snags'…),
-//      *unnamed* InstancedMeshes that measure like trees (eastnor and joyride
-//      ship theirs with no name at all), and merged tree meshes whose vertices
-//      get clustered into stems (sand-harbor bakes 4000 pines into one buffer).
-//      Every stem lands in an 8 m spatial hash. Each frame the swept segment
-//      from last position to this one is tested against it: brush a trunk at
-//      speed, or decelerate hard / wipe out next to one, and you get a line.
-//      Trees are decor in every one of these worlds — nothing collides with
-//      them — so "you went through it" is the honest event to detect.
+//   1. TREE QUIPS (every map). The stem scan and its 8 m spatial hash now live
+//      in solids.js — this module imports them rather than keeping its own copy,
+//      because since specs/0012 the CONTROLLER hits those same stems and two
+//      scans of the same forest would be two forests. Each frame the swept
+//      segment from last position to this one is tested against the hash: brush
+//      a trunk at speed, or decelerate hard / wipe out next to one, and you get
+//      a line. The quip is still the only thing this module does about it — the
+//      wipeout itself belongs to controller.js.
 //
 //   2. SURPRISES (five per finished world). A per-poi registry of one-shot
 //      proximity/condition triggers, defined here in world coordinates, each
@@ -30,8 +28,8 @@
 //
 // The camera belongs to main.js — this module never writes to it.
 
-const CELL = 8;             // m — spatial-hash cell for tree stems
-const MAX_STEMS = 60000;    // hard cap on harvested stems
+import { harvestStems } from './solids.js';
+
 const QUIP_CD = 2.6;        // s — one crash, one line
 const TOAST_MS = 2500;      // toast lifetime
 const JUMP_GUARD = 25;      // m — a bigger step than this is a teleport, not a run
@@ -40,7 +38,8 @@ const S = {
   ok: false,
   THREE: null, scene: null, camera: null, ctrl: null, hud: null,
   poi: '', run: '', u: 1,
-  // ---- tree hash
+  // ---- tree hash (solids.js owns the arrays; these are references into it)
+  stems: null,
   sx: null, sy: null, sz: null, sh: null,     // stem x / base y / z / height
   nStem: 0, grid: null, sources: [],
   // ---- per-frame state
@@ -185,7 +184,7 @@ const CSS = `
 .psur__toast {
   max-width: min(62vw, 640px); text-align: center;
   background: rgba(23, 22, 20, .88); color: #f4f1ea;
-  border: 1px solid rgba(244, 241, 234, .22); border-left: 3px solid #f0641e;
+  border: 1px solid rgba(244, 241, 234, .22);
   border-radius: 3px; padding: 8px 13px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px; font-weight: 650; letter-spacing: .045em; line-height: 1.45;
@@ -198,7 +197,8 @@ const CSS = `
   display: block; margin-bottom: 3px;
   font-size: 9px; letter-spacing: .22em; color: #f0641e; text-transform: uppercase;
 }
-.psur__toast.is-rare { border-left-color: #ffd166; }
+/* specs/0012 §C — no left stripe on any banner. A rare line still reads as rare:
+   the TAG above it carries the colour, which is where the eye was going anyway. */
 .psur__toast.is-rare .psur__tag { color: #ffd166; }
 @keyframes psurIn  { 0% { transform: translateY(9px) scale(.94); opacity: 0 } 100% { transform: none; opacity: 1 } }
 @keyframes psurOut { 0% { opacity: 1 } 100% { transform: translateY(-6px); opacity: 0 } }
@@ -260,159 +260,24 @@ function tickToasts(dt) {
 }
 
 // ===========================================================================
-// tree harvest
+// tree harvest — solids.js owns the scan; this is the adaptor
 // ===========================================================================
 
-const TREE_RE = /(^|[-_ ])(trees?|firs?|pines?|conifers?|spruces?|cedars?|snags?|forest|canopy|woods?|timber|birch|aspen|oaks?|poplar|larch|palms?)([-_ ]|\d|$)/i;
-
-function named(o) {
-  let q = o, n = 0;
-  while (q && n++ < 6) {
-    if (q.name && TREE_RE.test(q.name)) return true;
-    q = q.parent;
-  }
-  return false;
-}
-
-// world-space extents of one instance: how tall, how wide. Handles the
-// play:zup wrapper (a z-up world's tree geometry is tall along local Z).
-function worldExtent(THREE, obj, sizeX, sizeY, sizeZ) {
-  const m = obj.matrixWorld.elements;
-  const ax = [
-    [m[0] * sizeX, m[1] * sizeX, m[2] * sizeX],
-    [m[4] * sizeY, m[5] * sizeY, m[6] * sizeY],
-    [m[8] * sizeZ, m[9] * sizeZ, m[10] * sizeZ],
-  ];
-  let up = 0, flat = 0;
-  for (const a of ax) {
-    const vert = Math.abs(a[1]);
-    const horiz = Math.hypot(a[0], a[2]);
-    if (vert > up) up = vert;
-    if (horiz > flat) flat = horiz;
-  }
-  return { up, flat };
-}
-
-function addStem(x, y, z, h) {
-  if (S.nStem >= MAX_STEMS) return;
-  const i = S.nStem++;
-  S.sx[i] = x; S.sy[i] = y; S.sz[i] = z; S.sh[i] = h;
-}
-
+// The scan is CACHED on the scene root, so whichever of collision.js and this
+// module asks first pays for it and the other gets the same arrays. S.sx/sy/sz/
+// sh stay pointed at those arrays, which is what keeps every test hook below
+// (nearestTree, pickStem, stemAt…) reading the real forest.
 function harvest(THREE, scene) {
-  S.sx = new Float32Array(MAX_STEMS);
-  S.sy = new Float32Array(MAX_STEMS);
-  S.sz = new Float32Array(MAX_STEMS);
-  S.sh = new Float32Array(MAX_STEMS);
-  const seen = new Set();          // dedupe trunk+canopy pairs (joyride ships both)
-  const V = new THREE.Vector3();
-  const M = new THREE.Matrix4();
-  const P = new THREE.Vector3();
-  const Q = new THREE.Quaternion();
-  const SC = new THREE.Vector3();
-
-  scene.updateMatrixWorld(true);
-
-  scene.traverse((o) => {
-    try {
-      if (!o.geometry || (!o.isMesh && !o.isInstancedMesh)) return;
-      if (o.name && /^(play:|fx:|psur)/.test(o.name)) return;
-      const g = o.geometry;
-      if (!g.boundingBox) g.computeBoundingBox();
-      const bb = g.boundingBox;
-      if (!bb) return;
-      const gx = bb.max.x - bb.min.x, gy = bb.max.y - bb.min.y, gz = bb.max.z - bb.min.z;
-      const isNamed = named(o);
-
-      if (o.isInstancedMesh) {
-        // sample instance 0 to measure what one of these actually is
-        o.getMatrixAt(0, M);
-        M.decompose(P, Q, SC);
-        const e = worldExtent(THREE, o, gx * Math.abs(SC.x), gy * Math.abs(SC.y), gz * Math.abs(SC.z));
-        const treeish = e.up >= 3 && e.up <= 70 && e.up >= e.flat * 1.15 && o.count >= 40;
-        if (!isNamed && !treeish) return;
-        if (isNamed && e.up < 1.5) return;           // named but tiny: not a trunk
-        S.sources.push({ name: o.name || '(unnamed instanced)', kind: 'instanced', n: o.count, h: +e.up.toFixed(1) });
-        for (let i = 0; i < o.count && S.nStem < MAX_STEMS; i++) {
-          o.getMatrixAt(i, M);
-          V.setFromMatrixPosition(M).applyMatrix4(o.matrixWorld);
-          const k = ((V.x * 2) | 0) + ',' + ((V.z * 2) | 0);
-          if (seen.has(k)) continue;
-          seen.add(k);
-          addStem(V.x, V.y, V.z, e.up);
-        }
-        return;
-      }
-
-      // merged tree mesh (sand-harbor bakes its forest into one buffer): cluster
-      // the vertex cloud on a 3 m XZ grid and call each populated cell a stem.
-      if (!isNamed) return;
-      const pos = g.attributes && g.attributes.position;
-      if (!pos || pos.count < 60) return;
-      const e = worldExtent(THREE, o, gx, gy, gz);
-      if (e.up < 2) return;
-      const stride = Math.max(1, Math.floor(pos.count / 60000));
-      const cells = new Map();
-      for (let i = 0; i < pos.count; i += stride) {
-        V.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld);
-        const k = Math.round(V.x / 3) + ',' + Math.round(V.z / 3);
-        const c = cells.get(k);
-        if (c) { c.n++; if (V.y < c.y0) c.y0 = V.y; if (V.y > c.y1) c.y1 = V.y; }
-        else cells.set(k, { x: V.x, z: V.z, y0: V.y, y1: V.y, n: 1 });
-      }
-      let added = 0;
-      for (const c of cells.values()) {
-        if (c.n < 2 || S.nStem >= MAX_STEMS) continue;
-        addStem(c.x, c.y0, c.z, Math.max(4, c.y1 - c.y0));
-        added++;
-      }
-      if (added) S.sources.push({ name: o.name, kind: 'merged', n: added, h: +e.up.toFixed(1) });
-    } catch { S.errors++; }
-  });
-
-  // ---- spatial hash
-  S.grid = new Map();
-  for (let i = 0; i < S.nStem; i++) {
-    const k = Math.floor(S.sx[i] / CELL) + ',' + Math.floor(S.sz[i] / CELL);
-    let a = S.grid.get(k);
-    if (!a) { a = []; S.grid.set(k, a); }
-    a.push(i);
-  }
-}
-
-// squared distance from point i's stem to the segment (ax,az)->(bx,bz)
-function segDist2(i, ax, az, bx, bz) {
-  const dx = bx - ax, dz = bz - az;
-  const L2 = dx * dx + dz * dz;
-  let t = 0;
-  if (L2 > 1e-9) t = clamp(((S.sx[i] - ax) * dx + (S.sz[i] - az) * dz) / L2, 0, 1);
-  const qx = ax + dx * t - S.sx[i];
-  const qz = az + dz * t - S.sz[i];
-  return qx * qx + qz * qz;
+  const set = harvestStems(THREE, scene);
+  S.stems = set;
+  S.sx = set.sx; S.sy = set.sy; S.sz = set.sz; S.sh = set.sh;
+  S.nStem = set.n; S.grid = set.grid; S.sources = set.sources;
+  S.errors += set.errors;
 }
 
 // nearest stem to the swept segment, within `r`, at a height the body occupies
 function hitStem(ax, ay, az, bx, by, bz, r) {
-  if (!S.grid) return -1;
-  const r2 = r * r;
-  const c0x = Math.floor(Math.min(ax, bx) / CELL) - 1, c1x = Math.floor(Math.max(ax, bx) / CELL) + 1;
-  const c0z = Math.floor(Math.min(az, bz) / CELL) - 1, c1z = Math.floor(Math.max(az, bz) / CELL) + 1;
-  if ((c1x - c0x) * (c1z - c0z) > 400) return -1;      // absurd sweep: bail
-  let best = -1, bestD = r2;
-  for (let cx = c0x; cx <= c1x; cx++) {
-    for (let cz = c0z; cz <= c1z; cz++) {
-      const a = S.grid.get(cx + ',' + cz);
-      if (!a) continue;
-      for (let n = 0; n < a.length; n++) {
-        const i = a[n];
-        const y = Math.min(ay, by);
-        if (y < S.sy[i] - 2.5 || y > S.sy[i] + S.sh[i] * 0.95) continue;
-        const d = segDist2(i, ax, az, bx, bz);
-        if (d < bestD) { bestD = d; best = i; }
-      }
-    }
-  }
-  return best;
+  return S.stems ? S.stems.hitSegment(ax, ay, az, bx, by, bz, r) : -1;
 }
 
 // ===========================================================================

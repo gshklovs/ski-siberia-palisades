@@ -112,7 +112,7 @@ const CSS = `
 .psnw__toast { position: absolute; left: 50%; top: 88px; transform: translateX(-50%);
   max-width: min(62vw, 640px); text-align: center;
   background: rgba(23,22,20,.88); color: #f4f1ea;
-  border: 1px solid rgba(244,241,234,.22); border-left: 3px solid #9fd8ff;
+  border: 1px solid rgba(244,241,234,.22);   /* specs/0012 §C — no left stripe */
   border-radius: 3px; padding: 8px 13px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px; font-weight: 650; letter-spacing: .045em; line-height: 1.45;

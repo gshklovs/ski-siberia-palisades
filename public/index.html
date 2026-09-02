@@ -10,6 +10,21 @@
 <meta property="og:description" content="Ski Siberia and the Palisades at Palisades Tahoe. Real terrain, real rock, in your browser.">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
+<!-- THE SHARE CARD (specs/0011). iMessage will not resolve a relative og:image
+     and it will not follow one that 404s, so both URLs below are absolute and
+     built off https://ski-siberia-palisades.vercel.app/ — the world file's own origin, trailing slash
+     included. og.png is a binary template: build.mjs copies it byte for byte
+     from tools/export-red-dog/worlds/og/<world>.png to public/og.png, which is
+     the deploy root, and vercel.json exempts it from the catch-all rewrite so
+     the crawler gets a PNG instead of this page. The explicit width/height let
+     Messages reserve the 1.91:1 tile before the image lands, which is the
+     difference between a big picture and a small grey link row. -->
+<meta property="og:url" content="https://ski-siberia-palisades.vercel.app/">
+<meta property="og:image" content="https://ski-siberia-palisades.vercel.app/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Siberia Express — Palisades Tahoe">
+<meta name="twitter:image" content="https://ski-siberia-palisades.vercel.app/og.png">
 <link rel="stylesheet" href="css/te.css">
 <link rel="stylesheet" href="css/play.css">
 <link rel="stylesheet" href="css/intro.css">
