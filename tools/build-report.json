@@ -2,8 +2,8 @@
   "generator": "poi-lab tools/export-red-dog/build.mjs",
   "spec": "specs/0001-ski-red-dog-face-architecture.md",
   "world": "siberia",
-  "pin": "ccddce5f65e1478fa8076a05672cffaade968745",
-  "builtAt": "2026-09-02T19:35:59.315Z",
+  "pin": "918eab22bfeaa261d344971ce65b2b50a625e21d",
+  "builtAt": "2026-09-02T19:54:18.884Z",
   "tier": "A",
   "crop": {
     "$doc": [
@@ -61,9 +61,9 @@
   "files": 57,
   "sizes": {
     "n": 56,
-    "raw": 6798904,
-    "gz": 2766403,
-    "br": 2017564,
+    "raw": 6809282,
+    "gz": 2770318,
+    "br": 2020889,
     "byGroup": {
       "css": {
         "n": 4,
@@ -79,9 +79,9 @@
       },
       "player": {
         "n": 33,
-        "raw": 1348215,
-        "gz": 476994,
-        "br": 407642
+        "raw": 1358593,
+        "gz": 480909,
+        "br": 410967
       },
       "scene:data": {
         "n": 2,
@@ -129,21 +129,21 @@
       },
       {
         "file": "js/play/fx.js",
-        "raw": 137109,
-        "gzip": 48507,
-        "brotli": 39969
+        "raw": 137834,
+        "gzip": 48816,
+        "brotli": 40271
+      },
+      {
+        "file": "js/play/main.js",
+        "raw": 130429,
+        "gzip": 45778,
+        "brotli": 39245
       },
       {
         "file": "js/play/ski.js",
         "raw": 134772,
         "gzip": 45575,
         "brotli": 38614
-      },
-      {
-        "file": "js/play/main.js",
-        "raw": 128434,
-        "gzip": 45021,
-        "brotli": 38602
       },
       {
         "file": "js/play/guide.js",
@@ -171,9 +171,9 @@
       },
       {
         "file": "js/play/controller.js",
-        "raw": 51051,
-        "gzip": 18307,
-        "brotli": 15870
+        "raw": 58480,
+        "gzip": 21049,
+        "brotli": 18169
       }
     ],
     "perFile": [
@@ -203,21 +203,21 @@
       },
       {
         "file": "js/play/fx.js",
-        "raw": 137109,
-        "gzip": 48507,
-        "brotli": 39969
+        "raw": 137834,
+        "gzip": 48816,
+        "brotli": 40271
+      },
+      {
+        "file": "js/play/main.js",
+        "raw": 130429,
+        "gzip": 45778,
+        "brotli": 39245
       },
       {
         "file": "js/play/ski.js",
         "raw": 134772,
         "gzip": 45575,
         "brotli": 38614
-      },
-      {
-        "file": "js/play/main.js",
-        "raw": 128434,
-        "gzip": 45021,
-        "brotli": 38602
       },
       {
         "file": "js/play/guide.js",
@@ -245,9 +245,9 @@
       },
       {
         "file": "js/play/controller.js",
-        "raw": 51051,
-        "gzip": 18307,
-        "brotli": 15870
+        "raw": 58480,
+        "gzip": 21049,
+        "brotli": 18169
       },
       {
         "file": "js/play/hud.js",
@@ -323,9 +323,9 @@
       },
       {
         "file": "js/play/audio.js",
-        "raw": 29322,
-        "gzip": 9409,
-        "brotli": 8169
+        "raw": 29551,
+        "gzip": 9516,
+        "brotli": 8250
       },
       {
         "file": "js/play/solids.js",

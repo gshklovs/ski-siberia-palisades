@@ -2620,30 +2620,39 @@ window.__sparks = {
 // The trigger is the controller's own countdown going ≤ 0 → > 0.5, which is
 // where 0017's audio reads the same event, so there is no plumbing in main.js
 // and no third opinion about which frame the hit happened on.
+// ---- specs/0030 §4: SEVENTY-FIVE PER CENT LOUDER.
+//
+// Every number that governs how LOUD one burst is goes up by three quarters —
+// how long it holds, how many lines are in it, how wide they are, how opaque,
+// and how much white frame there is. Nothing that governs how OFTEN one happens
+// moves at all: `V_MIN`/`V_MAX`, `FLASH_V` and `SHAPE` are untouched, so a
+// stumble at walking pace is the same stumble it was and a 12 m/s trunk is the
+// only thing that still earns a white frame. Louder, not more frequent.
 const IM = {
-  DUR: 0.12,            // s — the whole burst
-  LINES_MIN: 40,        // ...at V_MIN
-  LINES_MAX: 85,        // ...and at V_MAX and above
+  DUR: 0.21,            // s — the whole burst
+  LINES_MIN: 70,        // ...at V_MIN
+  LINES_MAX: 149,       // ...and at V_MAX and above
   V_MIN: 4.0, V_MAX: 12.0,
   // ...and how the count runs BETWEEN those two. Not linearly: §5.4 asks for
-  // ~45 lines at 6 m/s, and the straight line through (4, 40) and (12, 85)
-  // passes through 51 there. A wipe at walking pace is a stumble and should look
-  // like one; the frame is meant to escalate as you approach the speeds a trunk
-  // actually hurts at.
+  // ~45 lines at 6 m/s on 0015's curve, and the straight line through its
+  // (4, 40) and (12, 85) passes through 51 there. 0030 lifts both ends by 75 %
+  // and leaves the exponent alone, so the SHAPE of the escalation is 0015's.
+  // A wipe at walking pace is a stumble and should look like one; the frame is
+  // meant to escalate as you approach the speeds a trunk actually hurts at.
   SHAPE: 1.6,
-  CAP: 96,              // pool ceiling: LINES_MAX plus slack
+  CAP: 160,             // pool ceiling: LINES_MAX plus slack
   INNER: 0.35,          // stops 35 % of the way in from the edge
   OUTER: 1.18,          // ...having started just outside the frame
   LEN: 0.30,            // one line's own length, as a fraction of the half-frame
-  WIDTH: 9.0,           // px at the outer (trailing) end
+  WIDTH: 15.75,         // px at the outer (trailing) end
   TAPER: 0.14,          // ...and the fraction of that at the converging end
   WIDTH_REF: 720,
-  ALPHA: 0.74,
+  ALPHA: 1.0,           // capped by SL_ALPHA_CEIL at the bucket, which is the point
   INK_FRAC: 0.30,       // the same deep slate the ordinary field is 30 % made of
   STAGGER: 0.34,        // how much of DUR the last line waits before it starts
   FLASH_V: 12.0,        // m/s — below this there is no flash, ever
-  FLASH_A: 0.35,
-  FLASH_FRAMES: 2,      // ...and above it there are exactly two frames of it
+  FLASH_A: 0.61,
+  FLASH_FRAMES: 4,      // ...and above it there are exactly four frames of it
 };
 
 const IMS = {

@@ -259,6 +259,39 @@ export function createController(THREE, collision, spawn, tuning = {}) {
   // from a caller running after update() is answering about somebody else's ray.
   let lastGroundCls = CLASS_SNOW;
   let lastBlock = null;
+  // ---- specs/0030 §2: THE TOSS.
+  //
+  // Two things the scrub needs and did not have. `velPre` is the velocity the
+  // frame STARTED with — the one you arrived at the trunk holding — because by
+  // the time `wipeout()` runs, the wall slide and the stem push-out have both
+  // already taken the closing half of it off, and a bounce computed from what is
+  // left is a bounce off nothing. `wipeHit` is the contact normal the caller
+  // just used, latched on the line before the wipe is spent and consumed by it,
+  // so a landing you simply fluffed still takes the plain scrub and no bounce.
+  const velPre = { x: 0, z: 0 };
+  let wipeHit = null;                // { nx, nz } — set immediately before wipeout()
+  const WIPE = {
+    LEN: 2.0,        // s — 0030 §1. Was 0.9.
+    // WHERE THE OLD 0.30 WENT. It did two jobs at once — it made the hit hurt
+    // AND it stopped the body — and the second one is what kept 0015's tumble
+    // inside a metre. It is now two numbers: the hit takes almost nothing off
+    // you (you are THROWN, that is the whole point), and the drag below is what
+    // brings you to rest, over the second half of the slide rather than the
+    // first tenth of it. Measured, on the 0015 rig: 3.79x and 4.50x.
+    SCRUB: 0.95,     // what a NON-contact wipe keeps of its speed (was 0.30 flat)
+    TAN: 0.72,       // ...and what a contact keeps of the TANGENTIAL half
+    REST: 0.35,      // ...having bounced this much of the closing half back out
+    // ...and the snow taking it off you again, so the get-up is not a body
+    // sliding into its riding pose at speed. HELD, then RAMPED: the throw is the
+    // first three quarters of a second and has to be allowed to happen, and the
+    // stop belongs to the second half of the slide. A flat drag cannot do both —
+    // strong enough to hold a body under 1.5 m/s on a 33 deg pitch at t = 1.6 s
+    // is strong enough to have deleted the throw by t = 0.3 s.
+    DRAG0: 0.25,     // 1/s — while the body is still being thrown
+    DRAG_HOLD: 0.85, // s — ...for this long
+    DRAG1: 18.0,     // 1/s — and this much from DRAG_IN onward
+    DRAG_IN: 1.10,   // s
+  };
   let canopyHits = 0;                // ...and §E2's, one per ENTRY into foliage
   let inCanopy = -1;                 // stem index whose canopy we are inside, -1 = out
   let canopyV = 0;                   // the speed carried into it (see T.canopyCarry)
@@ -389,6 +422,10 @@ export function createController(THREE, collision, spawn, tuning = {}) {
     solidWipes++;
     solidHits[h.why] = (solidHits[h.why] || 0) + 1;
     lastBlock = h;
+    // specs/0030 §2 — the face's own normal, handed to the scrub. `h` was taken
+    // BEFORE the slide (see solidAhead), so this is the surface as the body met
+    // it and not as the slide left it.
+    wipeHit = { nx: h.nx, nz: h.nz };
     wipeout(h.why);
   }
 
@@ -433,10 +470,42 @@ export function createController(THREE, collision, spawn, tuning = {}) {
   // worked, but latched across accidents and needed the harness to hand it an
   // animation frame at exactly the right moment (specs/0015 §5b round 5). The
   // event carries it now.
+  //
+  // ---- specs/0030 §2: AND IT THROWS YOU FOUR TIMES AS FAR.
+  //
+  // The old price was one line — 70 % of the speed, gone, whatever hit you. That
+  // is why 0015's tumble was a body that stopped and then lay down: at 12 m/s
+  // into a fir you kept 3.6 m/s and the hill took that back inside a third of a
+  // second, so the whole 0.9 s happened inside a metre.
+  //
+  // Two changes and no third. A CONTACT is split about the surface it hit: the
+  // tangential half — the half that was going to carry you past the tree anyway
+  // — mostly survives, and the closing half comes back out along the normal at
+  // `REST`, which is the bounce. A landing you merely fluffed has no surface to
+  // split about and takes the plain scrub. Both are measured off `velPre`, the
+  // velocity this frame STARTED with, because the wall slide and the stem
+  // push-out have already run by the time we are called and what they leave
+  // behind is a body that has politely come to rest.
+  //
+  // The other half of the toss is `update()`'s wipe drag, which takes it back
+  // off you again over the slide — see there. Without it a 4x toss is a 4x
+  // toss that is still doing 6 m/s when the body stands up.
   function wipeout(why, spinDeg = 0) {
     const spinDir = airSpin > 0 ? 1 : airSpin < 0 ? -1 : 0;
-    vel.x *= 0.30; vel.z *= 0.30;
-    wipeT = 0.9;
+    const h = wipeHit; wipeHit = null;
+    if (h) {
+      const vn = velPre.x * h.nx + velPre.z * h.nz;      // < 0 = still closing
+      const tx = (velPre.x - h.nx * vn) * WIPE.TAN;
+      const tz = (velPre.z - h.nz * vn) * WIPE.TAN;
+      const b = vn < 0 ? -vn * WIPE.REST : 0;            // ...and out again
+      vel.x = tx + h.nx * b; vel.z = tz + h.nz * b;
+    } else {
+      // the shape the old line had, with the old 0.30 opened up: a fluffed
+      // landing has no surface to split about, so this stays a plain multiply on
+      // the velocity the landing itself left behind
+      vel.x *= WIPE.SCRUB; vel.z *= WIPE.SCRUB;
+    }
+    wipeT = WIPE.LEN;
     lastTrick = { name: 'wipeout', deg: Math.round(spinDeg), spinDir, why };
     events.wipe = { ...lastTrick };
     airSpin = 0; airTime = 0;
@@ -455,7 +524,7 @@ export function createController(THREE, collision, spawn, tuning = {}) {
   // ---- specs/0012 §E4: and the push-out NEVER stops running.
   //
   // This function used to return early while `wipeT > 0`. That switched off the
-  // whole guard for the 0.9 s of the tumble — and the tumble is exactly when
+  // whole guard for the 2.0 s of the tumble — and the tumble is exactly when
   // the body is a ragdoll drifting sideways with no input, so it drifted into
   // the trunk it had just hit and Greg got to look out through the stump.
   //
@@ -471,9 +540,11 @@ export function createController(THREE, collision, spawn, tuning = {}) {
     // remainder the push-out is about to leave you holding
     let arrival = Math.hypot(vel.x, vel.z);
     let touched = false, touchedI = -1;
+    let nx0 = 0, nz0 = 0;                         // specs/0030 §2 — the bark's normal
     for (let pass = 0; pass < 3; pass++) {
       const h = collision.stemHit(pos.x, pos.y, pos.z, T.radius, U);
       if (!h) break;
+      if (!touched) { nx0 = h.nx; nz0 = h.nz; }   // the FIRST trunk: the one you hit
       touched = true;
       if (touchedI < 0) touchedI = h.i;
       // the extra millimetre is not decoration: pushing out by exactly `pen`
@@ -496,7 +567,10 @@ export function createController(THREE, collision, spawn, tuning = {}) {
       arrival = canopyV;
     }
     treeHits++;
-    if (arrival >= T.treeWipeV) wipeout('tree');
+    if (arrival >= T.treeWipeV) {
+      wipeHit = { nx: nx0, nz: nz0 };    // specs/0030 §2 — split about the bark
+      wipeout('tree');
+    }
   }
 
   // ---- specs/0012 §E2: THE CANOPY IS SOFT.
@@ -556,9 +630,30 @@ export function createController(THREE, collision, spawn, tuning = {}) {
     // second of sway a player does. One call, here, because this is the only
     // place in the player with a dt for every step the body takes.
     if (collision.canopyFx) collision.canopyFx.update(dt);
-    if (wipeT > 0) wipeT = Math.max(0, wipeT - dt);   // decays in every mode, so a
-                                                     // footed gear cannot land mid-
-                                                     // wipe and tumble forever
+    // specs/0030 §2 — the velocity this frame ARRIVED with, before the gear
+    // model, the slide and the push-out have had it. `wipeout()` splits this
+    // about the contact normal; nothing else reads it.
+    velPre.x = vel.x; velPre.z = vel.z;
+    if (wipeT > 0) {
+      wipeT = Math.max(0, wipeT - dt);   // decays in every mode, so a footed gear
+                                         // cannot land mid-wipe and tumble forever
+      // ---- specs/0030 §2: AND THE SNOW TAKES IT BACK OFF YOU.
+      //
+      // The toss above is the first half-second; this is the other 1.5. Ramped
+      // from almost nothing at the hit to 5.6/s by 1.15 s, so the body is thrown,
+      // slides, and is under 1.5 m/s by the time the get-up starts at 1.6 s —
+      // rather than standing up out of a 6 m/s slide, which is a body that
+      // teleports back into its riding pose.
+      //
+      // Applied to the horizontal only, and before the gear model runs: the
+      // skis' own friction still does its job underneath this, and vel.y is
+      // gravity's, which a fall does not get to argue with.
+      const tw = WIPE.LEN - wipeT;
+      const s = clamp((tw - WIPE.DRAG_HOLD) / Math.max(1e-3, WIPE.DRAG_IN - WIPE.DRAG_HOLD), 0, 1);
+      const k = WIPE.DRAG0 + (WIPE.DRAG1 - WIPE.DRAG0) * s * s * (3 - 2 * s);
+      const f = Math.exp(-k * dt);
+      vel.x *= f; vel.z *= f;
+    }
     if (GEARS[mode] && !footedNow()) updateRide(dt);
     else {
       updateWalk(dt);
@@ -671,9 +766,31 @@ export function createController(THREE, collision, spawn, tuning = {}) {
       }
     }
 
+    // ---- specs/0030 §2: A BODY IN A TUMBLE IS NOT ON ITS EDGES.
+    //
+    // THE WIPE WINDOW. A contact throws you TANGENTIALLY — across the way the
+    // skis are pointing — and ski.js charges a sideways ski the full lateral
+    // grip (`grip: 6.0`, a 1/s bleed on the lateral component). Measured on the
+    // 0015 rig: 21 m/s² off the throw, which stopped a four-times-longer toss
+    // inside a quarter of a second and made every knob in §2 a rounding error.
+    //
+    // The pose already says the body lies along its velocity — that is what
+    // `TUM_KF.align` is. This is the physics agreeing with the picture: for the
+    // frames the wipe owns, the gear is handed the HEADING OF THE SLIDE instead
+    // of the yaw, so the skis are running flat along the direction the body is
+    // actually going and the only friction left is the flat kind. It costs one
+    // value on the way in and one discarded on the way out.
+    //
+    // The yaw the gear hands back is DROPPED while wiping: `yaw` is the camera's
+    // and the trick machine's, and a lens that snapped round to the slide
+    // heading on the frame of the hit would be a cut, not a crash.
+    const wiping = wipeT > 0;
+    const wipeSp = Math.hypot(vel.x, vel.z);
+    const rideYaw = (wiping && wipeSp > 0.5 * U) ? Math.atan2(-vel.x, -vel.z) : yaw;
+
     // The gear model runs unless something else owns the velocity this frame.
     const step = boosting ? null : G.step({
-      vel, yaw, keys, grounded, normal: n, gravity: T.gravity, dt, S, lean, thrust: thrusting,
+      vel, yaw: rideYaw, keys, grounded, normal: n, gravity: T.gravity, dt, S, lean, thrust: thrusting,
       // gears that fly rather than ride need the look pitch, where they are,
       // and the terrain itself (the glider soars off ground it can sample)
       pitch, pos, collision,
@@ -683,7 +800,7 @@ export function createController(THREE, collision, spawn, tuning = {}) {
       lean += (0 - lean) * Math.min(1, 6 * dt);
       crouch = 0;
     } else {
-      yaw = step.yaw;
+      if (!wiping) yaw = step.yaw;   // 0030 §2 — see the wipe window above
       lean = step.lean;
       crouch = step.crouch || 0;
       if (step.pop) events.pop = step.pop;   // 'perfect' — HUD stamps it
@@ -881,6 +998,11 @@ export function createController(THREE, collision, spawn, tuning = {}) {
     // gear (the ski rack). Object.assign into it — the registry holds this exact
     // object, so replacing it wholesale would not take.
     gearTuning(name) { return GEARS[name] ? GEARS[name].S : null; },
+    // specs/0030 §2 — the wipe's own numbers, handed out the way `gearTuning`
+    // hands out a gear's: the LIVE object, so the toss rig can sweep the scrub
+    // and the drag in one browser session instead of one page load per guess.
+    // Read-only in every shipped path; nothing in the player writes to it.
+    get wipeTuning() { return WIPE; },
     get position() { return pos; },
     get velocity() { return vel; },
     get grounded() { return grounded; },

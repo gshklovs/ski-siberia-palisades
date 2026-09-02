@@ -616,20 +616,31 @@ world.scene.add(fpSnow);
 
 // ----------------------------------------------------- specs/0015 the tumble
 // THE POSED TUMBLE. The controller already spends the event — `wipeout(why)`
-// scrubs the velocity and puts 0.9 s on `wipeT` — and until 0015 the only thing
+// scrubs the velocity and puts 2.0 s on `wipeT` — and until 0015 the only thing
 // on screen was a lens wobble under a body that kept standing in its riding
-// tuck. This is the body going DOWN and getting back up inside that same 0.9 s,
+// tuck. This is the body going DOWN and getting back up inside that same 2.0 s,
 // and the eye going down with it, both read off ONE solver so first and third
 // person can never disagree about where the head is.
 //
-// The clock is `tw = 0.9 - wipeT`, which makes every pose a pure function of the
-// controller's own countdown. That is not a stylistic choice: it is the only
+// The clock is `tw = TUM_LEN - wipeT`, which makes every pose a pure function of
+// the controller's own countdown. That is not a stylistic choice: it is the only
 // reason the acceptance strips can be shot at all, because `wipeT` freezes when
 // the game is paused and the rig keeps drawing, so "the frame at t = 0.3 s" is a
 // frame anybody can take twice and get the same pixels.
 //
+// ---- specs/0030: TWO SECONDS, AND HARDER.
+//
+// 0.9 s was a hit and a get-up with no fall in between: the body folded, was
+// prone for a third of a second, and stood back up. 0030 keeps the HIT exactly
+// as snappy as it was — authority is on in three frames at 60, the fold is still
+// 0.15 s, the kick-back is still gone by 0.16 — puts the body DOWN faster than
+// before, and spends the extra 1.1 s SLIDING. The tracks below are RE-TIMED, not
+// stretched: nothing about the impact is slower, the prone hold runs to 1.55 s,
+// and the get-up owns the last 0.40 s and lands on the riding pose at 2.0
+// exactly, because every track still ends on its riding value.
+//
 // Nothing here writes to the controller. Every number below is a picture.
-const TUM_LEN = 0.9;                    // s — wipeT's span; not ours to change
+const TUM_LEN = 2.0;                    // s — wipeT's span; not ours to change
 // A CONTACT, as opposed to a landing you fluffed: something solid stopped the
 // body, so the first 0.15 s is a fold against it rather than a pitch over the
 // tips. specs/0018 put four more names on the same event — a tower, a building,
@@ -638,21 +649,24 @@ const TUM_LEN = 0.9;                    // s — wipeT's span; not ours to chang
 const TUM_SOLID = new Set(['tree', 'rock', 'building', 'tower', 'person', 'bench']);
 const TUM = {
   FOLD: 0.15,        // s — the stop, on a contact
-  BACK: 0.15,        // m — how far a contact folds the body back along -v
-  KICK_PITCH: 0.14,  // rad — 8 deg of nose-down that goes with it
-  ROLL: 0.30,        // rad — the prone roll's CHATTER, ±0.30 at 6 Hz, decaying
-  ROLL_HZ: 6.0,      // Hz
-  ROLL_DAMP: 0.34,   // s — its envelope
-  FOLD_ROLL: 0.20,   // rad — ...and the lean the fold itself puts on
+  BACK: 0.45,        // m — how far a contact folds the body back along -v
+  KICK_PITCH: 0.25,  // rad — 14 deg of nose-down that goes with it
+  ROLL: 0.50,        // rad — the prone roll's CHATTER, ±0.50 at 7 Hz, decaying
+  ROLL_HZ: 7.0,      // Hz
+  // ...over 0.8 s, not 0.34. At 0.34 the body was shuddering for half a second
+  // and lying dead for the other 1.5 of a 2 s slide, which is a corpse with a
+  // twitch at the start rather than something being dragged across snow.
+  ROLL_DAMP: 0.80,   // s — its envelope
+  FOLD_ROLL: 0.35,   // rad — ...and the lean the fold itself puts on
   // ...plus a roll the body HOLDS through the slide. The chatter alone is a sine
   // through zero, so whichever instant the shutter falls on is as likely to be
   // flat as not, and a prone body photographed flat is a plank. 15 deg onto the
   // shoulder it was thrown over is where a body that fell actually lies, and it
   // gives the chatter something to chatter around.
-  PRONE_ROLL: 0.26,  // rad
-  SPIN: 1.35,        // rad — peak yaw a contact throws you through
-  SPIN_ROT: 1.85,    // rad — ...and a rotation wipe, which keeps turning
-  EYE: 0.45,         // m — how low the eye gets (spec §3)
+  PRONE_ROLL: 0.40,  // rad
+  SPIN: 2.40,        // rad — peak yaw a contact throws you through
+  SPIN_ROT: 3.10,    // rad — ...and a rotation wipe, which keeps turning
+  EYE: 0.38,         // m — how low the eye gets (0015 §3's 0.45, knocked lower)
   EYE_FLOOR: 0.25,   // m — ...and how close to the snow it may ever come
   // §3's floor is 0.6 m off the trunk AXIS. This is 0.95, and the extra 0.35 m
   // is not decoration: a 0.24 m trunk with the lens 0.36 m off its bark is a
@@ -683,42 +697,54 @@ const TUM_KF = {
   // pitch of the whole body. Two tracks and the whole difference between them is
   // §2's last paragraph: a fluffed landing pitches over the tips in one motion;
   // a contact STOPS at 0.6 rad, holds there for the fold, and goes down second.
-  pitchAir:   [[0, 0], [0.15, 1.30], [0.60, 1.32], [0.78, 0.42], [0.86, -0.14], [0.90, 0]],
-  pitchSolid: [[0, 0], [0.035, 0.60], [0.15, 0.68], [0.33, 1.30], [0.60, 1.32], [0.80, 0.42], [0.87, -0.14], [0.90, 0]],
+  //
+  // 0030 §3: DOWN FASTER, AND FURTHER OVER. The peak arrives by 0.10 s instead
+  // of 0.15 and OVERSHOOTS to 1.55 rad before settling back to the 1.32 the
+  // slide holds — a body that is thrown past flat and then lands on itself,
+  // rather than one that eases down to horizontal and stops there.
+  pitchAir:   [[0, 0], [0.10, 1.55], [0.24, 1.32], [1.60, 1.32], [1.84, 0.42], [1.95, -0.14], [2.00, 0]],
+  // ...and the same past the fold: the 0.15 s stop against the trunk is exactly
+  // the stop it was, and then the body goes over hard.
+  pitchSolid: [[0, 0], [0.035, 0.60], [0.15, 0.68], [0.25, 1.55], [0.40, 1.32], [1.60, 1.32], [1.84, 0.42], [1.95, -0.14], [2.00, 0]],
   // authority: how much of the pose above is on screen. Three frames in (the
-  // fold IS a snap), all the way through the slide, and handed back over the
-  // last 0.18 s so the get-up lands exactly on the riding pose.
-  auth:  [[0, 0], [0.045, 1], [0.72, 1], [0.90, 0]],
-  // the hips pressing into the snow — small, but without it the prone body is a
-  // plank hovering at ankle height rather than something with weight in it
-  sink:  [[0, 0], [0.15, 0.03], [0.60, 0.05], [0.82, 0.01], [0.90, 0]],
-  // yaw: out, and back as the body re-aims downhill getting up
-  spin:  [[0, 0], [0.15, 0.24], [0.45, 0.86], [0.62, 1.0], [0.80, 0.52], [0.90, 0]],
+  // fold IS a snap) — UNCHANGED, because 0030 is a longer fall and not a slower
+  // hit — held all the way through the slide, and handed back over the last
+  // 0.40 s so the get-up lands exactly on the riding pose at 2.0.
+  auth:  [[0, 0], [0.045, 1], [1.60, 1], [2.00, 0]],
+  // the hips pressing into the snow. 0030 §3 doubles it to 0.10 m and puts a
+  // BOUNCE in it: the body lands on its hip, comes back up 0.04 m as the slide
+  // takes over, and settles for the rest of it. Without the bounce a 2 s slide
+  // is a body pressed into the snow at a constant depth for a second and a half.
+  sink:  [[0, 0], [0.13, 0.10], [0.30, 0.06], [0.48, 0.085], [1.60, 0.08], [1.88, 0.015], [2.00, 0]],
+  // yaw: out through the slide, and back as the body re-aims downhill getting up
+  spin:  [[0, 0], [0.12, 0.30], [0.55, 0.86], [0.95, 1.0], [1.60, 1.0], [1.84, 0.52], [2.00, 0]],
   // the roll the slide HOLDS, under the chatter
-  rollHold: [[0, 0], [0.16, 1], [0.62, 1], [0.84, 0.25], [0.90, 0]],
+  rollHold: [[0, 0], [0.14, 1], [1.60, 1], [1.88, 0.25], [2.00, 0]],
   // how far the prone body has swung onto the velocity vector (§2's "lies along
   // the velocity vector"). Body only — see the note at the yaw write below.
-  align: [[0, 0], [0.20, 1], [0.62, 1], [0.90, 0]],
-  // the eye's own drop, 0 = riding height, 1 = TUM.EYE. §3: 0.15 s down, hold,
-  // and the last 0.3 s to come back.
-  eye:   [[0, 0], [0.15, 1], [0.60, 1], [0.90, 0]],
+  align: [[0, 0], [0.18, 1], [1.60, 1], [2.00, 0]],
+  // the eye's own drop, 0 = riding height, 1 = TUM.EYE. Down in 0.12 s, held for
+  // the whole slide, and the last 0.40 s to come back.
+  eye:   [[0, 0], [0.12, 1], [1.60, 1], [2.00, 0]],
   // ...and where the lens points while it is down there. -0.42 rad, not the
   // -0.60 the first pass used: at 34 deg of nose-down from an eye 45 cm off the
   // snow the horizon leaves the top of the frame and every prone frame is a
   // featureless white field. At 24 deg the skyline stays in shot, and then the
   // roll below has something to roll.
-  camP:  [[0, 0], [0.15, -0.42], [0.60, -0.40], [0.80, -0.13], [0.88, 0.07], [0.90, 0]],
-  // the contact's kick-back, in 3 frames at 60 and gone by the time the fold is
-  kick:  [[0, 0], [0.008, 1], [0.05, 1], [0.16, 0], [0.90, 0]],
+  camP:  [[0, 0], [0.12, -0.42], [1.60, -0.40], [1.84, -0.13], [1.95, 0.07], [2.00, 0]],
+  // the contact's kick-back, in 3 frames at 60 and gone by the time the fold is.
+  // 0030 leaves this timing ALONE — §1 is explicit that the hit stays as snappy
+  // as it is — and only makes it bigger, via TUM.KICK_PITCH.
+  kick:  [[0, 0], [0.008, 1], [0.05, 1], [0.16, 0], [2.00, 0]],
   // the backward displacement the same contact folds the body by. It is the SAME
-  // 0.15 m the camera took above, held through the slide and released with the
+  // 0.45 m the camera took above, held through the slide and released with the
   // get-up, so the eye and the body never disagree about where the impact put you.
-  back:  [[0, 0], [0.008, 1], [0.30, 1], [0.60, 0.62], [0.90, 0]],
+  back:  [[0, 0], [0.008, 1], [0.35, 1], [1.60, 0.62], [2.00, 0]],
   // the arms: up and forward at the hit, splayed through the slide, down as you
   // stand. Negative x is forward/up here — `c * 0.9` sweeps them back into a tuck.
-  arm:   [[0, 0], [0.075, -1.15], [0.30, -0.42], [0.60, -0.32], [0.82, -0.04], [0.90, 0]],
+  arm:   [[0, 0], [0.065, -1.60], [0.32, -0.42], [1.60, -0.32], [1.90, -0.04], [2.00, 0]],
   // the skis: fanned and off the snow while the body is on it
-  ski:   [[0, 0], [0.16, 1], [0.60, 1], [0.84, 0.15], [0.90, 0]],
+  ski:   [[0, 0], [0.14, 1], [1.60, 1], [1.88, 0.15], [2.00, 0]],
 };
 
 // the short way round from `b` to `a`, in radians. Without it a body whose
@@ -820,7 +846,7 @@ function tumbleStep() {
   const wt = ctrl.wipeT;
   // THE EDGE. Everything that depends on the moment of the hit rather than on
   // the clock — which way it throws you, whether it was a contact, where the
-  // body was going — is latched here and held for the whole 0.9 s. Re-deriving
+  // body was going — is latched here and held for the whole 2.0 s. Re-deriving
   // the spin sign every frame from a velocity the scrub is still rotating would
   // let the body change its mind about which way it is falling.
   // `wipeT` only ever counts DOWN, so a value that went up is a fresh wipeout
@@ -853,7 +879,7 @@ function tumbleStep() {
     return;
   }
 
-  const t = tum.t = TUM_LEN - wt;              // 0 -> 0.9, the tumble's own clock
+  const t = tum.t = TUM_LEN - wt;              // 0 -> 2.0, the tumble's own clock
   tum.on = true;
   tum.w = wt / TUM_LEN;
   const a = tum.auth = tumAt(TUM_KF.auth, t);
@@ -1011,7 +1037,7 @@ window.__tumble = {
   // ...and whether the rig would treat the NEXT wipeout as a new one. It latches
   // off `wipeT` coming up from zero, and it can only look on the frames it is
   // posed on — so a harness that teleports and wipes without an animation frame
-  // in between hands it the same 0.9 twice and gets the previous accident's
+  // in between hands it the same 2.0 twice and gets the previous accident's
   // answers. This is how a test waits for the rig to have seen the reset, rather
   // than sleeping and hoping there was a frame in there somewhere.
   armed: () => tumPrevWipe <= 0,
@@ -1382,10 +1408,10 @@ function updateVisuals() {
     tpPack.visible = rock;
     if (onSled) {
       // the deck rocks onto its inside runner (sled.js owns the number), and a
-      // wipeout cartwheels the whole thing — the controller's 0.9 s of tumble,
+      // wipeout cartwheels the whole thing — the controller's 2.0 s of tumble,
       // spent on the sled rather than only on the lens
       rollSledRig(tpSled);
-      const w = ctrl.wipeT / 0.9;
+      const w = ctrl.wipeT / TUM_LEN;   // 0030: the span is a constant, not a literal
       tpSled.rotation.x = w * w * Math.sin(st.bob * 3.1) * 1.9;
       tpSled.rotation.y = w * w * Math.sin(st.bob * 2.3) * 1.4;
       tpSled.position.y = w * w * 0.35 * u;
@@ -1394,7 +1420,7 @@ function updateVisuals() {
       // front skis follow the bars and the chassis squats on the suspension —
       // both from snowmobile.js, so the pose cannot disagree with the physics
       poseSnowmobileRig(tpSnow);
-      const w = ctrl.wipeT / 0.9;
+      const w = ctrl.wipeT / TUM_LEN;   // 0030: the span is a constant, not a literal
       tpSnow.rotation.z = w * w * Math.sin(st.bob * 2.7) * 1.1;
     }
     if (onBike) {
@@ -1426,7 +1452,7 @@ function updateVisuals() {
     // ---- specs/0015: THE TUMBLE, written OVER the riding pose above.
     //
     // Every value is `mix(riding, tumble, tum.auth)`, and `auth` is 0 at both
-    // ends of the 0.9 s, so the body enters and leaves the animation on exactly
+    // ends of the 2.0 s, so the body enters and leaves the animation on exactly
     // the pose it would have been holding anyway. That is the whole reason there
     // are no pops here: nothing is switched, everything is blended, and the
     // blend's own weight is what starts and finishes.
@@ -1436,7 +1462,7 @@ function updateVisuals() {
     // arrives at ~0.4 m, which is where a head on snow is. The skis are posed by
     // hand rather than reparented into an `mFall` group: they are children of
     // `model` and inventory.js clones this rig to dress it, so a parent that
-    // exists for 0.9 s a run is a parent the locker would have to know about.
+    // exists for 2.0 s a run is a parent the locker would have to know about.
     // Their binding IS the pivot, so pitching them with the body keeps them at
     // the feet for free — all that is left is the fan and the lift.
     if (tum.on && mBody.visible) {
@@ -1446,7 +1472,7 @@ function updateVisuals() {
       // ABSOLUTE, not `-= sink`: the riding height is `-0.34 u * crouch`, and
       // crouch keeps easing all the way through a tumble because the scrub took
       // the speed that was holding it up. A body whose hips rose 0.1 m over the
-      // 0.9 s it spent lying in the snow is a body floating off it.
+      // 2.0 s it spent lying in the snow is a body floating off it.
       mBody.position.y += (-tum.sink - mBody.position.y) * a;
       // arms: up and forward on the hit, then splayed out through the slide
       const ax = tum.arm * a, az = Math.abs(tum.arm) * 0.55 * a;

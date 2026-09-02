@@ -504,11 +504,14 @@ export function update(dt) {
     // ---- specs/0017: the crash and the canopy, read straight off the controller
     //
     // The wipe edge is wipeT rising. By the time it shows, the controller has
-    // already scrubbed the velocity to 30% — the speed that tells you how hard
-    // the fall was is the one measured on the PREVIOUS frame, so that is the
-    // number the loudness comes from. wipeT sits above 0.5 for the whole 0.9 s
-    // tumble, so a tumble can only ever fire once: the edge needs it back at 0
-    // first, and only a fresh wipeout() can put it back up.
+    // already scrubbed the velocity — the speed that tells you how hard the fall
+    // was is the one measured on the PREVIOUS frame, so that is the number the
+    // loudness comes from. wipeT sits above 0.5 for all but the last half-second
+    // of the 2.0 s tumble (specs/0030 §1 lengthened it from 0.9), so a tumble
+    // can only ever fire once: the edge needs it back at 0 first, and only a
+    // fresh wipeout() can put it back up. None of the crash layers below is
+    // timed off the span — the longest of them is 0.45 s — so 0030 moves this
+    // comment and nothing else in this file.
     const wipeT = (c.wipeT || 0);
     if (A.prevWipeT <= 0 && wipeT > 0.5) {
       const why = (c.lastTrick || {}).why;
