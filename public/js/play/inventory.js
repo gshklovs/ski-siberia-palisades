@@ -43,6 +43,10 @@ import {
   resolveSnowmobileId, makeSnowmobileRig, styleSnowmobileRig,
 } from './snowmobile.js';
 import { BIKE_GEAR, BRAND } from './flags.js';
+// specs/0019 — the settings page at the back of the locker. The knobs' values
+// AND their copy live in settings.js; this file renders them and writes through
+// it, and holds no copy of either.
+import { KNOBS, get as getSetting, set as setSetting } from './settings.js';
 
 // the two glider models paint from the same 300×58 frame as the boots
 const GLIDER_LOOK = {
@@ -118,6 +122,13 @@ const ICON = {
   sled: '<path d="M3.2 13.9h12.9c2.1 0 3.5-1.3 3.5-3 0-1.3-1-2.3-2.2-2.3s-2.2 1-2.2 2.3"/><path d="M4.4 18.2h12.2"/><path d="M5.8 13.9v4.3"/><path d="M13.9 13.9v4.3"/>',
   // track, tunnel, windshield and the front ski
   snowmobile: '<rect x="2.5" y="14.2" width="10.2" height="4.3" rx="2.1"/><path d="M12.7 16.3h3.5l2.4-2.3"/><path d="M8.4 14.2 10.1 9.6h3.8l1.3 2.7"/><path d="M14 9.6 16.1 7.2"/><path d="M17.2 18.5h3.3"/><path d="M18.9 13.4v5.1"/>',
+  // specs/0019 — the cog. Two circles and eight teeth on the diagonals, struck
+  // at the same 1.7 stroke on currentColor as the six above, so the settings tab
+  // reads as one of the strip rather than as a pasted-in icon set.
+  gear: '<circle cx="12" cy="12" r="6.6"/><circle cx="12" cy="12" r="2.9"/>'
+    + '<path d="M18.6 12h2.2"/><path d="M5.4 12H3.2"/><path d="M12 5.4V3.2"/><path d="M12 18.6v2.2"/>'
+    + '<path d="M16.67 7.33 18.22 5.78"/><path d="M7.33 16.67 5.78 18.22"/>'
+    + '<path d="M16.67 16.67 18.22 18.22"/><path d="M7.33 7.33 5.78 5.78"/>',
 };
 function iconSVG(name) {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" '
@@ -347,6 +358,30 @@ const TABS = [
       spec: 'walk 4.5 m/s · sprint 8.0 m/s · step 0.55 m',
       facts: [['walk', '4.5 m/s'], ['sprint', '8.0 m/s'], ['jump', '4.5 m/s'], ['step up', '0.55 m']],
     }],
+  },
+  // ---- specs/0019. THE LAST TAB, and the only one that is not a rack.
+  //
+  // It is here rather than in a menu of its own for the reason Greg asked for it
+  // here: the locker is already the screen you press one undocumented key to
+  // reach, it already owns the keyboard, and a settings page "in the back of the
+  // inventory" costs a player nothing to find once and nothing to ignore
+  // forever. `kind: 'settings'` is the one word the five render functions below
+  // branch on; everything else on this entry is the same shape a rack has, so
+  // the tab strip, the accent, the Q/E walk and the count badge all just work.
+  //
+  // IT EQUIPS NOTHING. `gear` and `remember` are absent on purpose — onEquip is
+  // never called from this tab, the mannequin is left wearing whatever the last
+  // gear tab dressed it in, and the persistence is settings.js's own.
+  {
+    // the accent is a green nothing else in the strip is near (skis cyan, bikes
+    // and the snowmobile orange, the glider violet, the sled and the boots tan)
+    // — it has to carry "on" on the switch as well as tint the tab
+    id: 'settings', label: 'settings', kind: 'settings', icon: 'gear', accent: '#4fd6a9',
+    // one row per knob, straight off settings.js's table — the "next knob is one
+    // line" the spec asks for is one entry THERE, and no edit at all here.
+    items: () => KNOBS.map((k) => ({
+      id: k.key, key: k.key, name: k.label, desc: k.desc,
+    })),
   },
 ];
 
@@ -653,6 +688,63 @@ const LOCKER_CSS = `
 }
 .lk__eq::before { content: "\\2713"; font-size: 9px; letter-spacing: 0; }
 
+/* ---- specs/0019: the settings rows.
+   The same grid element the cards live in, switched to one full-width column,
+   so the scrolling, the keyboard selection and the swap animation are the ones
+   that already work rather than a second implementation of them. */
+.lk__grid.is-rows { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.lk__row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
+  gap: 8px 16px; cursor: pointer; text-align: left;
+  padding: 13px 15px;
+  border: 1px solid var(--lk-line); border-radius: 11px;
+  background: linear-gradient(158deg, rgba(255,255,255,.03) 0%, var(--lk-panel-2) 62%, var(--lk-panel-2) 100%);
+  /* border-color is the selection ring: not transitioned, same note as .lk__tab */
+  transition: transform .14s cubic-bezier(.2,.8,.25,1), box-shadow .18s;
+}
+.lk__row:hover { transform: translateY(-2px); border-color: var(--lk-line-2); }
+.lk__row.is-sel {
+  transform: translateY(-2px);
+  border-color: var(--lk-acc);
+  box-shadow: 0 0 0 1px var(--lk-acc), 0 12px 26px rgba(0,0,0,.5);
+}
+.lk__row.is-go { animation: lk-equip .42s cubic-bezier(.2,.9,.25,1); }
+/* both are SPANS in a <button> (a button may not contain a <div>), so they have
+   to be told to be blocks — left inline they set as one paragraph and the label
+   runs straight into the sentence after it */
+.lk__row-t {
+  display: block;
+  font-family: var(--lk-mono); font-size: 11px; font-weight: 700;
+  letter-spacing: .16em; text-transform: uppercase; color: var(--lk-ink);
+}
+.lk__row-d { display: block; font-size: 11.5px; line-height: 1.45; color: var(--lk-ink-2); margin-top: 5px; }
+.lk__row-txt { display: block; min-width: 0; }
+/* the switch: a track, a knob, and a word. NOTHING here is transitioned, and
+   that is the .lk__tab note applied to the one control on this screen where
+   being wrong for a moment is worst: a transition runs on the document's
+   animation clock, and on a frame-starved deck (a heavy world behind the panel,
+   a software rasteriser) that clock stalls — the first cut animated the knob's
+   travel and photographed a switch reading ON with its knob still hard left.
+   A switch may not lie about its state for even one frame. */
+.lk__sw { display: inline-flex; align-items: center; gap: 9px; }
+.lk__sw-t {
+  position: relative; width: 42px; height: 22px; border-radius: 999px; flex: none;
+  background: var(--lk-panel-3);
+  border: 1px solid var(--lk-line-2);
+}
+.lk__sw-t::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+  border-radius: 50%; background: var(--lk-ink-3);
+}
+.lk__sw-v {
+  font-family: var(--lk-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: .16em; text-transform: uppercase; color: var(--lk-ink-3);
+  width: 3ch;
+}
+.lk__sw.is-on .lk__sw-t { background: var(--lk-acc); border-color: var(--lk-acc); }
+.lk__sw.is-on .lk__sw-t::after { background: #08111a; transform: translateX(20px); }
+.lk__sw.is-on .lk__sw-v { color: var(--lk-acc); }
+
 /* ---- right: the detail panel */
 .lk__det {
   grid-area: det; min-height: 0;
@@ -854,7 +946,9 @@ export function createInventory({ THREE, model, unitScale, ctrl, onEquip, initia
   const load = el('div', 'lk__load');
   const loadRow = {};
   for (const t of TABS) {
-    if (t.id === 'boots') continue;                 // the loadout strip reads gear, not feet
+    // the loadout strip reads gear: not feet, and not the settings page, which
+    // equips nothing and so has nothing to report here
+    if (t.id === 'boots' || t.kind === 'settings') continue;
     const w = el('div', 'lk__load-i');
     const v = el('span', 'lk__load-v', '—');
     w.append(el('span', 'lk__load-k', t.label), v);
@@ -1150,15 +1244,53 @@ export function createInventory({ THREE, model, unitScale, ctrl, onEquip, initia
     }
   }
 
+  // ------------------------------------------------------- specs/0019: rows
+  // The settings page is a list, not a grid of cards, and this is the whole of
+  // the difference: one row element per knob, built into the same `grid` node so
+  // the scroll box, the keyboard selection and the swap animation are shared.
+  // `paintSwitch` is separated from `renderRow` because a toggle must not
+  // rebuild the list — rebuilding would fire mouseenter on whatever row the
+  // cursor is over and drag the keyboard selection back to it, the same bug
+  // paintBadges() exists to avoid on the card grid.
+  const swOf = new WeakMap();                       // row element -> its switch
+  function paintSwitch(c, key) {
+    const sw = swOf.get(c);
+    if (!sw) return;
+    const on = getSetting(key);
+    sw.el.classList.toggle('is-on', on);
+    sw.v.textContent = on ? 'on' : 'off';
+    c.setAttribute('aria-checked', on ? 'true' : 'false');
+  }
+  function renderRow(it, i) {
+    const c = el('button', 'lk__row');
+    c.type = 'button';
+    c.setAttribute('role', 'switch');
+    const txt = el('span', 'lk__row-txt');
+    txt.append(el('span', 'lk__row-t', it.name), el('span', 'lk__row-d', it.desc || ''));
+    const sw = el('span', 'lk__sw');
+    const v = el('span', 'lk__sw-v', 'off');
+    sw.append(el('span', 'lk__sw-t'), v);
+    swOf.set(c, { el: sw, v });
+    c.append(txt, sw);
+    paintSwitch(c, it.key);
+    c.addEventListener('click', (e) => { e.stopPropagation(); sel = i; paintSel(); equip(); });
+    c.addEventListener('mouseenter', () => { sel = i; paintSel(); });
+    grid.append(c);
+    return c;
+  }
+
   let cards = [];
   let scale = [];                                   // the stat scale for this tab
   function renderGrid() {
-    const all = safeItems(tab());
+    const t = tab();
+    const all = safeItems(t);
     scale = statScale(all);
     view = filter === 'all' ? all : all.filter((i) => i.group === filter);
     if (!view.length) view = all;
     sel = Math.max(0, Math.min(sel, view.length - 1));
     grid.textContent = '';
+    grid.classList.toggle('is-rows', t.kind === 'settings');
+    if (t.kind === 'settings') { cards = view.map(renderRow); paintSel(); return; }
     cards = view.map((it, i) => {
       const g = groupTint(it.group);
       const c = el('button', 'lk__card');
@@ -1226,11 +1358,39 @@ export function createInventory({ THREE, model, unitScale, ctrl, onEquip, initia
     }
   }
 
+  // specs/0019 — the settings page's own detail panel. The hero art and the
+  // stat bars are about an ITEM and there is no item here, so both stand down;
+  // what is left is the same head/blurb/fact-sheet furniture saying what the
+  // knob is and where it stands. THE PREVIEW COLUMN IS NOT TOUCHED: the
+  // mannequin keeps wearing whatever the last gear tab dressed it in, because
+  // this tab equips nothing and a figure that undressed itself when you opened
+  // the settings would be saying something untrue about your loadout.
+  function paintSettings(it) {
+    det.style.setProperty('--g', tab().accent);
+    heroImg.hidden = true;
+    heroBg.style.backgroundImage = 'none';
+    heroEq.hidden = true;
+    hero.hidden = true;
+    statsBox.textContent = '';
+    dBrand.textContent = 'settings';
+    dName.textContent = it.name;
+    dSpec.textContent = getSetting(it.key) ? 'on' : 'off';
+    dBlurb.textContent = it.desc || '';
+    factsEl.textContent = '';
+    for (const [k, v] of [['state', getSetting(it.key) ? 'on' : 'off'], ['default', 'off']]) {
+      const r = el('div', 'lk__fact');
+      r.append(el('span', 'k', k), el('span', 'v', v));
+      factsEl.append(r);
+    }
+  }
+
   function paintSel() {
     cards.forEach((c, i) => c.classList.toggle('is-sel', i === sel));
     const it = view[sel];
     if (!it) return;
     if (cards[sel] && cards[sel].scrollIntoView) cards[sel].scrollIntoView({ block: 'nearest' });
+    if (tab().kind === 'settings') { paintSettings(it); return; }
+    hero.hidden = false;
     const g = groupTint(it.group);
     det.style.setProperty('--g', g);
     const isEq = equipped[tab().id] === it.id;
@@ -1296,6 +1456,21 @@ export function createInventory({ THREE, model, unitScale, ctrl, onEquip, initia
   function equip() {
     const t = tab(), it = view[sel];
     if (!it) return;
+    // specs/0019 — on the settings page "equip" is "toggle", and that is the
+    // whole of it: one write through settings.js, the row repainted from what
+    // came back rather than from what we asked for, and the same landing click
+    // the cards get. onEquip is NOT called — this tab changes no gear, so
+    // main.js must never hear from it.
+    if (t.kind === 'settings') {
+      setSetting(it.key, !getSetting(it.key));
+      const row = cards[sel];
+      if (row) {
+        paintSwitch(row, it.key);
+        row.classList.remove('is-go'); void row.offsetWidth; row.classList.add('is-go');
+      }
+      paintSel();
+      return;
+    }
     equipped[t.id] = it.id;
     // a tab may bring its own persistence (every real rack does); the locker's
     // own localStorage key is the fallback for one that does not
@@ -1334,6 +1509,10 @@ export function createInventory({ THREE, model, unitScale, ctrl, onEquip, initia
 
   // how many cards fit across, for up/down
   function cols() {
+    // specs/0019 — the settings page is a LIST: up/down moves exactly one row,
+    // and it says so rather than relying on the measurement below happening to
+    // return 1 for a full-width row at every deck width
+    if (tab().kind === 'settings') return 1;
     if (!cards.length) return 1;
     const w = cards[0].offsetWidth || 1;
     const gap = 10;
@@ -1403,8 +1582,13 @@ export function createInventory({ THREE, model, unitScale, ctrl, onEquip, initia
       return true;                      // everything else is swallowed while up
     },
     // ---- test + wiring surface
-    // only the racks that are actually there; a rack that throws is not listed
-    tabs: () => TABS.filter((t) => !broken.has(t.id)).map((t) => t.id),
+    // THE RACKS that are actually there; a rack that throws is not listed, and
+    // neither is the settings page (specs/0019) — it holds no gear, main.js
+    // reports this list as the loadout's gear types, and the deploy gate asserts
+    // it is exactly the six racks in order. `pages()` below is where a non-rack
+    // tab is visible, and `tab()` still names whichever tab is on screen.
+    tabs: () => TABS.filter((t) => !broken.has(t.id) && t.kind !== 'settings').map((t) => t.id),
+    pages: () => TABS.filter((t) => !broken.has(t.id) && t.kind === 'settings').map((t) => t.id),
     tab: () => tab().id,
     setTab: (id) => { const i = TABS.findIndex((t) => t.id === id); if (i >= 0) setTab(i); return tab().id; },
     filter: () => filter,

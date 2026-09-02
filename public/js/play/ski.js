@@ -26,13 +26,23 @@
 //
 // Boots physics live in controller.js and never come through here.
 
-import { BRAND, pick } from './flags.js';
+import { BRAND, pick, pickBrand } from './flags.js';
 
 export const SKI_TUNING = {
   maxSpeed: 29,          // m/s — hard backstop; drag normally caps you below it
   slopeAccel: 0.92,      // × gravity·sinθ along the fall line
   glideFriction: 0.45,   // m/s² — constant snow drag
   dragQuad: 0.0085,      // 1/m — quadratic drag; ~28 m/s terminal on a 30° pitch
+  // ---- STATIC FRICTION (spec 0021 §1). Real skis hold on a slope until the
+  // skier lets them go; the three numbers below are the whole of that. `muS*`
+  // is tanθ at the hold angle, so `atan(muSnow)` = 30° (a standing skier holds
+  // a black run and does NOT hold a 40° cliff band) and `atan(muRock)` = 20°
+  // (skis on stone hold worse than skis on snow, not better). `holdV` is the
+  // speed below which the body counts as STANDING rather than sliding — above
+  // it the kinetic model below is untouched, so nothing about a run changes.
+  muSnow: 0.5774,        // tan 30°
+  muRock: 0.3640,        // tan 20°
+  holdV: 0.6,            // m/s — the standing/sliding line
   grip: 6.0,             // 1/s — lateral bleed rate at a standstill
   gripAtMax: 0.30,       // fraction of grip left at maxSpeed (drifty up top)
   carveRecover: 0.55,    // share of scrubbed lateral speed handed back forward
@@ -301,6 +311,9 @@ export function scaleSkiTuning(u, over = {}) {
     'dropV0', 'dropSpan', 'dropCompRef', 'dropFloor', 'popCompMax',
     // the takeoff impulse is a speed; its share of the bank is a ratio
     'pumpLaunchMax',
+    // the standing/sliding line is a speed; the two mu's are tangents of an
+    // angle and are unitless, so they must NOT scale
+    'holdV',
     'stivotVr']) S[k] *= u;
   for (const k of ['dragQuad', 'airDrag', 'rollPerLateral']) S[k] /= u;
   return S;
@@ -318,6 +331,38 @@ const wrapPi = (a) => { const m = (a + Math.PI) % (2 * Math.PI); return (m < 0 ?
 // laid on top, and is the number the renderer actually uses.
 let _chatT = 0, _chatter = 0;
 let _roll = 0, _rollOut = 0, _prevYaw = 0;
+
+// ---- static friction, for the HUD and the tests. `_hold` is 1 on a frame the
+// edges took the whole of gravity (the body is parked), 0.5 on a frame they took
+// as much as they could and the slope still won (a slow slide down something
+// past the hold angle), 0 whenever the model is kinetic — which is every frame
+// with a hand on the controls and every frame above `holdV`. `_holdMu` is the
+// coefficient that frame used, so "why did it not hold" is one number.
+const CLASS_ROCK = 1;
+let _hold = 0, _holdMu = 0;
+
+// Which coefficient the surface under the feet is worth. controller.js samples
+// `groundAt` at our position on the line above the call into this module, so
+// `groundClass()` is already the class under THESE feet — no second probe, and
+// nothing here writes to the collision soup. A caller that hands us no soup
+// (the rig previews, any future harness) gets snow, which is the safe answer:
+// snow holds better, so a missing class can only ever park a body that stone
+// would have let slide, never the other way round.
+function _muFor(ctx, S) {
+  const C = ctx.collision;
+  const cls = (C && typeof C.groundClass === 'function') ? C.groundClass() : 0;
+  return cls === CLASS_ROCK ? S.muRock : S.muSnow;
+}
+
+// Coulomb friction spending a budget of `dv` m/s against the XZ velocity. It
+// stops a body; it never reverses one, so the scale is clamped at zero.
+function _arrest(vel, dv) {
+  if (!(dv > 0)) return;
+  const sp = Math.hypot(vel.x, vel.z);
+  if (sp <= 1e-9) { vel.x = 0; vel.z = 0; return; }
+  const k = Math.max(0, sp - dv) / sp;
+  vel.x *= k; vel.z *= k;
+}
 
 // ---- pump state. The bank itself, which half of the turn we are in, the peak
 // engagement and when it happened (the two things the transition is graded on),
@@ -406,6 +451,7 @@ export function resetSki() {
   _lnx = 0; _lny = 1; _lnz = 0; _pumpNPaid = true;
   _lnPx = 0; _lnPy = 1; _lnPz = 0; _lnPeak = false;
   _dVyS = 0; _dropK = 0; _dropFull = 0; _dropCut = 0; _lastSp = 0; _vyRef = 0;
+  _hold = 0; _holdMu = 0;
 }
 
 export function skiState() {
@@ -432,6 +478,9 @@ export function skiState() {
     // ---- the drop-away: the surface's own vertical acceleration against
     // gravity, how much of the snap is being let go, and the two distances.
     dVyS: _dVyS, gravity: _grav, dropK: _dropK, snapFull: _dropFull, snapCut: _dropCut,
+    // ---- static friction: 1 = parked, 0.5 = holding as hard as it can and
+    // still losing, 0 = kinetic. `holdMu` is the coefficient of the surface.
+    hold: _hold, holdMu: _holdMu,
   };
 }
 
@@ -568,6 +617,12 @@ export function skiStep(ctx) {
 
     // ---- 1. fall line
     let nh = 0, dfx = 0, dfz = 0;
+    // HANDS OFF: no W/S (nor their grounded arrow aliases), no A/D, no arrows,
+    // no jump. `boosting` never reaches here at all — controller.js skips the
+    // gear model outright on a boosted frame — but `thrust` is checked anyway so
+    // this reads as the spec wrote it rather than as a fact about a caller.
+    const hands = push === 0 && turn === 0 && spin === 0 && !keys.jump && !ctx.thrust;
+    _hold = 0; _holdMu = 0;
     if (n) {
       nh = Math.hypot(n.x, n.z);                      // = sinθ for a unit normal
       if (nh > 1e-4) {
@@ -589,9 +644,36 @@ export function skiStep(ctx) {
             a *= 1 - k;
           }
         }
+        // ---- STATIC FRICTION (spec 0021 §1). Up to `mu * g * cosθ` of the
+        // along-slope pull is simply cancelled by the edges — so the body holds
+        // on anything up to `atan(mu)` and, past that, gets only the SURPLUS.
+        // `slopeAccel` multiplies both sides, which is what makes the hold angle
+        // exactly `atan(mu)` on every ski in the rack rather than a number that
+        // drifts with each model's own slope gain.
+        if (hands && sp0 < S.holdV) {
+          _holdMu = _muFor(ctx, S);
+          const cap = _holdMu * ctx.gravity * Math.abs(n.y) * S.slopeAccel * dt;
+          if (cap >= a) {
+            // parked. The pull is gone entirely, and what is LEFT of the edges'
+            // budget arrests whatever creep the body still carries — clamped at
+            // zero, because friction stops a body, it never reverses one.
+            _hold = 1;
+            _arrest(vel, cap - a);
+            a = 0;
+          } else {
+            _hold = 0.5;                              // past the hold angle: slides, slower
+            a -= cap;
+          }
+        }
         vel.x += dfx * a;
         vel.z += dfz * a;
       }
+    }
+    // ...and the same rule on ground too flat to HAVE a fall line: a standing
+    // body on the village square keeps nothing.
+    if (n && nh <= 1e-4 && hands && sp0 < S.holdV) {
+      _hold = 1; _holdMu = _muFor(ctx, S);
+      _arrest(vel, _holdMu * ctx.gravity * Math.abs(n.y) * S.slopeAccel * dt);
     }
 
     let vf = vel.x * fx + vel.z * fz;
@@ -1219,7 +1301,7 @@ export const SKI_REF = { len: 180, waist: 88 };   // the geometry of lab-standar
 
 export const SKI_MODELS = [
   {
-    id: 'lab-standard', name: pick('Lab Standard', 'Siberia 180'), brand: BRAND,
+    id: 'lab-standard', name: pickBrand({ lab: 'Lab Standard', 'RED DOG': 'Red Dog 180', SIBERIA: 'Siberia 180' }), brand: BRAND,
     disc: 'lab', group: 'lab', len: 180, waist: 88, radius: 18,
     blurb: 'The house ski. Every number in ski.js exactly as written — the ruler the rest of the rack is measured against.',
     look: { base: '#ff4d00', ink: '#17161a', accent: '#f4f1ea', pattern: 'lab' },

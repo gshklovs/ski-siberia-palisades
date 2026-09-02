@@ -186,3 +186,98 @@ export function tube(B, p0, p1, r, col, sides = 6, r1 = null) {
 export function plate(B, pts, col) {
   for (let i = 1; i < pts.length - 1; i++) tri(B, pts[0], pts[i], pts[i + 1], col);
 }
+
+// ============================================== NAMED DIALS AND LOOK PRESETS
+//
+// specs/0024, ported from the Red Dog run's lib/core.mjs. THIS SECTOR IS NOT ON
+// THE SHADER LOOK: specs/0005's L1-L4 landed on palisades-front only, so there
+// is no uniform plumbing here, no registerLookLayer and no `installLook` — the
+// dial constructors below are the SUBSET the preset needs, which is the sky
+// dome and the two lights and nothing else.
+//
+// That is why the golden-hour table can be copied across verbatim: `preset()`
+// skips a name this build does not have, so the L2 rows (SUN_RAMP_*,
+// SHADOW_TINT, FOG_BAND_COLOR, SUN_STEP_EDGE) fall through here and only the
+// sky and light rows apply.
+
+/** The named-tunable surface, `window.__look`. */
+export const LOOK = {};
+
+/** a Float32Array preloaded with `init` */
+export const f32 = (init) => Float32Array.from(init);
+
+const hexes = new Map();
+
+/** LOOK.NAME <-> an sRGB hex written into arr[off..off+2] as LINEAR rgb. */
+export function dialColor(name, arr, off, hex) {
+  const write = (h) => {
+    const c = lin(h);
+    arr[off] = c[0]; arr[off + 1] = c[1]; arr[off + 2] = c[2];
+    hexes.set(name, h);
+  };
+  write(hex);
+  Object.defineProperty(LOOK, name, {
+    get: () => hexes.get(name), set: write, enumerable: true, configurable: true,
+  });
+}
+
+// ----------------------------------------------------------------- presets
+const PRESETS = new Map();
+let CURRENT = 'default';
+
+function readDial(name) {
+  const v = LOOK[name];
+  return (v && typeof v === 'object' && typeof v.length === 'number') ? Array.from(v) : v;
+}
+
+function writeDial(name, v) {
+  if (Array.isArray(v)) {
+    const view = LOOK[name];
+    for (let i = 0; i < v.length && i < view.length; i++) view[i] = v[i];
+  } else {
+    LOOK[name] = v;
+  }
+}
+
+/**
+ * Register the preset tables; `tables.default` is filled in place from the
+ * dials. It captures the UNION OF WHAT THE OTHER TABLES NAME, not every dial —
+ * a preset undoes its own writes, and a dial no preset touched is somebody
+ * else's state (on the Red Dog run, restoring the whole registry wrote over
+ * TRACKS_GAIN, which the player owns at runtime).
+ */
+export function definePresets(tables) {
+  const captured = tables.default || (tables.default = {});
+  for (const [name, table] of Object.entries(tables)) {
+    if (name === 'default') continue;
+    for (const k of Object.keys(table)) if (k in LOOK && !(k in captured)) captured[k] = readDial(k);
+  }
+  for (const [name, table] of Object.entries(tables)) PRESETS.set(name, table);
+  return LOOK;
+}
+
+LOOK.presets = () => [...PRESETS.keys()];
+
+LOOK.preset = (name) => {
+  if (name === undefined) return CURRENT;
+  const table = PRESETS.get(name);
+  if (!table) {
+    console.warn(`look: no preset "${name}" — have ${[...PRESETS.keys()].join(', ') || '(none)'}`);
+    return null;
+  }
+  const undo = PRESETS.get('default');
+  const applied = [];
+  for (const [k, v] of Object.entries(table)) {
+    if (!(k in LOOK)) continue;                       // a dial this build does not have
+    if (undo && !(k in undo)) undo[k] = readDial(k);
+    writeDial(k, v);
+    applied.push(k);
+  }
+  CURRENT = name;
+  return applied;
+};
+
+// the tuning handle. On palisades-front this is installLook()'s last line;
+// there is no installLook here, and core.mjs is imported by every scene module,
+// so the global is published from the module that owns LOOK.
+try { globalThis.__look = LOOK; } catch { /* no global to hang it on */ }

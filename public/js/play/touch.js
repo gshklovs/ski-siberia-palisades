@@ -27,7 +27,9 @@
 //   right half  drag              look                P.look(dx*.9, dy*.9, LOOK)
 //   right half  tap               jump                keys.jump (edge)
 //   right half  hold              jumpHeld            level, for the flare/pop path
+//   any         tap on a sign     arm it              markers.touchAim(id)
 //   any         double-tap        reset               P.respawn()
+//   a sign      double-tap on it  fast travel there   markers.fastTravel(id)
 //   any         fast flick in the air                 spin
 //   any         two-finger tap    camera              C
 //
@@ -350,6 +352,18 @@ function start() {
     e.preventDefault();
   }, { passive: false });
 
+  // ---- the signs (specs/0016). markers.js is OPTIONAL and it is not imported:
+  // it attaches its handle during world boot, which is after this file runs, and
+  // a world with no markers never mounts it at all. So the handle is read fresh
+  // on every tap and a missing one is not an error — it is a world without signs,
+  // where the double-tap is the reset it always was. markers.js does the deciding
+  // (which sign, occluded or not, and every gate the T key answers to); this file
+  // only says where the finger landed.
+  const mk = () => { try { return window.__playMarkers || null; } catch { return null; } };
+  const signAt = (x, y) => { const M = mk(); try { return (M && M.signAt) ? M.signAt(x, y) : null; } catch { return null; } };
+  const touchAim = (id) => { const M = mk(); try { if (M && M.touchAim) M.touchAim(id); } catch { /* no signs */ } };
+  const travel = (id) => { const M = mk(); try { if (M && M.fastTravel) M.fastTravel(id); } catch { /* no signs */ } };
+
   const end = (e) => {
     reconcile(e, true);
     const now = performance.now();
@@ -370,15 +384,29 @@ function start() {
       // gesture, so it can no longer eat the jump or the reset.
       if (!quick || s.mates) continue;
 
-      // DOUBLE-TAP, either half, is the reset. It is checked FIRST so the second
-      // tap of a double on the right half resets instead of also jumping — one
-      // gesture, one outcome.
+      // WHAT IS UNDER THE FINGER (specs/0016). markers.js answers in its own
+      // screen-space terms; a world with no signs, or an export that never
+      // shipped the module, answers null and everything below is what it was.
+      const hit = signAt(s.x, s.y);
+
+      // DOUBLE-TAP, either half, is the reset — UNLESS both taps landed on the
+      // same sign, in which case it is the mobile fast travel: 'T' has no key to
+      // press on a phone, and a sign under the thumb is a better thing to mean
+      // than a reset. It is all checked FIRST so the second tap of a double on the
+      // right half neither jumps nor resets — one gesture, one outcome.
       if (lastTap && now - lastTap.t < DBL_MS && Math.hypot(s.x - lastTap.x, s.y - lastTap.y) < DBL_PX) {
+        const same = hit && lastTap.sign && hit.id === lastTap.sign;
         lastTap = null;
-        P.respawn();
+        if (same) travel(hit.id); else P.respawn();
         continue;
       }
-      lastTap = { t: now, x: s.x, y: s.y };
+      // Remember WHICH sign, not just where, so the pair has to agree about the
+      // target and not merely about the pixel. And arm it: the offer moves to this
+      // sign for a beat, so the chip names what a second tap would take you to.
+      // The arm is a side effect — this tap still jumps if it was on the right
+      // half, exactly as before.
+      lastTap = { t: now, x: s.x, y: s.y, sign: hit ? hit.id : null };
+      if (hit) touchAim(hit.id);
       // tap right = jump. The RETRACTION is measured in FRAMES, not milliseconds,
       // and that is a real bug fix rather than a style choice. controller.js
       // clears this edge itself on any update that reads it (`keys.jump = false;

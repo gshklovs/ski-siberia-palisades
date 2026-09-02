@@ -21,8 +21,9 @@
 //   debugHud  true  → the top-left readout, the fps chip, the B reference
 //                     viewer, the full ESC key reference, the bench pause row,
 //                     the T fast-travel card, the [play] console dump.
-//   brand     'RED DOG' | 'POI-LAB' → the wordmark on the gear, the HUD chip,
-//                     the pause header and the tab title.
+//   brand     the WORDMARK on the gear, the HUD chip, the pause header and the
+//                     tab title. Any non-empty string — 'RED DOG', 'SIBERIA',
+//                     the next world's — and 'POI-LAB' (the lab) when unset.
 //   label     bench chrome only: the name the LAB lists this world/mode under.
 //                     It never reaches the game, so a bench mode that reproduces
 //                     the shipped build reproduces it exactly and still shows up
@@ -67,12 +68,26 @@ export const FULL_GEAR_MENU = GEAR_SET === 'full';
 export const DEBUG_HUD = P.debugHud !== false;
 
 // -------------------------------------------------------------------- brand
-// PATCHED by poi-lab tools/export-red-dog for world #2 (worlds/siberia.json).
-// Upstream this is a two-value enum and 'SIBERIA' would resolve to POI-LAB —
-// the internal identity string, on the skis, on a public site. Here any
-// non-empty brand is taken at its word; the LAB is still the only fallback.
+//
+// BRAND IS THE WORDMARK, whatever the host page calls this world. It used to be
+// a two-value enum ('RED DOG' or the lab), which was the right shape while there
+// was exactly one shareable build. It stopped being right at world #2: a third
+// value did not fall through to "some other product", it fell through to
+// POI-LAB — the INTERNAL identity string D9 exists to keep off a screenshot —
+// and it would have been painted on the ski topsheet, the toboggan deck, the
+// snowmobile cowl, the boots card, the HUD chip and the pause header of a public
+// site. Siberia carried that fix as tools/export-red-dog/patches/siberia/
+// flags-brand.patch.mjs from 2026-09-01 until specs/0027 promoted it here.
+//
+// Any non-empty brand is now taken at its word. The LAB is still the only
+// fallback, for this file's standing reason: forgetting a flag must fail towards
+// showing the workshop, never towards shipping something unnoticed.
 export const BRAND = (typeof P.brand === 'string' && P.brand.trim()) ? P.brand.trim() : 'POI-LAB';
-// Still "is this a shipped build", which is what every call site means by it.
+
+// Still "is this a shipped build", which is what every one of its ~20 call sites
+// means by it — "not the lab, take the second branch". It keeps the name it has
+// had since there was one build to ship, because renaming it would touch eight
+// player modules and change nothing.
 export const RED_DOG = BRAND !== 'POI-LAB';
 
 // Pick a string per brand. Two arguments in the order (lab, red) at every call
@@ -80,6 +95,26 @@ export const RED_DOG = BRAND !== 'POI-LAB';
 // identity string in the build — which is exactly what D9 wants to be able to
 // audit.
 export const pick = (lab, red) => (RED_DOG ? red : lab);
+
+// THE SAME TABLE, ONE COLUMN PER WORLD, for the strings that are not "lab or
+// shipped" but "which mountain is this". `pick(` above answers the first
+// question and is still the whole of the answer for gear that is the lab's
+// standard kit under a house name; `pickBrand(` answers the second, keyed on the
+// wordmark itself:
+//
+//     pickBrand({ lab: 'Lab Standard', 'RED DOG': 'Red Dog 180', SIBERIA: 'Siberia 180' })
+//
+// A wordmark with no column falls back to `lab`, which is the same failure
+// direction as every other default here: a world that forgets to add itself
+// shows the lab's own string, and a lab string on a public site is what the
+// D9 audit and the gate's banned-string check are both looking for.
+//
+// Together `grep -n "pick(\|pickBrand("` is still the complete table of every
+// user-visible identity string in the player — the audit 0003/D9 asked for,
+// widened by a column rather than replaced (specs/0027).
+export const pickBrand = (table) => (
+  Object.prototype.hasOwnProperty.call(table, BRAND) ? table[BRAND] : table.lab
+);
 
 // -------------------------------------------------------------------- label
 export const LABEL = (typeof P.label === 'string' && P.label) ? P.label : null;

@@ -37,12 +37,13 @@ import { createHud } from './hud.js';
 import { createLifts } from './lift.js';
 import { createBoost } from './boost.js';
 import { createDev } from './dev.js';
+import { tracks } from './tracks.js';
 import './fx.js';
 import './surprise.js';
 import './snowball.js';
 import './markers.js';
 import './audio.js';
-import { BIKE_GEAR, FULL_GEAR_MENU, DEBUG_HUD, LABEL, pick } from './flags.js';
+import { BIKE_GEAR, FULL_GEAR_MENU, DEBUG_HUD, LABEL, pickBrand } from './flags.js';
 
 const cfg = window.__PLAY;
 const say = cfg.say || (() => {});
@@ -613,6 +614,409 @@ fpSnow.name = 'play:fp-snowmobile';
 fpSnow.visible = false;
 world.scene.add(fpSnow);
 
+// ----------------------------------------------------- specs/0015 the tumble
+// THE POSED TUMBLE. The controller already spends the event — `wipeout(why)`
+// scrubs the velocity and puts 0.9 s on `wipeT` — and until 0015 the only thing
+// on screen was a lens wobble under a body that kept standing in its riding
+// tuck. This is the body going DOWN and getting back up inside that same 0.9 s,
+// and the eye going down with it, both read off ONE solver so first and third
+// person can never disagree about where the head is.
+//
+// The clock is `tw = 0.9 - wipeT`, which makes every pose a pure function of the
+// controller's own countdown. That is not a stylistic choice: it is the only
+// reason the acceptance strips can be shot at all, because `wipeT` freezes when
+// the game is paused and the rig keeps drawing, so "the frame at t = 0.3 s" is a
+// frame anybody can take twice and get the same pixels.
+//
+// Nothing here writes to the controller. Every number below is a picture.
+const TUM_LEN = 0.9;                    // s — wipeT's span; not ours to change
+// A CONTACT, as opposed to a landing you fluffed: something solid stopped the
+// body, so the first 0.15 s is a fold against it rather than a pitch over the
+// tips. specs/0018 put four more names on the same event — a tower, a building,
+// a person and a bench are all "you hit a thing" — so this is a SET and not an
+// `=== 'tree'` that the next solid thing would have to be threaded through.
+const TUM_SOLID = new Set(['tree', 'rock', 'building', 'tower', 'person', 'bench']);
+const TUM = {
+  FOLD: 0.15,        // s — the stop, on a contact
+  BACK: 0.15,        // m — how far a contact folds the body back along -v
+  KICK_PITCH: 0.14,  // rad — 8 deg of nose-down that goes with it
+  ROLL: 0.30,        // rad — the prone roll's CHATTER, ±0.30 at 6 Hz, decaying
+  ROLL_HZ: 6.0,      // Hz
+  ROLL_DAMP: 0.34,   // s — its envelope
+  FOLD_ROLL: 0.20,   // rad — ...and the lean the fold itself puts on
+  // ...plus a roll the body HOLDS through the slide. The chatter alone is a sine
+  // through zero, so whichever instant the shutter falls on is as likely to be
+  // flat as not, and a prone body photographed flat is a plank. 15 deg onto the
+  // shoulder it was thrown over is where a body that fell actually lies, and it
+  // gives the chatter something to chatter around.
+  PRONE_ROLL: 0.26,  // rad
+  SPIN: 1.35,        // rad — peak yaw a contact throws you through
+  SPIN_ROT: 1.85,    // rad — ...and a rotation wipe, which keeps turning
+  EYE: 0.45,         // m — how low the eye gets (spec §3)
+  EYE_FLOOR: 0.25,   // m — ...and how close to the snow it may ever come
+  // §3's floor is 0.6 m off the trunk AXIS. This is 0.95, and the extra 0.35 m
+  // is not decoration: a 0.24 m trunk with the lens 0.36 m off its bark is a
+  // black rectangle filling the frame, not a tree. Measured on the first strips,
+  // which came back unreadable. Still a floor, never a target — the eye is only
+  // ever pushed OUT to it.
+  STEM_R: 0.95,      // m — how far the eye is kept off a trunk axis
+  STEM_PROBE: 2.20,  // m — how wide a net the eye casts looking for that trunk
+  SPLAY: 0.50,       // rad — the skis fan out
+  LIFT: 0.10,        // m — ...and come off the snow, because they are on a body
+  CHASE_IN: 1.30,    // m — the chase steps in and down so the fold fills the frame
+  CHASE_DOWN: 0.85,  // m
+  // ...and SWINGS OFF THE AXIS, which is the single biggest thing in the frame.
+  // From dead astern a body folding against a trunk is a body with a trunk
+  // behind it: the fold happens along the view axis, so the one motion the shot
+  // exists to show is the one motion the camera cannot see, and the fir fills the
+  // middle of the picture as a flat dark slab. 49 deg round puts the fold across
+  // the frame and the tree beside it against open snow. Same medicine, same
+  // reason, as BIKE_SWING two dozen lines below.
+  CHASE_SWING: 0.85, // rad
+};
+
+// ---- the keyframe tracks. `[t, v]` in TUMBLE seconds, smoothstepped across
+// each segment so no joint in the animation is a corner. Every track starts and
+// ends at the riding value, which is what makes the entry and the exit pop-free
+// without anybody having to remember to fade them.
+const TUM_KF = {
+  // pitch of the whole body. Two tracks and the whole difference between them is
+  // §2's last paragraph: a fluffed landing pitches over the tips in one motion;
+  // a contact STOPS at 0.6 rad, holds there for the fold, and goes down second.
+  pitchAir:   [[0, 0], [0.15, 1.30], [0.60, 1.32], [0.78, 0.42], [0.86, -0.14], [0.90, 0]],
+  pitchSolid: [[0, 0], [0.035, 0.60], [0.15, 0.68], [0.33, 1.30], [0.60, 1.32], [0.80, 0.42], [0.87, -0.14], [0.90, 0]],
+  // authority: how much of the pose above is on screen. Three frames in (the
+  // fold IS a snap), all the way through the slide, and handed back over the
+  // last 0.18 s so the get-up lands exactly on the riding pose.
+  auth:  [[0, 0], [0.045, 1], [0.72, 1], [0.90, 0]],
+  // the hips pressing into the snow — small, but without it the prone body is a
+  // plank hovering at ankle height rather than something with weight in it
+  sink:  [[0, 0], [0.15, 0.03], [0.60, 0.05], [0.82, 0.01], [0.90, 0]],
+  // yaw: out, and back as the body re-aims downhill getting up
+  spin:  [[0, 0], [0.15, 0.24], [0.45, 0.86], [0.62, 1.0], [0.80, 0.52], [0.90, 0]],
+  // the roll the slide HOLDS, under the chatter
+  rollHold: [[0, 0], [0.16, 1], [0.62, 1], [0.84, 0.25], [0.90, 0]],
+  // how far the prone body has swung onto the velocity vector (§2's "lies along
+  // the velocity vector"). Body only — see the note at the yaw write below.
+  align: [[0, 0], [0.20, 1], [0.62, 1], [0.90, 0]],
+  // the eye's own drop, 0 = riding height, 1 = TUM.EYE. §3: 0.15 s down, hold,
+  // and the last 0.3 s to come back.
+  eye:   [[0, 0], [0.15, 1], [0.60, 1], [0.90, 0]],
+  // ...and where the lens points while it is down there. -0.42 rad, not the
+  // -0.60 the first pass used: at 34 deg of nose-down from an eye 45 cm off the
+  // snow the horizon leaves the top of the frame and every prone frame is a
+  // featureless white field. At 24 deg the skyline stays in shot, and then the
+  // roll below has something to roll.
+  camP:  [[0, 0], [0.15, -0.42], [0.60, -0.40], [0.80, -0.13], [0.88, 0.07], [0.90, 0]],
+  // the contact's kick-back, in 3 frames at 60 and gone by the time the fold is
+  kick:  [[0, 0], [0.008, 1], [0.05, 1], [0.16, 0], [0.90, 0]],
+  // the backward displacement the same contact folds the body by. It is the SAME
+  // 0.15 m the camera took above, held through the slide and released with the
+  // get-up, so the eye and the body never disagree about where the impact put you.
+  back:  [[0, 0], [0.008, 1], [0.30, 1], [0.60, 0.62], [0.90, 0]],
+  // the arms: up and forward at the hit, splayed through the slide, down as you
+  // stand. Negative x is forward/up here — `c * 0.9` sweeps them back into a tuck.
+  arm:   [[0, 0], [0.075, -1.15], [0.30, -0.42], [0.60, -0.32], [0.82, -0.04], [0.90, 0]],
+  // the skis: fanned and off the snow while the body is on it
+  ski:   [[0, 0], [0.16, 1], [0.60, 1], [0.84, 0.15], [0.90, 0]],
+};
+
+// the short way round from `b` to `a`, in radians. Without it a body whose
+// velocity heading is 179° from its look would take the long way through the
+// whole tumble, which reads as a helicopter rather than a fall.
+function angDiff(a, b) {
+  let d = (a - b) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return d;
+}
+
+// linear-in-t, smoothstep-in-v sampling of one track
+function tumAt(track, t) {
+  const n = track.length;
+  if (t <= track[0][0]) return track[0][1];
+  if (t >= track[n - 1][0]) return track[n - 1][1];
+  for (let i = 1; i < n; i++) {
+    const [t1, v1] = track[i];
+    if (t > t1) continue;
+    const [t0, v0] = track[i - 1];
+    const s = (t - t0) / (t1 - t0 || 1);
+    return v0 + (v1 - v0) * s * s * (3 - 2 * s);
+  }
+  return track[n - 1][1];
+}
+
+// The solver's whole output, in one object both views read. Written once a frame
+// in camRig.update(); read by applyTo() (the eye) and updateVisuals() (the body).
+const tum = {
+  on: false, t: 0, w: 0, why: null, solid: false, sign: 1, auth: 0,
+  pitch: 0, roll: 0, spin: 0, align: 0, sink: 0, arm: 0, ski: 0,
+  bx: 0, bz: 0, back: 0,               // the fold's displacement, in world x/z
+  eye: 0, eyeDrop: 0, camP: 0, camR: 0, camY: 0,
+  yawVel: 0,                           // heading of the velocity at the hit
+  // measured, for the gate: how close the eye came to the snow and to a trunk
+  eyeGround: 0, eyeStem: -1, stemDist: -1, clampedGround: 0, clampedStem: 0,
+  n: 0,                                // wipes this rig has posed
+};
+let tumPrevWipe = 0;
+
+// The SIGN of the spin. specs/0015 §2: a rotation wipe keeps turning the way it
+// was turning, and a contact spins you AWAY from what you hit. `lastTrick.deg`
+// carries the first (the controller records the air spin it failed to close);
+// for a contact it is 0, because `wipeout('tree')` takes no angle — so the sign
+// comes off the geometry instead. `collision.stemHit` and `ctrl.lastBlock` are
+// the two contact normals the player already has; failing both, it is the side
+// the body is sliding out on.
+//
+// HEADS-UP, deliberate: the controller does not publish WHICH stem the wipe was
+// against (`canopyStem` is cleared for the duration of a tumble by design, and
+// `wipeout()` takes no index). specs/0015 §3 allows `solids.nearest`, which does
+// not exist; the equivalent that does is a wide `stemHit` probe, which answers
+// with the deepest trunk inside `STEM_PROBE` of the body. In a glade tight enough
+// for two trunks to be in that net it can pick the neighbour. Nothing downstream
+// is wrong when it does — the eye is pushed off A trunk rather than THE trunk.
+function tumContactNormal() {
+  const p = ctrl.position;
+  if (collision.stemHit) {
+    const h = collision.stemHit(p.x, p.y, p.z, TUM.STEM_PROBE * unitScale, unitScale);
+    if (h) return { nx: h.nx, nz: h.nz, stem: h.i };
+  }
+  const b = ctrl.lastBlock;
+  if (b && Number.isFinite(b.nx)) return { nx: b.nx, nz: b.nz, stem: -1 };
+  return null;
+}
+
+// WHICH WAY IT THROWS YOU. specs/0015 §2: a rotation wipe keeps turning the way
+// it was turning, and a contact spins you away from what you hit.
+//
+// The first half is now a read, not a reconstruction. The rig used to watch
+// `ctrl.airSpinDeg` frame by frame and keep the last sign it saw over 5°,
+// because `lastTrick.deg` is a magnitude and `wipeout()` zeroed `airSpin` in the
+// same breath — a latch that survived across accidents and only saw the frames
+// the rig was posed on. controller.js reads the sign itself now and puts it on
+// the wipe event as `spinDir` (specs/0028 §1), so there is one source and it is
+// exact: ±1 for a rotation left open, 0 when there was no air.
+//
+// 0 falls through to the geometry below, which is every contact wipe.
+function tumSign(lt) {
+  if (lt && lt.spinDir) return lt.spinDir;
+  const v = ctrl.velocity;
+  const c = tumContactNormal();
+  // away from the contact: the cross product of where you were going and where
+  // the surface points is which way the body gets thrown round
+  if (c) {
+    const s = v.x * c.nz - v.z * c.nx;
+    if (Math.abs(s) > 1e-3) return Math.sign(s);
+  }
+  // ...or the side you were already sliding out on. right = (cos yaw, -sin yaw).
+  const lat = v.x * Math.cos(ctrl.yaw) - v.z * Math.sin(ctrl.yaw);
+  return lat < 0 ? -1 : 1;
+}
+
+// ONE SOLVE A FRAME, and the only place any tumble number is decided. Called
+// from camRig.update() before anything reads `tum`.
+function tumbleStep() {
+  const u = unitScale;
+  const wt = ctrl.wipeT;
+  // THE EDGE. Everything that depends on the moment of the hit rather than on
+  // the clock — which way it throws you, whether it was a contact, where the
+  // body was going — is latched here and held for the whole 0.9 s. Re-deriving
+  // the spin sign every frame from a velocity the scrub is still rotating would
+  // let the body change its mind about which way it is falling.
+  // `wipeT` only ever counts DOWN, so a value that went up is a fresh wipeout
+  // even if the rig never saw the zero in between — which is what happens
+  // whenever the controller is stepped faster than the rig is posed (a
+  // deterministic test ride does exactly that, and so does a dropped frame).
+  if (wt > 0 && (tumPrevWipe <= 0 || wt > tumPrevWipe + 1e-6)) {
+    const lt = ctrl.lastTrick;
+    tum.why = lt && lt.name === 'wipeout' ? (lt.why || null) : null;
+    tum.solid = TUM_SOLID.has(tum.why);
+    tum.sign = tumSign(lt);
+    const v = ctrl.velocity;
+    const vm = Math.hypot(v.x, v.z);
+    tum.yawVel = vm > 0.5 * u ? Math.atan2(-v.x, -v.z) : ctrl.yaw;
+    const c = tum.solid ? tumContactNormal() : null;
+    tum.eyeStem = c ? c.stem : -1;
+    tum.n++;
+  }
+  tumPrevWipe = wt;
+
+  const riding = ctrl.mode !== 'boots' && !ctrl.footedNow;
+  if (!(wt > 0) || !riding) {
+    tum.on = false; tum.auth = 0; tum.t = 0; tum.w = 0;
+    tum.pitch = tum.roll = tum.spin = tum.align = tum.sink = tum.arm = tum.ski = 0;
+    tum.bx = tum.bz = tum.back = 0;
+    tum.eyeDrop = 0; tum.eye = ctrl.T.eyeHeight;
+    tum.camP = tum.camR = tum.camY = 0;
+    tum.stemDist = -1; tum.clampedGround = 0; tum.clampedStem = 0;
+    tum.eyeGround = 0;
+    return;
+  }
+
+  const t = tum.t = TUM_LEN - wt;              // 0 -> 0.9, the tumble's own clock
+  tum.on = true;
+  tum.w = wt / TUM_LEN;
+  const a = tum.auth = tumAt(TUM_KF.auth, t);
+  const K = TUM_KF;
+
+  tum.pitch = tumAt(tum.solid ? K.pitchSolid : K.pitchAir, t);
+  tum.sink = tumAt(K.sink, t) * u;
+  tum.arm = tumAt(K.arm, t);
+  tum.ski = tumAt(K.ski, t);
+  tum.align = tumAt(K.align, t);
+
+  // ---- the roll. A lean onto the spin side while the body folds, then the
+  // ±0.3 rad 6 Hz chatter of a body actually sliding on snow, decaying. One
+  // expression, so fp and tp cannot drift apart by a frame.
+  const fold = Math.min(1, t / TUM.FOLD);
+  const st = Math.max(0, t - TUM.FOLD);
+  const osc = Math.sin(st * Math.PI * 2 * TUM.ROLL_HZ) * Math.exp(-st / TUM.ROLL_DAMP);
+  const prone = t > TUM.FOLD ? 1 : 0;
+  tum.roll = tum.sign * (TUM.FOLD_ROLL * fold * fold
+    + TUM.PRONE_ROLL * tumAt(TUM_KF.rollHold, t)
+    + TUM.ROLL * osc * prone);
+
+  // ---- the spin
+  tum.spin = tum.sign * tumAt(K.spin, t) * (tum.solid ? TUM.SPIN : TUM.SPIN_ROT);
+
+  // ---- the fold's displacement, along -v. A contact only: nothing pushes you
+  // back off a landing you simply fluffed.
+  const bk = tum.solid ? tumAt(K.back, t) * TUM.BACK * u : 0;
+  tum.back = bk;
+  if (bk > 1e-6) {
+    const yv = tum.yawVel;
+    // forward is (-sin yaw, -cos yaw), so backward is its negation
+    tum.bx = Math.sin(yv) * bk; tum.bz = Math.cos(yv) * bk;
+  } else { tum.bx = 0; tum.bz = 0; }
+
+  // ---- the eye, and the lens
+  const eye0 = ctrl.T.eyeHeight;
+  tum.eyeDrop = tumAt(K.eye, t) * a;
+  tum.eye = eye0 + (TUM.EYE * u - eye0) * tum.eyeDrop;
+  const kick = tum.solid ? tumAt(K.kick, t) : 0;
+  tum.camP = (tumAt(K.camP, t) - TUM.KICK_PITCH * kick) * a;
+  tum.camR = tum.roll * a;
+  tum.camY = tum.spin * a;
+
+  // ---- EYE RADIUS (§3). While the eye is this low it can be inside the snow or
+  // inside the wood, and both are the same bug with different textures. Probed
+  // and clamped HERE rather than in applyTo() because applyTo() is also called
+  // from the boot and from a respawn, and the clamp has to be a fact about the
+  // frame the solver produced and not about how many times somebody asked for a
+  // camera matrix.
+  const p = ctrl.position;
+  let ex = p.x + tum.bx, ez = p.z + tum.bz, ey = p.y + tum.eye;
+  tum.clampedGround = 0; tum.clampedStem = 0;
+  const floor = TUM.EYE_FLOOR * u;
+  const clampGround = () => {
+    const g = collision.groundAt(ex, ez, ey + 2 * u);
+    if (g === null) { tum.eyeGround = -1; return; }
+    if (ey < g + floor) { tum.clampedGround += g + floor - ey; ey = g + floor; }
+    tum.eyeGround = +(ey - g).toFixed(4);
+  };
+  clampGround();
+  // ...and off the trunk. Pushed back along -v̂, which is the direction the body
+  // arrived from and therefore the one direction guaranteed to be clear of it.
+  tum.stemDist = -1;
+  if (tum.solid && collision.stemHit && collision.stemAt) {
+    const h = collision.stemHit(ex, ey, ez, TUM.STEM_PROBE * u, u);
+    const s = h ? collision.stemAt(h.i) : null;
+    if (s) {
+      // scaled by `auth` for the same reason every other value here is: on the
+      // frame of the hit the eye is still the riding eye, and a lens that jumped
+      // 0.4 m backwards in one frame — before the kick-back had even started —
+      // read as a cut rather than as an impact. At auth 0 the push is 0, and the
+      // eye at riding height is well outside the bark anyway.
+      const want = TUM.STEM_R * u * a;
+      let d = Math.hypot(ex - s.x, ez - s.z);
+      // march back along -v̂ until the axis is `want` away. Bounded on purpose:
+      // a body that hit the trunk dead centre has no -v̂ that helps, and 24 steps
+      // of 0.05 m is 1.2 m, wider than any trunk in the hash.
+      const bxu = Math.sin(tum.yawVel) * 0.05 * u, bzu = Math.cos(tum.yawVel) * 0.05 * u;
+      for (let k = 0; k < 24 && d < want; k++) {
+        ex += bxu; ez += bzu;
+        d = Math.hypot(ex - s.x, ez - s.z);
+        tum.clampedStem += 0.05 * u;
+      }
+      tum.stemDist = +d.toFixed(4);
+      // the push moved the eye over new ground, so the floor is re-asked. Both
+      // clamps only ever raise the eye, so the second pass cannot undo the first.
+      if (tum.clampedStem > 0) clampGround();
+    }
+  }
+  tum.clampedGround = +tum.clampedGround.toFixed(4);
+  tum.clampedStem = +tum.clampedStem.toFixed(4);
+  tum.bx = ex - p.x; tum.bz = ez - p.z;
+  tum.eye = ey - p.y;
+}
+
+// The tumble's test surface, in the shape `__speedlines` and `__sparks` already
+// use. A pose is a matrix and a matrix cannot be interrogated from a gate, so
+// the two numbers §5 actually asserts on — how high the head is and how high the
+// eye is, frame by frame — are published rather than measured off a screenshot.
+// Read-only: nothing here writes to the picture.
+window.__tumble = {
+  on: () => tum.on,
+  n: () => tum.n,
+  // the tumble's own clock and the controller's countdown it is derived from
+  t: () => +tum.t.toFixed(4),
+  wipeT: () => +ctrl.wipeT.toFixed(4),
+  why: () => tum.why,
+  solid: () => tum.solid,
+  sign: () => tum.sign,
+  auth: () => +tum.auth.toFixed(4),
+  // WHERE THE HEAD IS, in metres above the body's own ground point. The head
+  // mesh sits at 1.52 u on a rig that pivots at the feet, so this is that height
+  // swung through the tumble's pitch and roll — the same arithmetic three.js is
+  // about to do, rather than a second guess at it.
+  headY: () => {
+    const h = 1.52 * unitScale;
+    const a = tum.on ? tum.auth : 0;
+    const c = camRig.state.crouch;
+    const pitch = 0.55 * c * (1 - a) + tum.pitch * a;
+    const roll = tum.roll * a;
+    // the same two writes updateVisuals makes, in the same order
+    const base = -0.34 * unitScale * c;
+    const y = base + (-tum.sink - base) * a;
+    return +(h * Math.cos(pitch) * Math.cos(roll) + y).toFixed(4);
+  },
+  // ...and where the eye is, on the same datum
+  eyeY: () => +(tum.on ? tum.eye : ctrl.T.eyeHeight).toFixed(4),
+  // §3's two floors, measured on the frame that was just solved
+  eyeToGround: () => +tum.eyeGround.toFixed(4),
+  eyeToStem: () => +tum.stemDist.toFixed(4),
+  stem: () => tum.eyeStem,
+  clamped: () => ({ ground: tum.clampedGround, stem: tum.clampedStem }),
+  // TOTAL displacement of the eye from the body, and the FOLD's own half of it.
+  // They differ by whatever the trunk push-out added, and a gate asserting §2's
+  // 0.15 m has to be able to see the fold on its own.
+  back: () => +Math.hypot(tum.bx, tum.bz).toFixed(4),
+  fold: () => +tum.back.toFixed(4),
+  pose: () => ({
+    t: +tum.t.toFixed(4), auth: +tum.auth.toFixed(4), pitch: +tum.pitch.toFixed(4),
+    roll: +tum.roll.toFixed(4), spin: +tum.spin.toFixed(4), sink: +tum.sink.toFixed(4),
+    camP: +tum.camP.toFixed(4), camR: +tum.camR.toFixed(4), camY: +tum.camY.toFixed(4),
+  }),
+  tuning: TUM,
+  keyframes: TUM_KF,
+  // THE HARNESS DOOR, in the shape `__sparks.step` and `__impact.step` opened.
+  // It used to have work to do: the rig is posed off the requestAnimationFrame
+  // line and `__player.stepFixed` does not run it, so the air-spin watcher had
+  // to be pumped by hand once per stepped frame or it never saw the spin that
+  // the landing was about to erase. specs/0028 §1 moved that sign onto the wipe
+  // event itself, so there is nothing left to sample — the door stays open, and
+  // reports the sign the rig latched, so 0015's harness reads the same shape.
+  tick: () => tum.sign,
+  spinSign: () => tum.sign,
+  // ...and whether the rig would treat the NEXT wipeout as a new one. It latches
+  // off `wipeT` coming up from zero, and it can only look on the frames it is
+  // posed on — so a harness that teleports and wipes without an animation frame
+  // in between hands it the same 0.9 twice and gets the previous accident's
+  // answers. This is how a test waits for the rig to have seen the reset, rather
+  // than sleeping and hoping there was a frame in there somewhere.
+  armed: () => tumPrevWipe <= 0,
+};
+
 // ------------------------------------------------------------ camera rig
 // Owns everything between the controller's pose and the camera: fp/tp modes,
 // the speed-FOV, shake, landing kick, wipe tumble, and the chase follow.
@@ -628,7 +1032,7 @@ const camRig = (() => {
   let t = 0;
   const state = { spN: 0, bob: 0, walkBob: 0, tipRise: 0, crouch: 0 };
   const shake = { x: 0, y: 0, z: 0, r: 0 };
-  let dip = 0, wobP = 0, wobR = 0;
+  let dip = 0, wobP = 0, wobR = 0, wobY = 0;
   let bodyYaw = 0;                             // where the body points: the track when flying, else the look
   let preDip = 0;                              // preload compression — eye sinks with the charge
   const tpPos = new THREE.Vector3();
@@ -690,13 +1094,12 @@ const camRig = (() => {
       shake.r = Math.sin(t * 27.1) * 0.0035 * spN * (0.4 + steep);
     }
 
-    // ---- wipeout tumble
-    wobP = 0; wobR = 0;
-    if (riding && ctrl.wipeT > 0) {
-      const w = ctrl.wipeT / 0.9;
-      wobR = Math.sin(t * 13) * 0.55 * w * w;
-      wobP = Math.sin(t * 9.2) * 0.22 * w * w;
-    }
+    // ---- wipeout tumble (specs/0015). The 0.55 rad lens sine that used to live
+    // here is gone: the eye now rides the SAME keyframes the body does, because a
+    // wobble the third-person body knows nothing about is exactly how the two
+    // views came to disagree about whether anything had happened at all.
+    tumbleStep();
+    wobP = tum.camP; wobR = tum.camR; wobY = tum.camY;
 
     // ---- shared animation state for the visuals
     state.bob += dt * (2 + 9 * spN);
@@ -731,12 +1134,22 @@ const camRig = (() => {
     // the rider — so they take the bike's swing. Nothing else changes: skis,
     // boots and the wing are on their original zero.
     const RIDE_SWING = ctrl.mode === 'bike' || ctrl.mode === 'sled' || ctrl.mode === 'snowmobile';
-    const camYaw = bodyYaw + (flying ? 0.58 : (RIDE_SWING ? BIKE_SWING : 0));
+    // specs/0015 — and a tumble swings it further still, onto the side the body
+    // is being thrown, so the lens is the outside of the spin
+    const camYaw = bodyYaw + (flying ? 0.58 : (RIDE_SWING ? BIKE_SWING : 0))
+      + TUM.CHASE_SWING * tum.auth * tum.sign;
     const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw);
-    const dist = (flying ? 4.6 + 2.0 * spN : 4.3 + 2.2 * spN) * u;
+    // specs/0015 — the chase steps in and comes down through a tumble. From the
+    // ordinary 4.3 m / 2.1 m the fold is a small figure at the bottom of a big
+    // hillside; a metre closer and three quarters of a metre lower it is a body
+    // hitting a tree, which is what the frame is about.
+    const dist = (flying ? 4.6 + 2.0 * spN : 4.3 + 2.2 * spN) * u - TUM.CHASE_IN * u * tum.auth;
     const height = (flying ? 2.05 + 0.50 * spN : 2.1 + 0.6 * spN) * u
-      - Math.sin(ctrl.pitch) * (flying ? 1.7 : 2.4) * u;
-    const hx = pos.x, hy = pos.y + eye * (flying ? 0.78 : 0.9), hz = pos.z;
+      - Math.sin(ctrl.pitch) * (flying ? 1.7 : 2.4) * u - TUM.CHASE_DOWN * u * tum.auth;
+    // ...and it aims at the HEAD rather than at a standing rider's chest, so the
+    // subject does not slide out of the bottom of the frame as the body goes down
+    const aimY = eye * (flying ? 0.78 : 0.9);
+    const hx = pos.x, hy = pos.y + aimY + (tum.eye * 0.85 - aimY) * tum.auth, hz = pos.z;
     let dx = -fx * dist, dy = height, dz = -fz * dist;
     const len = Math.hypot(dx, dy, dz);
     // keep the chase camera out of the hillside
@@ -759,11 +1172,22 @@ const camRig = (() => {
     // reports an actual bank angle (plus any barrel roll), so it goes through 1:1
     const leanMul = ctrl.mode === 'glider' ? 1 : 1.35;
     if (mode === 'fp') {
-      cam.position.set(pos.x + shake.x, pos.y + eye - dip - preDip + shake.y, pos.z + shake.z);
+      // specs/0015 — the eye is ON the body, so through a tumble it takes the
+      // body's height and the fold's backward displacement, both already probed
+      // and clamped by tumbleStep(). `wobY` is the spin: a wipeout turns you, and
+      // first person that did not turn with it was the tell that nothing was
+      // really happening.
+      // `tum.on` is the guard and not a nicety: applyTo() is also called at boot
+      // and from a respawn, before update() has ever solved a frame.
+      cam.position.set(
+        pos.x + tum.bx + shake.x,
+        pos.y + (tum.on ? tum.eye : eye) - dip - preDip + shake.y,
+        pos.z + tum.bz + shake.z,
+      );
       cam.rotation.order = 'YXZ';
       cam.rotation.set(
         ctrl.pitch - (dip / u) * 0.5 + wobP,
-        ctrl.yaw,
+        ctrl.yaw + wobY,
         (riding ? ctrl.lean * leanMul : 0) + shake.r + wobR,
       );
     } else {
@@ -772,7 +1196,16 @@ const camRig = (() => {
       const fx = -Math.sin(bodyYaw), fz = -Math.cos(bodyYaw);
       cam.position.set(tpPos.x, tpPos.y - dip * 0.6, tpPos.z);
       cam.up.set(0, 1, 0);
-      cam.lookAt(pos.x + fx * 1.4 * u, pos.y + (flying ? 1.30 * u : eye * 0.8), pos.z + fz * 1.4 * u);
+      // specs/0015 — through a tumble the aim point rides down with the head, or
+      // the body slides out of the bottom of the frame exactly when it becomes
+      // the subject. `wobR` is now the tumble's own roll, so the chase gets half
+      // of it: enough to feel the body go over, not enough to roll the hillside.
+      const aim = eye * 0.8;
+      cam.lookAt(
+        pos.x + fx * 1.4 * u,
+        pos.y + (flying ? 1.30 * u : aim + (tum.eye * 0.8 - aim) * tum.auth),
+        pos.z + fz * 1.4 * u,
+      );
       cam.rotateZ((riding ? ctrl.lean * (ctrl.mode === 'glider' ? 0.8 : 0.55) : 0) + wobR * 0.5);
     }
     if (Math.abs(cam.fov - fov) > 0.01) { cam.fov = fov; cam.updateProjectionMatrix(); }
@@ -890,6 +1323,30 @@ function updateVisuals() {
     // the lens through a Double Rodeo is a way to make somebody put the mouse down.
     const tpose = tricks.trickPose();
     if (tpose && tpose.flip) fpRig.rotateX(-tpose.flip);
+    // specs/0015 — ...and they come off the rails in a tumble, exactly as the
+    // third-person pair do. The fp skis hang off the CAMERA, so left alone they
+    // are the one thing on screen that carries on riding perfectly while the eye
+    // is face down in the snow — which was visible in the first strips as two
+    // tidy red tips pinned to the bottom of every frame of a crash.
+    if (tum.on) {
+      const k = tum.ski * tum.auth;
+      // No `else` and nothing to restore: every one of these four properties is
+      // written unconditionally a few lines above (position.y and rotation.x
+      // here, rotation.y by rollSkiRigs, which re-writes it whenever either the
+      // carve splay or the current value is non-zero). The frame after a tumble
+      // ends is the frame the ordinary pose comes back on its own.
+      // Half the drop the first pass used. At 0.34 m, with the lens already 24
+      // deg nose-down, both skis left the bottom of the frame entirely and first
+      // person during a wipeout became an empty white field — "your skis are
+      // somewhere up there at a stupid angle" is a better read than "you appear
+      // to have no legs".
+      fpSkiL.rotation.y -= TUM.SPLAY * 0.75 * k;
+      fpSkiR.rotation.y += TUM.SPLAY * 0.75 * k;
+      fpSkiL.rotation.x += 0.55 * k;
+      fpSkiR.rotation.x += 0.40 * k;
+      fpSkiL.position.y -= 0.17 * u * k;
+      fpSkiR.position.y -= 0.10 * u * k;
+    }
   }
 
   model.visible = tp;
@@ -900,8 +1357,17 @@ function updateVisuals() {
     // Flying, the body points down the TRACK, not down the look — in a hard
     // turn the two differ by tens of degrees and it is the track the wing is
     // actually flying. Everywhere else the look is the body, exactly as before.
-    model.rotation.y = glideAir && Math.hypot(v.x, v.z) > 0.5 * u
+    // specs/0015 — and through a tumble the body swings onto the VELOCITY vector
+    // (§2: "the body lies along the velocity vector") and then takes the spin on
+    // top. This alignment is on the body and NOT on the lens: where the mass is
+    // lying is a fact about the body, whereas first person is somebody's head,
+    // and hijacking a player's heading to a velocity he is no longer steering is
+    // how a wipeout becomes a motion-sickness feature. Both views take the spin.
+    const yawRide = glideAir && Math.hypot(v.x, v.z) > 0.5 * u
       ? Math.atan2(-v.x, -v.z) : ctrl.yaw;
+    model.rotation.y = tum.on
+      ? yawRide + angDiff(tum.yawVel, yawRide) * tum.align * tum.auth + tum.spin * tum.auth
+      : yawRide;
     model.rotation.z = riding ? ctrl.lean * (glide ? 1 : 1.25) : 0;
     // the standing body steps aside for the prone one, and vice versa — and now
     // also for the seated one: the bike rig brings its own rider, posed to ITS
@@ -944,15 +1410,62 @@ function updateVisuals() {
     mBody.rotation.x = 0.55 * c;               // tuck forward with speed / in air
     mArmL.rotation.x = c * 0.9;                // arms sweep back into the tuck
     mArmR.rotation.x = c * 0.9;
+    mArmL.rotation.z = 0.22; mArmR.rotation.z = -0.22;
     mSkiL.visible = mSkiR.visible = ski;       // (bike riders get no skis; the
     if (ski) {                                 // bike model is the bike agent's)
       mSkiL.rotation.x = st.tipRise * 0.8;
       mSkiR.rotation.x = st.tipRise * 0.72;
+      mSkiL.rotation.y = 0; mSkiR.rotation.y = 0;
+      mSkiL.position.y = 0.02 * u; mSkiR.position.y = 0.02 * u;
       rollSkiRigs([mSkiL, mSkiR]);             // the edges, from ski.js
     }
     // the legs and hips follow the edges a little — the body is one piece here,
     // so a third of the edge angle is as much lower body as this rig can spend
     mBody.rotation.z = ski ? skiState().roll * 0.30 : 0;
+
+    // ---- specs/0015: THE TUMBLE, written OVER the riding pose above.
+    //
+    // Every value is `mix(riding, tumble, tum.auth)`, and `auth` is 0 at both
+    // ends of the 0.9 s, so the body enters and leaves the animation on exactly
+    // the pose it would have been holding anyway. That is the whole reason there
+    // are no pops here: nothing is switched, everything is blended, and the
+    // blend's own weight is what starts and finishes.
+    //
+    // The rig pivots at the FEET (mBody's origin sits on the snow), so pitching
+    // it 1.32 rad is a body falling forward over its own tips and the head
+    // arrives at ~0.4 m, which is where a head on snow is. The skis are posed by
+    // hand rather than reparented into an `mFall` group: they are children of
+    // `model` and inventory.js clones this rig to dress it, so a parent that
+    // exists for 0.9 s a run is a parent the locker would have to know about.
+    // Their binding IS the pivot, so pitching them with the body keeps them at
+    // the feet for free — all that is left is the fan and the lift.
+    if (tum.on && mBody.visible) {
+      const a = tum.auth;
+      mBody.rotation.x = mBody.rotation.x + (tum.pitch - mBody.rotation.x) * a;
+      mBody.rotation.z = mBody.rotation.z + (tum.roll - mBody.rotation.z) * a;
+      // ABSOLUTE, not `-= sink`: the riding height is `-0.34 u * crouch`, and
+      // crouch keeps easing all the way through a tumble because the scrub took
+      // the speed that was holding it up. A body whose hips rose 0.1 m over the
+      // 0.9 s it spent lying in the snow is a body floating off it.
+      mBody.position.y += (-tum.sink - mBody.position.y) * a;
+      // arms: up and forward on the hit, then splayed out through the slide
+      const ax = tum.arm * a, az = Math.abs(tum.arm) * 0.55 * a;
+      mArmL.rotation.x += ax; mArmR.rotation.x += ax;
+      mArmL.rotation.z += az; mArmR.rotation.z -= az;
+      if (ski) {
+        const k = tum.ski * a;
+        // HALF the body's pitch, not all of it: a ski carries the body's rotation
+        // about its own binding, and at the full 1.32 rad both of them stood
+        // straight up over the rider like a salute. Half lays them back along the
+        // slide, which is where skis go when a body lands on them.
+        mSkiL.rotation.x += tum.pitch * a * 0.52;
+        mSkiR.rotation.x += tum.pitch * a * 0.44;
+        mSkiL.rotation.y = -TUM.SPLAY * k;     // fanned: they are not on rails
+        mSkiR.rotation.y = TUM.SPLAY * k;
+        mSkiL.position.y += TUM.LIFT * u * k;  // ...and off the snow, because
+        mSkiR.position.y += TUM.LIFT * u * k * 0.72;   // they are on a body
+      }
+    }
     // third person sees the whole flip, which is the point of third person
     const tposeTp = ski ? tricks.trickPose() : null;
     model.rotation.x = tposeTp ? -tposeTp.flip : 0;
@@ -971,7 +1484,11 @@ const hud = createHud({
 // world/mode under) winning when it is set. The public build never sets `label`.
 document.title = LABEL
   ? 'POI LAB / ' + LABEL
-  : pick('WORLD · ' + cfg.run, 'Siberia Express — Palisades Tahoe');
+  : pickBrand({
+    lab: 'WORLD · ' + cfg.run,
+    'RED DOG': 'Red Dog Chair — Palisades Tahoe',
+    SIBERIA: 'Siberia Express — Palisades Tahoe',
+  });
 
 // ------------------------------------------------------------- the ski rack
 // One ski model is one set of overrides on SKI_TUNING plus one topsheet. Both
@@ -1585,6 +2102,12 @@ function playerSystems(dt, live) {
   // the guided run, when the flag brought it in. It reads the same dt the
   // trick machine does, so the deterministic stepper drives it too.
   if (guideMod) guideMod.update(dt, live);
+  // specs/0013 — persistent ski tracks. The splat map lives entirely in
+  // tracks.js; this is the whole hook. It is HERE and not on the rAF line for
+  // the reason the guided run above is: __player.stepFixed drives this function
+  // and nothing else, and the acceptance rides that have to prove a carve
+  // leaves two lines are stepFixed rides. Self-initialising on the first call.
+  tracks.update(dt, live, world, ctrl, unitScale, cfg.test);
 }
 function frame(now) {
   requestAnimationFrame(frame);

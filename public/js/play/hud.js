@@ -3,7 +3,22 @@
 
 import { gliderState } from './glider.js';
 import { skiState } from './ski.js';
-import { DEBUG_HUD, BRAND, pick } from './flags.js';
+import { DEBUG_HUD, BRAND, pick, pickBrand } from './flags.js';
+
+// THE WIPEOUT SUBTITLE, by `why`. One line per thing the world is allowed to
+// put you down with: the controller decides which, this only prints it. specs/
+// 0012 shipped landing/tree, 0020 shipped rock, specs/0018 adds the four props.
+// Anything not in here falls back to the rotation wording, which is what an
+// unfinished spin and a crossed-ski landing have always read as.
+const WIPE_SUB = {
+  landing: 'came in too hot',
+  tree: 'met a tree',
+  rock: 'that was rock',
+  building: 'that wall was load-bearing',
+  tower: 'the lift is not a slalom gate',
+  person: 'sorry. so sorry.',
+  bench: 'the bench had it coming',
+};
 
 const el = (tag, cls, text) => {
   const e = document.createElement(tag);
@@ -441,7 +456,7 @@ export function createHud({ poi, run, adapter, onResume, onRespawn }) {
   // specs/0003 — `brand`. The bench names the run it is playing; the shareable
   // build names itself, because "palisades-front-A-merge-01" is an internal
   // identity string (D9) and nobody outside this repo can read it.
-  hd.append(el('span', 'lbl lbl--accent', 'paused'), el('span', 'spacer'), el('span', 'lbl', pick(run || '', 'siberia express')));
+  hd.append(el('span', 'lbl lbl--accent', 'paused'), el('span', 'spacer'), el('span', 'lbl', pickBrand({ lab: run || '', 'RED DOG': 'red dog chair', SIBERIA: 'siberia express' })));
   const bd = el('div', 'panel__bd ppause__bd');
   const keys = el('div', 'ppause__keys');
   // 'lift' rows only exist for worlds that declare lifts[] — setLiftKey() below
@@ -769,12 +784,11 @@ export function createHud({ poi, run, adapter, onResume, onRespawn }) {
     trick(t) {
       const wipe = t.name === 'wipeout';
       trickBig.textContent = wipe ? 'WIPEOUT' : t.name + '!';
-      // ...'tree' / 'rock' are the solids (specs/0012): you hit something.
+      // ...'tree' / 'rock' are the solids (specs/0012), and specs/0018 adds the
+      // four the world built and never made solid: a lodge wall, a lift tower or
+      // a sign post, somebody standing there, and the furniture.
       trickSub.textContent = wipe
-        ? (t.why === 'landing' ? 'came in too hot'
-          : t.why === 'tree' ? 'met a tree'
-          : t.why === 'rock' ? 'that was rock'
-          : (t.deg ? t.deg + '° · unfinished' : 'skis crossed'))
+        ? (WIPE_SUB[t.why] || (t.deg ? t.deg + '° · unfinished' : 'skis crossed'))
         : t.deg + '°';
       trick.classList.toggle('is-wipe', wipe);
       trick.hidden = false;

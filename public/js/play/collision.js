@@ -11,19 +11,32 @@
 //
 //   * SURFACE CLASS. One byte per triangle: 0 snow, 1 rock. `groundClass()`
 //     reports the class of the last `groundAt()` hit, the way `groundNormal()`
-//     reports its normal, and the controller turns "rock at speed" into a
-//     wipeout. See `meshRock()` for how a rock mesh is recognised.
+//     reports its normal. It says what you are STANDING ON — fx.js strikes
+//     sparks off it — and, on a `raycast()` hit (`best.cls`, `best.mesh`), what
+//     you are about to run INTO, which is the half the controller wipes on
+//     (specs/0020 §2b). See `meshRock()` for how a rock mesh is recognised.
+//   * MESH NAME. Two bytes per triangle indexing a per-build name table, so a
+//     hit can say `poulsen-cliff` and not just "class 1".
 //   * TREE STEMS. Not triangles at all — solids.js hashes them separately and
 //     this file just forwards the query (`stemHit`), so the controller needs one
 //     object rather than two.
 
 import { harvestStems } from './solids.js';
+import { createCanopyFx } from './canopy.js';
 
 const EPS = 1e-7;
 
 // ---------------------------------------------------------------- surface class
 export const CLASS_SNOW = 0;
 export const CLASS_ROCK = 1;
+// specs/0018 — the props that are solid AND have something to say about it.
+// Greg, 2026-09-01: "queue towers buildings people and benches as collideable
+// and give them all the funny chats when they induce wipeout." Sign posts join
+// TOWER: a post is a thin tower, and it puts you down the same way.
+export const CLASS_BUILDING = 2;
+export const CLASS_TOWER = 3;
+export const CLASS_PERSON = 4;
+export const CLASS_BENCH = 5;
 
 // dot(faceNormal, up) below which a rock face is ROCK. Above it the face is
 // flat enough that the world's slope-gated snow (specs/0005 L4, and snowLace's
@@ -63,6 +76,42 @@ function meshRock(mesh) {
     if (m && ROCK_MAT_RE.test(matTag(m))) return true;
   }
   return false;
+}
+
+// ---- specs/0018: THE PROP CLASS TABLE, and why it is names and not materials.
+//
+// Rock gets two chances (name, then material) because a world that hand-writes
+// a granite shader pins a material key, and `kt-eagles-nest` is a place name
+// with no rock word in it. Props get exactly ONE chance — the scene-group name —
+// because both worlds here draw every prop group with the SAME shared
+// MeshLambertMaterial (`SHEET`), so a material tag would paint the buildings,
+// the towers, the people and the terrain furniture all one class. The name is
+// the only thing that actually distinguishes them, and the worlds already name
+// them (`base-buildings`, `lift-structures`, `people-props`, `ridge-furniture`).
+//
+// Ordered, first match wins: a `deck-benches` group is seating before it is
+// furniture, and `sign-posts` is a post before it is anything else. ROCK is
+// tested ahead of all of them, so `poulsen-cliff` and `funitel-granite` keep the
+// class — and the snow-cap slope gate — they already had.
+const CLASS_NAME_RE = [
+  [CLASS_PERSON, /(^|[-_ ])(people|person|persons|skier|skiers|rider|riders|crowd|pedestrians?|figures?|props)([-_ ]|\d|$)/i],
+  [CLASS_BENCH, /(^|[-_ ])(bench|benches|seat|seats|table|tables|picnic)([-_ ]|\d|$)/i],
+  [CLASS_TOWER, /(^|[-_ ])(tower|towers|pylons?|masts?|posts?|poles?|signposts?|structures?|furniture)([-_ ]|\d|$)/i],
+  [CLASS_BUILDING, /(^|[-_ ])(buildings?|lodges?|houses?|huts?|sheds?|terminals?|stations?|chalets?|barns?|lifthouse)([-_ ]|\d|$)/i],
+];
+
+// The class this mesh contributes. Rock first (it owns the material fallback and
+// the slope gate), then the prop table against the name chain, then snow.
+function meshClass(mesh) {
+  if (meshRock(mesh)) return CLASS_ROCK;
+  let q = mesh, n = 0;
+  while (q && n++ < 6) {
+    if (q.name) {
+      for (const [cls, re] of CLASS_NAME_RE) if (re.test(q.name)) return cls;
+    }
+    q = q.parent;
+  }
+  return CLASS_SNOW;
 }
 
 // A collider is anything a body could stand on or walk into. Backdrops are
@@ -120,13 +169,31 @@ function growU8(buf, need) {
   out.set(buf);
   return out;
 }
+function growU16(buf, need) {
+  if (need <= buf.length) return buf;
+  let n = buf.length || 1024;
+  while (n < need) n *= 2;
+  const out = new Uint16Array(n);
+  out.set(buf);
+  return out;
+}
 
 export function buildCollision(THREE, root, opts = {}) {
   const cell = opts.cell || 6;
   const half = opts.halfExtent || 620;
   const center = opts.center || new THREE.Vector3();
   const maxCellsPerTri = opts.maxCellsPerTri || 64;   // rejects backdrop-sized triangles
-  const triBudget = opts.triBudget || 900000;
+  // THE SOUP'S CEILING, and specs/0018 is the reason it moved. `palisades-front`
+  // was harvesting 895,689 triangles against a 900,000 cap — 4,311 of headroom —
+  // so declaring five more prop groups as colliders would have silently
+  // truncated whichever of them the traversal reached last, with no error and no
+  // way to tell a missing bench from a bench you happened to miss. `pushTri`
+  // fails CLOSED (it returns, it does not throw), which is exactly the failure a
+  // gate cannot see. Raised to 1.2 M: `palisades-front` now harvests 906,535,
+  // so there is 293 k of room. The cost is linear and paid only by triangles
+  // that exist — the arrays double from 1 k, they are not sized to the cap —
+  // 39 bytes each plus their grid entries, so an empty budget costs nothing.
+  const triBudget = opts.triBudget || 1200000;
 
   const x0 = center.x - half, z0 = center.z - half;
   const nx = Math.max(1, Math.ceil((half * 2) / cell));
@@ -137,9 +204,28 @@ export function buildCollision(THREE, root, opts = {}) {
   let V = new Float32Array(1 << 16);   // 9 floats per triangle, world space
   let B = new Int32Array(1 << 14);     // 4 ints per triangle: i0,j0,i1,j1
   let C = new Uint8Array(1 << 12);     // 1 byte per triangle: CLASS_SNOW | CLASS_ROCK
+  // ...and specs/0020 §2b: WHICH MESH the triangle came off, as an index into
+  // `meshNames`. Two bytes a triangle (about 5% on top of the soup) buys the
+  // one thing "did I run INTO something" needs and the class byte cannot give:
+  // a name to put in the report. 0018 wants it for towers and buildings; here
+  // it is what lets a gate say WHICH rock face the wipe was against.
+  let M = new Uint16Array(1 << 12);
+  const meshNames = [''];              // 0 is "unknown", so an unfilled slot is honest
+  let meshIdx = 0;
+  // specs/0018 §1 — THE HARVEST LEDGER. One row per mesh the traversal saw,
+  // whether it was eaten or dropped, with the class it contributed and how many
+  // triangles actually landed in the soup. It is the only way to answer "is the
+  // Funitel base in the soup, and as what?" without re-deriving the traversal in
+  // a probe that would then be answering about its own rules and not these.
+  // Build-time only; one small object per mesh, capped so a pathological scene
+  // cannot turn the ledger into the memory story.
+  const ledger = [];
+  const LEDGER_CAP = 4000;
+  let ledgerRow = null;
   let nTri = 0, nEntries = 0;
   let skippedOversize = 0, skippedOutside = 0, meshesUsed = 0, meshesSkipped = 0;
   let nRockTri = 0, nRockMesh = 0;
+  const nClsTri = [0, 0, 0, 0, 0, 0];   // specs/0018 — triangles per class byte
   let minY = Infinity, maxY = -Infinity;
   // the class the mesh currently being eaten contributes, before the slope gate
   let meshCls = CLASS_SNOW;
@@ -184,7 +270,11 @@ export function buildCollision(THREE, root, opts = {}) {
       if (len > 1e-9 && Math.abs(ny / len) >= ROCK_SLOPE_COS) cls = CLASS_SNOW;
     }
     C[nTri] = cls;
+    M = growU16(M, nTri + 1);
+    M[nTri] = meshIdx;
     if (cls === CLASS_ROCK) nRockTri++;
+    if (cls < nClsTri.length) nClsTri[cls]++;
+    if (ledgerRow) { ledgerRow.tris++; ledgerRow.byClass[cls] = (ledgerRow.byClass[cls] || 0) + 1; }
     nEntries += cells;
     nTri++;
     if (ay < minY) minY = ay; if (ay > maxY) maxY = ay;
@@ -211,12 +301,25 @@ export function buildCollision(THREE, root, opts = {}) {
   for (const r of roots) {
     r.traverse((o) => {
       if (!o.visible || !o.isMesh) return;
-      if (!explicit && isBackdrop(o)) { meshesSkipped++; return; }
+      if (!explicit && isBackdrop(o)) {
+        meshesSkipped++;
+        if (ledger.length < LEDGER_CAP) ledger.push({ name: o.name || '(unnamed)', eaten: false, why: 'backdrop', cls: -1, tris: 0, byClass: {} });
+        return;
+      }
       const geo = o.geometry;
       if (!geo || !geo.getAttribute || !geo.getAttribute('position')) return;
       meshesUsed++;
-      meshCls = meshRock(o) ? CLASS_ROCK : CLASS_SNOW;
+      meshCls = meshClass(o);
       if (meshCls === CLASS_ROCK) nRockMesh++;
+      ledgerRow = ledger.length < LEDGER_CAP
+        ? { name: o.name || '(unnamed)', eaten: true, why: explicit ? 'declared' : 'auto',
+            cls: meshCls, tris: 0, byClass: {}, instanced: !!o.isInstancedMesh }
+        : null;
+      if (ledgerRow) ledger.push(ledgerRow);
+      // the name goes in the table once per mesh, not once per triangle; a
+      // world with more than 65534 collidable meshes keeps 0 ('unknown')
+      if (meshNames.length < 65535) { meshNames.push(o.name || '(unnamed)'); meshIdx = meshNames.length - 1; }
+      else meshIdx = 0;
       if (o.isInstancedMesh) {
         for (let i = 0; i < o.count; i++) {
           o.getMatrixAt(i, inst);
@@ -255,12 +358,26 @@ export function buildCollision(THREE, root, opts = {}) {
 
   const tris = V.subarray(0, nTri * 9);
   const cls = C.subarray(0, nTri);
+  const mid = M.subarray(0, nTri);
   const stamp = new Int32Array(nTri);
   let stampGen = 0;
 
   // Tree stems live outside the soup — see solids.js. The scan is cached on the
   // scene root, so surprise.js's init gets this same object for free.
   const stems = harvestStems(THREE, root);
+  // ...and §E3's visible half. Built here, not in main.js, because this is the
+  // one place that already holds BOTH the scene root (to hang the snow buffer
+  // on) and the stem set (to find the instance a hit belongs to). It costs one
+  // Points object with an empty draw range until something actually falls.
+  //
+  // The scene's unit is RECOVERED from the cell size rather than passed: main.js
+  // hands this function `cell: 6 * unitScale`, so `cell / 6` is the scale, and
+  // the seam stays where it already is instead of growing another argument
+  // through a call site this spec has no business editing. (controller.js
+  // recovers the same number from `T.walk` for the same reason.)
+  let canopyFx = null;
+  try { canopyFx = createCanopyFx(THREE, root, stems, { unit: (opts.cell || 6) / 6 }); }
+  catch { canopyFx = null; }         // a host with no renderer is still playable
 
   // ---- queries -------------------------------------------------------------
 
@@ -294,12 +411,17 @@ export function buildCollision(THREE, root, opts = {}) {
   }
 
   const scratch = { dist: 0, nx: 0, ny: 0, nz: 0 };
-  const best = { dist: 0, nx: 0, ny: 1, nz: 0, y: 0, hit: false };
+  // `cls` and `mesh` are specs/0020 §2b: the same two facts groundAt() has
+  // always reported about the floor, reported about an ARBITRARY hit, so
+  // "what did I just run into" is one query and not a second index.
+  const best = { dist: 0, nx: 0, ny: 1, nz: 0, y: 0, hit: false, cls: CLASS_SNOW, mesh: '' };
   // ground normal from the last groundAt(), kept apart from `best` so a raycast
   // in between cannot overwrite it (skiing reads it a few lines later)
   const gn = { x: 0, y: 1, z: 0 };
-  // ...and the surface CLASS of that same hit, kept for the same reason.
+  // ...and the surface CLASS of that same hit, kept for the same reason, plus
+  // the mesh it came off (specs/0020).
   let gcls = CLASS_SNOW;
+  let gmesh = 0;
 
   function cellOf(x, z) {
     const i = Math.floor((x - x0) / cell), j = Math.floor((z - z0) / cell);
@@ -312,18 +434,18 @@ export function buildCollision(THREE, root, opts = {}) {
     const c = cellOf(x, z);
     if (c < 0) return null;
     const s = start[c], e = start[c + 1];
-    let hitY = -Infinity, hnx = 0, hn = 1, hnz = 0, hc = CLASS_SNOW;
+    let hitY = -Infinity, hnx = 0, hn = 1, hnz = 0, hc = CLASS_SNOW, hm = 0;
     for (let k = s; k < e; k++) {
       const t = items[k];
       if (hitTri(t, x, fromY, z, 0, -1, 0, 1e5, scratch)) {
         const y = fromY - scratch.dist;
-        if (y > hitY) { hitY = y; hnx = scratch.nx; hn = scratch.ny; hnz = scratch.nz; hc = cls[t]; }
+        if (y > hitY) { hitY = y; hnx = scratch.nx; hn = scratch.ny; hnz = scratch.nz; hc = cls[t]; hm = mid[t]; }
       }
     }
     if (hitY === -Infinity) return null;
     best.y = hitY; best.ny = hn;
     gn.x = hnx; gn.y = hn; gn.z = hnz;   // always points up: the probe ray is -Y
-    gcls = hc;
+    gcls = hc; gmesh = hm;
     return hitY;
   }
   function groundNormalY() { return best.ny; }
@@ -334,13 +456,16 @@ export function buildCollision(THREE, root, opts = {}) {
   // as groundNormal() — it is the last groundAt() that HIT, so read it in the
   // same breath as the height you just took.
   function groundClass() { return gcls; }
+  // ...and its NAME, on the same contract. Empty string when the host built the
+  // soup before names were tracked or the world ran past the 65534-mesh table.
+  function groundMesh() { return meshNames[gmesh] || ''; }
 
   // Short arbitrary ray. Distances here are sub-metre, so sampling the cells
   // along the segment beats a full grid DDA and cannot miss at this length.
   function raycast(ox, oy, oz, dx, dy, dz, maxDist) {
     const steps = Math.max(1, Math.ceil(maxDist / (cell * 0.5)));
     stampGen++;
-    let found = false, bd = maxDist;
+    let found = false, bd = maxDist, bt = -1;
     for (let s = 0; s <= steps; s++) {
       const f = (s / steps) * maxDist;
       const c = cellOf(ox + dx * f, oz + dz * f);
@@ -351,27 +476,39 @@ export function buildCollision(THREE, root, opts = {}) {
         if (stamp[t] === stampGen) continue;
         stamp[t] = stampGen;
         if (hitTri(t, ox, oy, oz, dx, dy, dz, bd, scratch) && scratch.dist < bd) {
-          bd = scratch.dist; found = true;
+          bd = scratch.dist; found = true; bt = t;
           best.dist = scratch.dist; best.nx = scratch.nx; best.ny = scratch.ny; best.nz = scratch.nz;
         }
       }
     }
     if (!found) return null;
     best.hit = true;
+    // one array read on the WINNING triangle, not on every candidate
+    best.cls = cls[bt]; best.mesh = meshNames[mid[bt]] || '';
     return best;
   }
 
   const api = {
-    groundAt, groundNormalY, groundNormal, groundClass, raycast,
+    groundAt, groundNormalY, groundNormal, groundClass, groundMesh, raycast,
+    // specs/0018 §1 — the harvest ledger: what the traversal saw, what it ate,
+    // and as what. Tooling only; the player never reads it.
+    meshTable: () => ledger.map((r) => ({ ...r, byClass: { ...r.byClass } })),
     // the class of any triangle, by index — for tooling that wants to audit the
     // soup rather than stand on it
     classOf: (t) => (t >= 0 && t < nTri ? cls[t] : -1),
+    meshOf: (t) => (t >= 0 && t < nTri ? (meshNames[mid[t]] || '') : ''),
     // ---- tree stems (solids.js). Forwarded, not reimplemented: the controller
     // already holds a `collision`, and handing it a second object to carry would
     // buy nothing. `unit` is main.js's unitScale.
     stemHit: (x, y, z, bodyR, unit) => stems.stemHit(x, y, z, bodyR, unit),
     stemSegment: (ax, ay, az, bx, by, bz, r) => stems.hitSegment(ax, ay, az, bx, by, bz, r),
     stemAt: (i) => stems.stemAt(i),
+    // specs/0012 §E2 — the soft half of the same hash. Returns the stem index
+    // of the foliage the point is inside, or -1.
+    canopyIn: (x, y, z, unit) => stems.canopyIn(x, y, z, unit),
+    // ...and §E3's rustle + snow fall (canopy.js). The controller calls
+    // `.hit(i, x, y, z)` on entry and `.update(dt)` once a step.
+    canopyFx,
     stems,
     inBounds: (x, z) => cellOf(x, z) >= 0,
     bounds: { x0, z0, x1: x0 + nx * cell, z1: z0 + nz * cell, minY, maxY },
@@ -379,8 +516,11 @@ export function buildCollision(THREE, root, opts = {}) {
       triangles: nTri, cellEntries: nEntries, cells: nCells, cell,
       meshesUsed, meshesSkipped, skippedOversize, skippedOutside,
       rockMeshes: nRockMesh, rockTriangles: nRockTri,
+      // specs/0018 — [snow, rock, building, tower, person, bench]
+      classTriangles: nClsTri.slice(),
       stems: stems.n, stemMs: Math.round(stems.ms),
-      bytes: nTri * 37 + nEntries * 4,
+      meshNames: meshNames.length - 1,
+      bytes: nTri * 39 + nEntries * 4,   // +2/tri for the mesh index (specs/0020)
     },
   };
   // Lab handle. The player's own test surface (`window.__player`) is built in

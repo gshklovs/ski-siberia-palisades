@@ -27,8 +27,26 @@
 //     reader. display:none is the honest state; the opacity is only the fade IN.
 
 const IDLE_MS = 7000;          // how long "stopped" has to last before the offer
-const STOPPED_MPS = 0.5;       // ...and what counts as stopped
+const STOPPED_MPS = 1.2;       // ...and what counts as stopped
 const POLL_MS = 200;
+
+// WHY 1.2 AND NOT 0.5 (specs/0014 §2). "Stopped" means NOT GOING ANYWHERE, not
+// "below half a metre a second". A body parked on the flat at THE VILLAGE
+// creeps: there is no static friction on shallow snow at rest, so with no key
+// held it drifts down the apron and settles at roughly half a metre a second.
+// At 0.5 that drift sat a hair UNDER the line at two frames a second and a hair
+// OVER it at two hundred, so the same game read as "stopped" in software and as
+// "moving" on a GPU — and on the GPU the seven-second clock reset forever and
+// the offer never came (the gate saw it first: "idleMs 5654" after 14 s of
+// standing perfectly still). The frame rate was never supposed to be an input
+// to this. A player drifting down a village apron at a walking pace with their
+// hands off the keys is stuck by every definition this nudge exists for, so the
+// threshold moved to where the product's own meaning of the word already was.
+//
+// It does not make the offer eager: the nudge is dismissed by INPUT, not by
+// drift (`bump()` below), so a wider "stopped" band cannot show it to anybody
+// who is playing. The creep itself is a real bug and it is ski.js's, not this
+// file's — it is filed separately and deliberately NOT fixed here.
 
 // A POLL, not a rAF loop, on purpose. Under swiftshader this scene renders at a
 // handful of frames per second, so a rAF-driven timer would make "seven
@@ -127,4 +145,10 @@ window.__idle = {
   text: () => root.innerText,
   idleMs: () => (since === null ? 0 : performance.now() - since),
   threshold: IDLE_MS,
+  // THE ONE COPY OF THE NUMBER. The gate's idle probe has to wait for the body
+  // to say it has stopped before it can time a seven-second clock, and it used
+  // to carry its own literal 0.5 to do it — two constants meaning one thing,
+  // which is how a probe ends up waiting for a state the product no longer has.
+  // Exported so the test reads the game's threshold instead of remembering it.
+  stoppedMps: STOPPED_MPS,
 };

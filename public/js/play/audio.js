@@ -16,6 +16,10 @@
 //   pump whump    a short low thump when a charged turn pays its bank out
 //   landing       lowpassed noise burst + pitch-dropping sine, ~ impact
 //   jump whoosh   band-sweep noise on leaving the ground
+//   crash         a body arriving on the snow — noise burst + a sine dropping
+//                 110->45 Hz + a scrape. Stone adds chatter clicks, a trunk
+//                 adds a crack and the shimmy below. specs/0017
+//   shimmy        the needles: tremolo'd band noise, one per canopy ENTRY
 //   trick ding    window.__playAudio.trick() — small bell for trick hooks
 //   rocket        window.__playAudio.rocket(0..1) — boost.js sets the throttle
 //                 each frame; a low roar + crackle band + a sub sine
@@ -50,6 +54,16 @@ const A = {
   rocketV: 0,           // 0..1 throttle, pushed in by boost.js each frame
   prevReleasing: false, // last frame's skiState().releasing, for the whump edge
   hissV: 0, whumps: 0,  // current hiss level and how many whumps have fired
+  // ---- specs/0017. The crash reads the controller the way the landing edge
+  // does, so main.js needs no wiring: wipeT rising is the wipe, canopyStem
+  // changing to a new tree is the entry.
+  prevWipeT: 0,         // last frame's ctrl.wipeT, for the rising edge
+  prevStem: -1,         // last frame's ctrl.canopyStem
+  prevSpeed: 0,         // last frame's speed in m/s — see wipe() below
+  prevLat: 1,           // last frame's lateral velocity SIGN, for the shimmy pan
+  panV: 0,              // the pan the wind/carve layers are sitting at
+  shimCd: 0,            // s left of the shimmy cooldown
+  wipes: 0, shimmies: 0, lastWhy: null,
   errors: 0,
 };
 
@@ -299,6 +313,154 @@ function footstep(speedN) {
   n.stop(t + 0.12);
 }
 
+// ------------------------------------------------------- specs/0017: crashes
+//
+// One normalisation for both one-shots: nothing below 4 m/s is a crash worth
+// hearing and 20 m/s is as loud as it gets. A walking-pace `crossed` comes out
+// a soft flump, a 20 m/s trunk is the full hit.
+const CRASH_N = (spd) => clamp(((Number(spd) || 0) - 4) / 16, 0, 1);
+
+// Somewhere to hang every voice of one crash so they share a pan and a level.
+// Returns { bus, v } — `v` is the peak the noise body is allowed, which is the
+// same number thump() reaches on its loudest landing: a crash must never be
+// quieter than an arrival.
+function crashBus(n01, pan) {
+  const ctx = A.ctx;
+  const g = ctx.createGain();
+  g.gain.value = 1;
+  const p = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+  if (p) { p.pan.value = clamp(pan, -0.85, 0.85); g.connect(p); p.connect(A.master); }
+  else g.connect(A.master);
+  return { bus: g, v: 0.9 * (0.22 + 0.78 * n01) };
+}
+
+// A short burst of band-limited noise on a bus. The clicks, the crack and the
+// scrape are all this shape with different filters, so they share the code.
+function burst(bus, { type, freq, q, at, rise, dur, gain }) {
+  const ctx = A.ctx, t = ctx.currentTime + at;
+  const n = noiseSource(false, Math.random());
+  const f = ctx.createBiquadFilter();
+  f.type = type; f.frequency.value = freq; f.Q.value = q;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain), t + rise);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  n.connect(f); f.connect(g); g.connect(bus);
+  n.stop(t + dur + 0.05);
+}
+
+// The needles. Band noise up where a fir actually is (2.5-5 kHz), chopped by a
+// 6 Hz tremolo so it reads as a branch shaking rather than as more hiss, with a
+// quieter 900 Hz copy underneath for the weight of the branch itself. Panned by
+// the LAST frame's lateral velocity — the stem's position is not exposed, but
+// where the body was going is where the tree it just hit is.
+export function shimmy(strength) {
+  try {
+    A.shimmies++;
+    if (!running()) return;
+    const ctx = A.ctx, t = ctx.currentTime;
+    const n01 = clamp(Number(strength) || 0, 0, 1);
+    // ~0.5 of a crash ON THE ANALYSER, which is what §2 asks for and is not the
+    // same as half its gain: the crash body is lowpassed at 120-400 Hz and this
+    // is a narrow band four octaves up, so the same number would read a third as
+    // loud. Measured against the trunk case and set from there.
+    const v = 1.25 * (0.25 + 0.75 * n01);
+    const { bus } = crashBus(n01, 0.5 * (A.prevLat >= 0 ? 1 : -1));
+
+    // tremolo: one LFO drives the depth of both copies
+    const trem = ctx.createGain();
+    trem.gain.setValueAtTime(1 - 0.6 / 2, t);  // centre, so the swing is +/-0.3
+    const lfo = ctx.createOscillator();
+    lfo.type = 'sine'; lfo.frequency.value = 6;
+    const lg = ctx.createGain(); lg.gain.value = 0.6 / 2;
+    lfo.connect(lg); lg.connect(trem.gain);
+    lfo.start(t); lfo.stop(t + 0.85);
+
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0.0001, t);
+    env.gain.exponentialRampToValueAtTime(v, t + 0.03);
+    env.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+    trem.connect(env); env.connect(bus);
+
+    for (const [freq, q, mul] of [[3200, 0.7, 1], [900, 0.9, 0.6]]) {
+      const n = noiseSource(false, Math.random());
+      const f = ctx.createBiquadFilter();
+      f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = q;
+      const g = ctx.createGain(); g.gain.value = mul;
+      n.connect(f); f.connect(g); g.connect(trem);
+      n.stop(t + 0.8);
+    }
+  } catch { A.errors++; }
+}
+
+// The general crash: a body hitting snow at speed. Every `why` gets this much —
+// 'landing', 'crossed', 'rotation', 'rock', 'tree' — and stone and wood each add
+// their own top layer on it, so however you ate it, it reads as the same fall.
+export function wipe(why, speedN) {
+  try {
+    A.wipes++;
+    A.lastWhy = why == null ? null : String(why);
+    if (!running()) return;
+    const ctx = A.ctx, t = ctx.currentTime;
+    const n01 = clamp(Number(speedN) || 0, 0, 1);
+    const { bus, v } = crashBus(n01, A.panV);
+
+    // body: a lowpassed noise burst whose cutoff falls away under it
+    const n = noiseSource(false, Math.random());
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.Q.value = 0.7;
+    lp.frequency.setValueAtTime(400, t);
+    lp.frequency.exponentialRampToValueAtTime(120, t + 0.15);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(v, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.19);
+    n.connect(lp); lp.connect(g); g.connect(bus);
+    n.stop(t + 0.25);
+
+    // weight: the sine that makes it a body and not a gust
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(110, t);
+    o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(0.0001, t);
+    og.gain.exponentialRampToValueAtTime(v * 0.72, t + 0.010);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+    o.connect(og); og.connect(bus);
+    o.start(t); o.stop(t + 0.32);
+
+    // scrape: what is left of you sliding. Length is the speed — a flump stops
+    // dead, a 20 m/s hit keeps going for most of half a second. Stone scrapes
+    // through a tighter, lower band, which is what makes granite sound like
+    // granite and not like a snowbank.
+    const stone = why === 'rock';
+    burst(bus, {
+      type: 'bandpass', freq: stone ? 600 : 900, q: stone ? 2 : 0.8,
+      at: 0.02, rise: 0.05, dur: 0.18 + 0.27 * n01, gain: v * 0.34,
+    });
+
+    if (stone) {
+      // stone chatter: a handful of hard little clicks bouncing off the slab
+      const clicks = 3 + (n01 > 0.5 ? 1 : 0);
+      for (let i = 0; i < clicks; i++) {
+        burst(bus, {
+          type: 'highpass', freq: 2000, q: 0.9,
+          at: 0.02 + (i / clicks) * 0.2 + Math.random() * 0.02,
+          rise: 0.002, dur: 0.012, gain: v * 0.30,
+        });
+      }
+    }
+
+    if (why === 'tree') {
+      // the crack: two short splinters at the peak, 45 ms apart
+      burst(bus, { type: 'highpass', freq: 1800, q: 1.5, at: 0, rise: 0.003, dur: 0.025, gain: v * 0.55 });
+      burst(bus, { type: 'highpass', freq: 1800, q: 1.5, at: 0.045, rise: 0.003, dur: 0.025, gain: v * 0.45 });
+      shimmy(1);                                // the whole tree gets it
+    }
+  } catch { A.errors++; }
+}
+
 // ------------------------------------------------------------------- public
 export function init(ctx) {
   try {
@@ -338,6 +500,43 @@ export function update(dt) {
     }
     A.prevGrounded = grounded;
     A.prevVy = v ? v.y : 0;
+
+    // ---- specs/0017: the crash and the canopy, read straight off the controller
+    //
+    // The wipe edge is wipeT rising. By the time it shows, the controller has
+    // already scrubbed the velocity to 30% — the speed that tells you how hard
+    // the fall was is the one measured on the PREVIOUS frame, so that is the
+    // number the loudness comes from. wipeT sits above 0.5 for the whole 0.9 s
+    // tumble, so a tumble can only ever fire once: the edge needs it back at 0
+    // first, and only a fresh wipeout() can put it back up.
+    const wipeT = (c.wipeT || 0);
+    if (A.prevWipeT <= 0 && wipeT > 0.5) {
+      const why = (c.lastTrick || {}).why;
+      wipe(why, CRASH_N(A.prevSpeed));
+    }
+    A.prevWipeT = wipeT;
+
+    // The canopy edge is the stem index changing to a NEW tree — including
+    // straight from one fir's foliage into the next, which is two entries.
+    // canopyGuard parks it at -1 for the whole tumble, so a wipe cannot also
+    // ring the needles; the cooldown is only there for a body threading a tight
+    // glade faster than the ear can separate.
+    A.shimCd = Math.max(0, A.shimCd - dt);
+    const stem = (typeof c.canopyStem === 'number') ? c.canopyStem : -1;
+    if (stem >= 0 && stem !== A.prevStem && A.shimCd <= 0) {
+      A.shimCd = 0.25;
+      shimmy(CRASH_N(A.prevSpeed));
+    }
+    A.prevStem = stem;
+
+    // ...and the two numbers those two read next frame. The lateral sign is the
+    // shimmy's pan: it is where the body was going, which is where the tree it
+    // just went into is.
+    A.prevSpeed = sn;
+    if (v) {
+      const lat = v.x * Math.cos(c.yaw) + v.z * -Math.sin(c.yaw);
+      if (Math.abs(lat) > 1e-4) A.prevLat = lat >= 0 ? 1 : -1;
+    }
 
     // ski.js keeps the pump state, so read it once a frame and only while the
     // skis are actually on — in any other gear it is stale and must not be
@@ -406,6 +605,7 @@ export function update(dt) {
     set(A.carve.gain.gain, carveV, 0.05);
     set(A.carve.filt.frequency, carveF, 0.06);
     if (A.carve.pan) set(A.carve.pan.pan, carveP, 0.08);
+    A.panV = carveP;                              // where a crash lands in the field
 
     // ---- pump release: a payout starts on the frame releasing goes false to
     // true, and the whump is that instant. The one-shot drain ski.js exposes
@@ -465,8 +665,10 @@ export function state() {
   return {
     ok: A.ok, ctx: A.ctx ? A.ctx.state : 'none', errors: A.errors, unit: A.u, rocket: A.rocketV,
     pump: { hiss: A.hissV, whumps: A.whumps },
+    // specs/0017 — counters, not events: a gate asserts on the delta across a run
+    wipes: A.wipes, shimmies: A.shimmies, lastWhy: A.lastWhy,
   };
 }
 
-window.__playAudio = { init, update, trick, rocket, level, state };
+window.__playAudio = { init, update, trick, rocket, level, state, wipe, shimmy };
 export default init;

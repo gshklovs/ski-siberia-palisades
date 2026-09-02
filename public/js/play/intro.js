@@ -10,6 +10,11 @@
 //
 // Attribution (ODbL) is rendered HERE, in the product, not only in the repo.
 
+// specs/0027 — the venue name is per-world, so it comes from the one table the
+// D9 audit reads. The CREDIT below is NOT: USGS 3DEP and OpenStreetMap are
+// every world's sources, word for word.
+import { pickBrand } from './flags.js';
+
 const CREDIT = 'terrain USGS 3DEP · trails © OpenStreetMap contributors (ODbL)';
 const HOLD_MS = 2400;          // how long the title card sits before the controls
 const COARSE = matchMedia('(pointer: coarse)').matches;
@@ -28,12 +33,12 @@ document.body.classList.add('intro-up');
 
 const root = el('div', 'intro');
 root.setAttribute('role', 'dialog');
-root.setAttribute('aria-label', 'Siberia Express');
+root.setAttribute('aria-label', pickBrand({ lab: 'Red Dog Chair', 'RED DOG': 'Red Dog Chair', SIBERIA: 'Siberia Express' }));
 
 // ---- card 1: where you are
 const title = el('section', 'intro__card intro__card--title');
 title.append(
-  el('h1', 'intro__h1', 'SIBERIA EXPRESS'),
+  el('h1', 'intro__h1', pickBrand({ lab: 'RED DOG CHAIR', 'RED DOG': 'RED DOG CHAIR', SIBERIA: 'SIBERIA EXPRESS' })),
   el('p', 'intro__sub', 'Palisades Tahoe · Olympic Valley, California'),
   el('p', 'intro__credit', CREDIT),
 );

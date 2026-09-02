@@ -83,6 +83,17 @@ export async function buildWorld(THREE, opts = {}) {
 
   // ----------------------------------------------------------------- lifts
   const Bl = buf();
+  // THE CABLES GET THEIR OWN MESH, and it is not a collider — the same split
+  // world #1 made (runs/palisades-front-A-merge-01/scene/world.mjs:207). The
+  // ropes were being appended to `Bl` alongside the towers and the terminals,
+  // so this world shipped a `lift-structures` with the haul rope merged into it
+  // and no `lift-cables` mesh at all: the plant had towers and chairs and no
+  // visible rope of its own, and every one of those triangles sat in the
+  // collider set. A 55 mm rope hanging 15-25 m in the air is not something a
+  // skier can touch, and the harvest can only give one mesh one class byte —
+  // a rope is not a tower. Same geometry, same coordinates; the only changes
+  // are which buffer it lands in and that the buffer is not declared a collider.
+  const Bc = buf();
   const liftState = [];
   for (const L of LIFTS) {
     // Headwall Express climbs 533 m out of Squaw Creek from x = +1506, far
@@ -157,7 +168,7 @@ export async function buildWorld(THREE, opts = {}) {
     }
     nodes.push([bN.x, bN.y, bN.z + ends[ends.length - 1].h]);
     const armW = 3.0;
-    cable(Bl, nodes, armW, { sagK: 0.010 });
+    cable(Bc, nodes, armW, { sagK: 0.010 });     // Bc, not Bl — see the note above
     liftState.push({ L, path: makeCablePath(nodes, armW, 0.010), term0, term1, fr });
     report.runs.push({ lift: L.name, osmWay: L.osmWay, plan: Math.round(fr.L),
                        base: [Math.round(b0.x), Math.round(b0.y), +(b0.z + DEM_Z0).toFixed(1)],
@@ -168,6 +179,11 @@ export async function buildWorld(THREE, opts = {}) {
   liftMesh.name = 'lift-structures';
   liftMesh.castShadow = true; liftMesh.receiveShadow = true;
   scene.add(liftMesh); colliders.push(liftMesh);
+
+  const cableMesh = new THREE.Mesh(toGeo(THREE, Bc), SHEET);
+  cableMesh.name = 'lift-cables';
+  cableMesh.castShadow = false; cableMesh.receiveShadow = false;
+  scene.add(cableMesh);                              // deliberately not a collider
 
   // terminal lettering on both Siberia Express sheds and the Headwall top shed
   for (const st of liftState) {

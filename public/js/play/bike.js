@@ -42,7 +42,7 @@
 //
 // Boots physics live in controller.js and never come through here.
 
-import { BRAND, pick } from './flags.js';
+import { BRAND, pickBrand } from './flags.js';
 
 export const BIKE_TUNING = {
   maxSpeed: 22,          // m/s — hard backstop (downhill + gravity territory)
@@ -411,7 +411,7 @@ export const BIKE_MODELS = [
     // 2026-08-31, which makes both strings below reachable and therefore
     // scrubbable  14 the brand on the card, and `mark` painted on the down tube,
     // which is on screen in third person the whole time you ride it.
-    id: 'lab-standard', name: pick('Lab Standard Bike', 'Siberia Traverse'), brand: BRAND,
+    id: 'lab-standard', name: pickBrand({ lab: 'Lab Standard Bike', 'RED DOG': 'Red Dog Trail', SIBERIA: 'Siberia Traverse' }), brand: BRAND,
     disc: 'dirt jump', group: 'lab',
     spec: { travel: '100 / 0 mm', head: 69.0, wb: 1080, mass: '11.4 kg', wheel: '26 × 2.3"' },
     blurb: 'The house bike. Every number in bike.js exactly as written — the ruler the rest of the rack is measured against, and the bike both parks were shaped around. Nothing you equip changes how this one feels.',

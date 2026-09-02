@@ -112,6 +112,17 @@ const AIM_MIN_DOT = 0.20;
 // the crossover, which reads as two signs flickering rather than one lighting up.
 const AIM_STICK = 0.12;
 const AIM_HZ = 0.10;    // s — how often the (expensive) occlusion probe re-runs
+// ---- tap to travel (touch)
+// A finger is not a crosshair. It names a sign by LANDING on it, anywhere on the
+// screen, so the touch path needs two things the keyboard path never did: a
+// screen-space hit test (signAt) and somewhere to keep its answer while the
+// second tap of the double is still on its way (touchAim → S.aimHold).
+// TOUCH_AIM_MS is that window — comfortably longer than touch.js's DBL_MS, so the
+// offer is still standing when the second tap lands. TOUCH_MIN_PX floors the hit
+// box: a demoted chip is drawn at 0.42 of a card and can be a dozen pixels
+// across, and a thumb is a thumb.
+const TOUCH_AIM_MS = 900;
+const TOUCH_MIN_PX = 44;
 const OCC_STEPS = 56;   // samples along the camera→sign line
 const TRAVEL_OFF = 3;   // m — land beside the anchor, not inside whatever is on it
 const LAND_TOL = 4;     // m — a landing spot whose floor is this close to the
@@ -147,6 +158,7 @@ const S = {
   errors: 0,
   // ---- fast travel
   aim: null, aimT: 0, aimBlocked: false, aimEl: null, aimKeyEl: null, aimNameEl: null,
+  aimHold: 0,               // wall-clock instant a tapped sign stops holding the offer
   hoverWall: 0,
   flashEl: null, flash: 0, travels: 0, lastTravel: null, wired: false,
 };
@@ -1322,6 +1334,59 @@ function aimMiss(r) {
   return Math.max(Math.abs(r.sx) / (0.5 * r.angW), Math.abs(r.sy) / (0.5 * r.angH));
 }
 
+// aimMiss's eligibility WITHOUT its crosshair box: is this sign drawn, in front
+// of you, and a real size on the screen? The box is the one gate the touch path
+// cannot borrow — a tap names a sign the crosshair is nowhere near — so this is
+// what is left of it, and it is also the test that ends a tap's hold: a sign that
+// has faded out, gone behind you or scrolled off is no longer being offered.
+function aimLive(r) {
+  return r.aCard > AIM_MIN_A && r.dot > AIM_MIN_DOT
+    && isFinite(r.angW) && isFinite(r.angH) && r.angW > 0 && r.angH > 0;
+}
+
+// What is under this point of the glass — the tap's answer to "which sign".
+//
+// Screen space, CSS px, against the card the shader ACTUALLY DREW, and it reuses
+// the numbers step() already worked out this frame (`r.angW/angH`, `r.ds`): there
+// is no second projection pass over the world, only one Vector3.project per row,
+// and only on a tap. Nothing here runs per frame.
+//
+// The box is the crosshair's box restated in pixels: the card's own angular size
+// times the focal length, padded by AIM_PAD_H/V and capped by AIM_MAX_H/V exactly
+// as aimMiss pads and caps, then floored at TOUCH_MIN_PX so a chip stays hittable.
+// Ranking is aimMiss's too — deepest inside its OWN card wins, and only a true tie
+// falls through to the nearer sign — so a tap and the crosshair disagree about
+// nothing except where the pointer is.
+export function signAt(px, py) {
+  try {
+    if (!S.ok || !S.rows.length || !S.camera || !S.THREE) return null;
+    // everything the T key refuses, the gesture refuses: paused, gear, locker, fly
+    if (!travelLive()) return null;
+    const f = 0.5 * innerHeight / Math.tan(0.5 * (S.camera.fov || 60) * Math.PI / 180);
+    let best = null, bestM = Infinity;
+    for (const r of S.rows) {
+      if (!aimLive(r)) continue;
+      const v = new S.THREE.Vector3(r.pos[0], r.sky, r.pos[2]).project(S.camera);
+      if (!(v.z <= 1)) continue;                       // behind the camera
+      const cx = (v.x + 1) / 2 * innerWidth, cy = (1 - v.y) / 2 * innerHeight;
+      const cw = 0.5 * r.angW * f, ch = 0.5 * r.angH * f;     // half the drawn card
+      const hx = Math.max(Math.min(cw * AIM_PAD_H, AIM_MAX_H * f), TOUCH_MIN_PX / 2);
+      const hy = Math.max(Math.min(ch * AIM_PAD_V, AIM_MAX_V * f), TOUCH_MIN_PX / 2);
+      const dx = Math.abs(px - cx), dy = Math.abs(py - cy);
+      if (dx > hx || dy > hy) continue;
+      const m = Math.max(dx / cw, dy / ch);
+      if (m < bestM - 1e-4) { best = r; bestM = m; }
+      else if (best && m <= bestM + 1e-4 && r.ds < best.ds) { best = r; bestM = m; }
+    }
+    if (!best) return null;
+    // A sign behind a ridge is not on the screen, so a finger cannot be on it —
+    // the tap falls through to whatever a tap on empty snow does. One probe, on
+    // the winner only, which is the same cost tickAim pays on a crosshair change.
+    if (occluded(best)) return null;
+    return { id: best.id, name: best.name };
+  } catch { S.errors++; return null; }
+}
+
 function occluded(r) {
   const col = S.collision;
   if (!col || !col.groundAt || !col.bounds) return false;   // no collider: nothing to hide behind
@@ -1344,6 +1409,23 @@ function occluded(r) {
 // straight away when the sign under the crosshair changes
 function tickAim(dt, live) {
   if (!live) { setAim(null); return; }
+  // A TAPPED sign holds the offer for TOUCH_AIM_MS (touchAim). The finger is not
+  // the crosshair, so without this the loop below would take the offer straight
+  // back on the very next frame and the second tap of a double would have nothing
+  // to travel to. The hold ends the instant the sign stops being a target at all —
+  // faded, behind you, scrolled off — and occlusion keeps re-probing on its own
+  // timer underneath it, so a ridge sliding in front of an armed sign still mutes
+  // the offer. On every other frame this costs one compare against 0.
+  if (S.aimHold) {
+    const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    if (now < S.aimHold && S.aim && aimLive(S.aim)) {
+      S.aimT += dt;
+      if (S.aimT >= AIM_HZ) { S.aimT = 0; S.aimBlocked = occluded(S.aim); }
+      setAim(S.aimBlocked ? null : S.aim);
+      return;
+    }
+    S.aimHold = 0;
+  }
   let best = null, bestM = Infinity;
   for (const r of S.rows) {
     const m = aimMiss(r);
@@ -1401,6 +1483,24 @@ function setAim(r) {
   el.classList.add('is-on');
 }
 
+// Take the offer to a sign a finger has landed on, and hold it there for a beat.
+// Everything downstream — the prompt chip, the hover ease, fastTravel() with no
+// argument, the hud line on arrival — reads S.aim and cannot tell a tap from a
+// crosshair, which is the point: the gesture adds a way to NAME a sign, not a
+// second fast-travel path. signAt has already refused an occluded sign, so the
+// offer starts unblocked; tickAim's timer re-checks that for as long as it stands.
+export function touchAim(id) {
+  try {
+    if (!S.ok || !S.rows.length) return null;
+    const r = S.rows.find((q) => q.id === id || q.name === id);
+    if (!r) return null;
+    S.aim = r; S.aimT = 0; S.aimBlocked = false;
+    S.aimHold = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + TOUCH_AIM_MS;
+    setAim(r);
+    return { id: r.id, name: r.name, ms: TOUCH_AIM_MS };
+  } catch { S.errors++; return null; }
+}
+
 // what the crosshair is offering right now, or null
 export function aimedAt() {
   const r = (S.aim && !S.aimBlocked) ? S.aim : null;
@@ -1433,13 +1533,54 @@ function groundY(x, z, hintY) {
 // conversion lift.js uses to face you back down the line
 const yawToward = (fx, fz, tx, tz) => Math.atan2(-(tx - fx), -(tz - fz));
 
+// ---- specs/0028 §2: THE NAME PEOPLE TYPE.
+//
+// The rows carry two spellings of every place — an id (`base-area`) and a
+// display name shouted in caps (`THE VILLAGE`) — and a driver at a console types
+// neither. `fastTravel('the-village')` used to return null, which is a silent
+// no-op that reads exactly like a broken teleport; it was the third wrong guess
+// of one night's headless debugging.
+//
+// So the id and the name are BOTH slugified — lower-cased, every run of
+// non-alphanumerics collapsed to one `-`, ends trimmed — and the typed string is
+// slugified the same way before it is compared. `the-village`, `The Village`,
+// `kt22` and `KT-22` all land. This is the same normalisation spawn.js's
+// `?spawn=` already runs, deliberately: two ways of naming the same mountain
+// that disagree about spelling are worse than one that is merely strict.
+//
+// An exact id or name still wins outright, so nothing that resolved before can
+// be stolen by a slug collision.
+const mkSlug = (s) => String(s == null ? '' : s)
+  .toLowerCase().trim()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-+|-+$/g, '');
+
+function rowNamed(id) {
+  const exact = S.rows.find((q) => q.id === id || q.name === id);
+  if (exact) return exact;
+  const want = mkSlug(id);
+  if (!want) return null;
+  const hits = S.rows.filter((q) => mkSlug(q.id) === want || mkSlug(q.name) === want);
+  if (!hits.length) return null;
+  // ROW ORDER DECIDES, and it says so out loud. Two places whose names slugify
+  // to the same string is a world-authoring problem, not a caller's — picking
+  // silently would hide it, and throwing would break a link that used to work.
+  if (hits.length > 1) {
+    try {
+      console.warn(`[markers] fastTravel('${id}') is ambiguous — `
+        + `${hits.map((q) => `${q.id} ("${q.name}")`).join(', ')}; taking ${hits[0].id}`);
+    } catch { S.errors++; }
+  }
+  return hits[0];
+}
+
 // The whole feature. Lands TRAVEL_OFF metres short of the anchor on the side you
 // came from, on the real floor, looking at the place — so you arrive seeing the
 // thing you asked for rather than standing in the middle of it.
 export function fastTravel(id) {
   try {
     if (!S.ok || !S.rows.length || !S.ctrl || !S.ctrl.teleport || !S.THREE) return null;
-    const r = id ? S.rows.find((q) => q.id === id || q.name === id)
+    const r = id ? rowNamed(id)
                  : ((S.aim && !S.aimBlocked) ? S.aim : null);
     if (!r) return null;
 
@@ -1736,5 +1877,8 @@ const _test = {
   },
 };
 
-window.__playMarkers = { init, update, stats, aimedAt, fastTravel, _test };
+// signAt/touchAim ride the same handle: touch.js is the only caller and it already
+// reaches the player through a global, so the tap path needs no import and a world
+// that never mounted this module simply has no signs to tap.
+window.__playMarkers = { init, update, stats, aimedAt, fastTravel, signAt, touchAim, _test };
 export default init;

@@ -22,6 +22,9 @@
 
 import { gliderState } from './glider.js';
 import { skiState, takeSkiBurst, bankState, skiAccent, getSkiModel, SKI_REF } from './ski.js';
+// specs/0019 — the two clean-frame knobs. A leaf module: read every frame,
+// never cached here, so a flip in the locker lands on the very next frame.
+import { get as setting } from './settings.js';
 
 const POOL = 4096;          // particle pool size
 const SPRAY_CONE = 35 * Math.PI / 180;   // half-angle of the spray() throw cone
@@ -462,9 +465,15 @@ function slSize() {
 // speedo.js and idle.js already established. H is in here because clean-frame's
 // structural rule is `> *:not(canvas)` and this element IS a canvas, so the
 // stylesheet deliberately walks past it; the suppression has to be real.
-function slSuppressed(paused) {
+//
+// specs/0019 added `ignoreClean`, and only that: it takes H — and NOTHING else —
+// out of the list for one read. Everything below the first line is unconditional
+// and stays unconditional, which is what "every other suppression reason still
+// applies" means in the spec. Callers that pass nothing get the original
+// function, so the sparks (specs/0020) and every other reader are untouched.
+function slSuppressed(paused, ignoreClean) {
   const b = document.body.classList;
-  if (b.contains('clean-frame')) return true;   // H — the frame is being filmed
+  if (!ignoreClean && b.contains('clean-frame')) return true;   // H — the frame is being filmed
   if (b.contains('intro-up')) return true;
   if (b.contains('gd-intro-up')) return true;
   if (b.contains('is-dev')) return true;        // dev fly mode is not play
@@ -477,15 +486,27 @@ function slSuppressed(paused) {
   return false;
 }
 
+// specs/0019 — the two knobs mean the ink field can now be silent while the
+// coloured burst on the SAME canvas is not, so "drop the field" had to become
+// separable from "hide the canvas". This half is the drop: the state slHide()
+// always left behind, without touching a canvas the other half may still be
+// drawing into. `gb[i] = 255` is the "not in any alpha bucket" value slStep
+// writes for a dead line, and it is what stops slDraw re-painting a frozen
+// field that nothing is stepping any more.
+function slDrop(force) {
+  if (!force && !S.live && !S.rush && !S.burst) return;   // already dropped; do it once
+  S.live = 0; S.acc = 0; S.burst = 0; S.rush = 0; S.t = 0;
+  S.accel = 0; S.prevS = NaN;      // see slStep: no acceleration across a gap
+  for (let i = 0; i < SL_CAP; i++) { S.lf[i] = 0; S.gb[i] = 255; }
+}
+
 function slHide() {
   if (S.shown) {
     S.shown = false;
     S.cv.style.display = 'none';
     // drop the field rather than freezing it: coming back from the pause panel
     // to a stale 200-line frame would flash a photograph of the moment you left
-    S.live = 0; S.acc = 0; S.burst = 0;
-    S.accel = 0; S.prevS = NaN;      // see slStep: no acceleration across a gap
-    for (let i = 0; i < SL_CAP; i++) S.lf[i] = 0;
+    slDrop(true);
     S.cx.clearRect(0, 0, S.w, S.h);
   }
 }
@@ -701,29 +722,61 @@ function slDraw() {
   }
 }
 
+// ---------------------------------------------------------- specs/0019
+// The two knob-aware reads. `slSuppressed` is unchanged and still answers "is
+// this silent, H included"; these two ask the same question with H made
+// CONDITIONAL on the knob that owns that effect. One line each, deliberately:
+// there is no second list of silences to drift out of step with the first.
+//
+// The keys are read every call rather than cached, which is the whole of "a knob
+// flips live" — settings.js is a property lookup, not storage I/O.
+const slHidden = (paused) => slSuppressed(paused, setting('cleanSpeedLines'));
+const auHidden = (paused) => slSuppressed(paused, setting('cleanPumpTracks'));
+
 // The whole overlay, once a frame. `sMs` is metres per second — the caller has
 // already chosen between ground speed and the wing's airspeed.
 function slUpdate(dt, sMs, inAir, paused) {
   A.lineMs = 0;
   if (!S.cv) return;
-  if (slSuppressed(paused)) { slHide(); flReset(); return; }
+  // specs/0019 — the ink field and the coloured burst share this canvas but no
+  // longer share their silence: in a clean frame each answers to its own knob,
+  // because one is "anime lines" and the other is half of the aura. Everywhere
+  // else the two reads are identical, so this is a no-op outside H.
+  const inkOff = slHidden(paused);
+  const fireOff = auHidden(paused);
+  // specs/0015 — the impact frame is a THIRD tenant of this canvas, and the one
+  // that can hold it open alone: §4's whole point is that a wipe bursts at a
+  // speed the field correctly ignores. It answers its own suppression (inside
+  // imStep) and keeps its own clock, so this is the entire seam.
+  const imOn = imStep(dt, paused);
+  if (inkOff && fireOff && !imOn) { slHide(); flReset(); return; }
   const t0 = performance.now();
-  const any = slStep(dt, sMs, inAir);
+  // a suppressed half is DROPPED, not frozen — same reason slHide() drops it:
+  // a field nothing is stepping would otherwise be re-painted unchanged, every
+  // frame, as a photograph of the moment the knob went off.
+  let any = false;
+  if (inkOff) slDrop(); else any = slStep(dt, sMs, inAir);
   // specs/0006's coloured burst shares this canvas and this frame. It is stepped
   // and timed SEPARATELY so neither budget can quietly be charged to the other,
   // and it can hold the overlay open on its own: a full-bank pop from a standing
   // start spends real power at a speed the ink field correctly ignores.
   let fany = false, flMs = 0;
   if (FX_AURA_ON) {
-    const q = performance.now();
-    fany = flStep(dt);
-    flMs = performance.now() - q;
+    if (fireOff) flReset();
+    else {
+      const q = performance.now();
+      fany = flStep(dt);
+      flMs = performance.now() - q;
+    }
   }
-  if (!any && !fany) { slHide(); return; }
+  if (!any && !fany && !imOn) { slHide(); return; }
   if (!S.shown) { S.shown = true; S.cv.style.display = 'block'; }
   slDraw();
   const t1 = performance.now();
   if (fany) flDraw(S.cx);
+  // ...and specs/0015 last, on top of both: for an eighth of a second the impact
+  // frame is the loudest thing on the screen, and then it is gone.
+  if (imOn) imDraw(S.cx);
   A.lineMs = flMs + (performance.now() - t1);
   S.cost[S.ci] = (t1 - t0) - flMs;
   S.ci = (S.ci + 1) % S.cost.length;
@@ -1704,8 +1757,10 @@ function auraStep(dt, paused) {
     const c = R.ctrl;
     // Every silence the anime lines obey (spec §3), plus the two this one has of
     // its own: no skis on your feet, and no aura on a bike/sled/glider (v1).
+    // specs/0019: `auHidden`, not `slSuppressed` — in a clean frame this half
+    // answers to the aura's own knob. Everywhere else the two are the same read.
     const onSkis = !!(c && c.mode === 'skis');
-    if (!onSkis || slSuppressed(paused)) {
+    if (!onSkis || auHidden(paused)) {
       auraHide();
       A.p = 0; A.burst = 0; A.drainT = 0; A.live = 0;
       for (let i = 0; i < FL_CAP; i++) A.lf[i] = 0;
@@ -2107,6 +2162,7 @@ export function init(ctx) {
     R.u = (R.ctrl && R.ctrl.T && R.ctrl.T.eyeHeight) ? R.ctrl.T.eyeHeight / 1.70 : 1;
     polish(R.THREE, R.scene, R.camera, R.renderer, R.hud);
     buildPool(R.THREE, R.scene);
+    sparksBuild();          // specs/0020 §2b — dormant until an edge finds stone
     slBuild();
     R.ok = true;
     // specs/0006 — if main.js handed the ski rigs over first, build now
@@ -2157,6 +2213,12 @@ export function update(dt) {
       R.aSize[i] = R.sz[i] * (1 + 1.3 * (1 - t));          // puff expands as it flies
       R.aAlpha[i] = R.a0[i] * fadeIn * Math.pow(t, 1.15);  // fade out
     }
+    // ...and specs/0020's sparks, which keep their own pool. Emit then step, the
+    // order canopy.js's snow uses: a spark asked for on this frame is on the
+    // screen on this frame.
+    sparksEmit(dt, paused);
+    sparksStep(dt);
+
     R.alive = alive;
     R.pGeo.attributes.position.needsUpdate = true;
     R.pGeo.attributes.aSize.needsUpdate = true;
@@ -2258,7 +2320,9 @@ window.__speedlines = {
   accel: () => +S.accel.toFixed(2),
   focus: () => ({ x: Math.round(S.focusX), y: Math.round(S.focusY) }),
   rush: () => +S.rush.toFixed(3),
-  suppressed: () => slSuppressed(!!(R.hud && R.hud.isPaused && R.hud.isPaused())),
+  // specs/0019 — the FIELD's own answer, knob included, so a gate reading this
+  // is reading the same boolean slUpdate branched on rather than a near-miss.
+  suppressed: () => slHidden(!!(R.hud && R.hud.isPaused && R.hud.isPaused())),
   fire: (a) => { slBurst(a === undefined ? 1 : a); return S.burst; },
   tuning: SL,
   // measured, not asserted: the ring holds the last 240 frames of step+draw
@@ -2328,12 +2392,446 @@ window.__aura = {
   },
   // a name a screenshot can be filed under, on the tiers spec §2.1 describes
   tier: () => (A.p <= AU.ON_AT ? 'off' : A.p < 0.30 ? 'tips' : A.p < AU.FLARE_AT ? 'lit' : 'flare'),
-  suppressed: () => slSuppressed(!!(R.hud && R.hud.isPaused && R.hud.isPaused())),
+  // specs/0019 — the AURA's own answer: `cleanPumpTracks`, not the line knob
+  suppressed: () => auHidden(!!(R.hud && R.hud.isPaused && R.hud.isPaused())),
   force: (p) => { A.forced = (p == null ? null : clamp(+p || 0, 0, 1)); return A.forced; },
   fire: (e) => auraFire(e === undefined ? 1 : e),
   tuning: AU,
   cost: () => ({ n: A.cn, p50: auraCostPct(0.50), p95: auraCostPct(0.95), max: auraCostPct(0.999) }),
   costReset: () => { A.ci = 0; A.cn = 0; return true; },
+};
+
+// ---------------------------------------------------------------- sparks
+// specs/0020 §2b, Greg on the bench 2026-09-02: "Skiing on top of a rock should
+// not wipe out, it should throw some sparks though."
+//
+// This is the whole of what edge-on-stone now costs you, visually: the wipeout
+// it used to be is gone (controller.js), the SPEED it costs you is ski.js's
+// rock friction, and this is the tell that says why. A self-contained pool with
+// its own Points object, deliberately NOT the shared snow pool above — sparks
+// are additive and orange and rise off the tails, and folding two looks into one
+// material would have cost a uniform switch per emitter.
+//
+// Lifecycle discipline is canopy.js's `snow()`: a packed array with a draw
+// range, `visible` false and +0 draw calls whenever nothing is alive, and a
+// swap-remove that keeps the pool packed so the range is always [0, live).
+const SP = {
+  CAP: 160,             // pool ceiling; a hard ceiling, not a target
+  V_MIN: 3.0,           // m/s — under this, edges are not striking anything
+  V_FULL: 18.0,         // m/s — the rate and the throw are at full at this speed
+  RATE: 90,             // particles/s at V_FULL (about 1.5 a frame at 60)
+  LIFE: 0.30,           // s
+  G: 11.0,              // m/s^2 — heavier than snow; a spark falls, it does not drift
+  THROW: 3.2,           // m/s — how hard they are flung back along the track
+  SPREAD: 1.4,          // m/s — lateral scatter
+  SIZE: 0.085,          // PointsMaterial world size. three's attenuation is
+                        // `size * (h/2) / d`, so on a 720-line canvas this is
+                        // ~6 px at 5 m — the snowfall's number, in the units
+                        // this material happens to want
+  TAIL: 0.55,           // m behind the body the tails are taken to be
+  GAP: 0.36,            // m between the two skis
+};
+
+const SK = {
+  pts: null, geo: null, mat: null, posAttr: null, colAttr: null,
+  px: null, py: null, pz: null, vx: null, vy: null, vz: null, age: null,
+  live: 0, acc: 0, bursts: 0, lifetime: 0, on: false, why: 'idle',
+};
+
+function sparksBuild() {
+  const THREE = R.THREE;
+  const g = new THREE.BufferGeometry();
+  const pos = new Float32Array(SP.CAP * 3);
+  const col = new Float32Array(SP.CAP * 4);
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(col, 4));
+  g.setDrawRange(0, 0);
+  const mat = new THREE.PointsMaterial({
+    size: SP.SIZE * R.u,
+    // the snow pool's sprite, not a second copy of the same 32x32 disc
+    map: (R.pMat && R.pMat.uniforms && R.pMat.uniforms.uMap) ? R.pMat.uniforms.uMap.value : makeSprite(THREE),
+    vertexColors: true,
+    transparent: true,
+    depthWrite: false,
+    sizeAttenuation: true,
+    blending: THREE.AdditiveBlending,
+  });
+  const pts = new THREE.Points(g, mat);
+  pts.frustumCulled = false;      // the emitter is always at the camera
+  pts.renderOrder = 6;
+  pts.visible = false;
+  pts.name = 'fx:sparks';
+  R.scene.add(pts);
+  SK.pts = pts; SK.geo = g; SK.mat = mat;
+  SK.posAttr = g.attributes.position; SK.colAttr = g.attributes.color;
+  SK.px = new Float32Array(SP.CAP); SK.py = new Float32Array(SP.CAP); SK.pz = new Float32Array(SP.CAP);
+  SK.vx = new Float32Array(SP.CAP); SK.vy = new Float32Array(SP.CAP); SK.vz = new Float32Array(SP.CAP);
+  SK.age = new Float32Array(SP.CAP);
+}
+
+// Is there stone under the edges right now, and how hard are they on it?
+// `groundClass()` is the controller's captured value (specs/0020) — the class
+// under THIS step's ground probe, not whatever ray happened to run last.
+function sparksWant() {
+  const c = R.ctrl;
+  if (!c) { SK.why = 'no ctrl'; return 0; }
+  if (!c.grounded) { SK.why = 'airborne'; return 0; }
+  if (c.wipeT > 0) { SK.why = 'wiping'; return 0; }
+  // boots do not have edges. Every ride gear does.
+  if (c.mode === 'boots') { SK.why = 'on foot'; return 0; }
+  let cls = 0;
+  try { cls = c.groundClass ? c.groundClass() : 0; } catch { cls = 0; }
+  if (cls !== 1) { SK.why = 'on snow'; return 0; }
+  const sp = c.speed ? c.speed() : 0;
+  const v = sp / R.u;                          // metres per second, whatever the scene's unit
+  if (v < SP.V_MIN) { SK.why = 'too slow'; return 0; }
+  SK.why = 'on rock';
+  return clamp((v - SP.V_MIN) / (SP.V_FULL - SP.V_MIN), 0, 1);
+}
+
+function sparksEmit(dt, paused) {
+  if (!SK.pts) return;
+  // the same suppression the speed lines answer to, and for the same reason:
+  // clean-frame is being filmed, the locker is a menu, dev fly is not play.
+  if (slSuppressed(paused)) { SK.on = false; SK.why = 'suppressed'; SK.acc = 0; return; }
+  const t = sparksWant();
+  SK.on = t > 0;
+  if (!SK.on) { SK.acc = 0; return; }
+  const c = R.ctrl, u = R.u;
+  SK.acc += SP.RATE * t * dt;
+  let n = Math.floor(SK.acc);
+  if (n <= 0) return;
+  SK.acc -= n;
+  if (n > 12) n = 12;                          // one frame cannot own the pool
+  const p = c.position, v = c.velocity;
+  const sp = Math.hypot(v.x, v.z) || 1;
+  const fx = v.x / sp, fz = v.z / sp;          // travel direction
+  const rx = -fz, rz = fx;                     // ...and across it
+  for (let k = 0; k < n; k++) {
+    if (SK.live >= SP.CAP) break;
+    const i = SK.live++;
+    const side = (k % 2 ? 1 : -1) * SP.GAP * 0.5 * u;
+    SK.px[i] = p.x - fx * SP.TAIL * u + rx * side;
+    SK.py[i] = p.y + 0.04 * u;
+    SK.pz[i] = p.z - fz * SP.TAIL * u + rz * side;
+    // flung BACK along the track, with a little lift and scatter: an edge
+    // throws its sparks behind it, which is what makes the direction readable
+    const back = SP.THROW * (0.5 + t) * u;
+    SK.vx[i] = -fx * back * rand(0.6, 1.2) + rx * rand(-SP.SPREAD, SP.SPREAD) * u;
+    SK.vy[i] = rand(0.6, 2.4) * u;
+    SK.vz[i] = -fz * back * rand(0.6, 1.2) + rz * rand(-SP.SPREAD, SP.SPREAD) * u;
+    SK.age[i] = 0;
+    SK.lifetime++;
+  }
+  SK.bursts++;
+  sparksFlush();
+}
+
+function sparksFlush() {
+  const pa = SK.posAttr.array, ca = SK.colAttr.array;
+  const n = SK.live;
+  for (let i = 0; i < n; i++) {
+    const o = i * 3, q = i * 4;
+    pa[o] = SK.px[i]; pa[o + 1] = SK.py[i]; pa[o + 2] = SK.pz[i];
+    // white-hot at birth, orange as it cools, gone by LIFE
+    const f = SK.age[i] / SP.LIFE;
+    ca[q] = 1;
+    ca[q + 1] = 0.92 - 0.55 * f;
+    ca[q + 2] = 0.72 - 0.66 * f;
+    ca[q + 3] = Math.max(0, 1 - f * f);
+  }
+  SK.geo.setDrawRange(0, n);
+  SK.posAttr.needsUpdate = true;
+  SK.colAttr.needsUpdate = true;
+  SK.pts.visible = n > 0;
+}
+
+function sparksStep(dt) {
+  if (!SK.pts || !SK.live) return;             // nothing alive: not one instruction
+  const g = SP.G * R.u;
+  let n = SK.live;
+  for (let i = 0; i < n; i++) {
+    SK.age[i] += dt;
+    if (SK.age[i] >= SP.LIFE) {
+      const j = --n;                           // swap-remove keeps the pool packed
+      if (j !== i) {
+        SK.px[i] = SK.px[j]; SK.py[i] = SK.py[j]; SK.pz[i] = SK.pz[j];
+        SK.vx[i] = SK.vx[j]; SK.vy[i] = SK.vy[j]; SK.vz[i] = SK.vz[j];
+        SK.age[i] = SK.age[j];
+      }
+      i--;
+      continue;
+    }
+    SK.vy[i] -= g * dt;
+    SK.px[i] += SK.vx[i] * dt;
+    SK.py[i] += SK.vy[i] * dt;
+    SK.pz[i] += SK.vz[i] * dt;
+  }
+  SK.live = n;
+  sparksFlush();
+}
+
+// The test handle, the shape __speedlines and __aura already use.
+window.__sparks = {
+  count: () => SK.live,
+  state: () => ({
+    live: SK.live, on: SK.on, why: SK.why,
+    lifetime: SK.lifetime, bursts: SK.bursts,
+    draws: SK.pts && SK.pts.visible ? 1 : 0,
+    built: !!SK.pts,
+    suppressed: slSuppressed(!!(R.hud && R.hud.isPaused && R.hud.isPaused())),
+    groundClass: (() => { try { return R.ctrl && R.ctrl.groundClass ? R.ctrl.groundClass() : null; } catch { return null; } })(),
+    speed: (() => { try { return R.ctrl ? +(R.ctrl.speed() / R.u).toFixed(3) : null; } catch { return null; } })(),
+  }),
+  tuning: SP,
+  reset: () => { SK.live = 0; SK.acc = 0; SK.lifetime = 0; SK.bursts = 0; if (SK.pts) sparksFlush(); return true; },
+  // THE HARNESS DOOR, and it exists because of a seam that predates this spec:
+  // main.js drives `__playFX.update()` off the requestAnimationFrame line, which
+  // `__player.stepFixed()` does not run — and stepFixed has to PAUSE the game to
+  // be deterministic at all, which `slSuppressed` correctly reads as "not
+  // playing". A gate that could only ask through update() could therefore never
+  // see a spark. This runs the real `sparksEmit` + `sparksStep` with the pause
+  // flag SUPPLIED instead of read. Every other suppression — clean-frame, the
+  // intro, dev fly, the locker, the gear menu — is still slSuppressed's own and
+  // is not overridable, which is what keeps §3.3 an honest test.
+  step: (dt, paused = false) => {
+    const d = clamp(dt || 0.016, 0.0005, 0.05);
+    sparksEmit(d, !!paused);
+    sparksStep(d);
+    return SK.live;
+  },
+};
+
+// ============================================================ the impact frame
+// specs/0015 §4. Greg picked it out of the lookbook on 2026-09-01 — "lets do
+// 2 5" — so it is exactly two things and there is no third: an INWARD burst of
+// speed lines from the edge of the frame toward a point a third of the way to
+// the centre (option 2), and, on a big hit only, two frames of white (option 5).
+//
+// It sits on the SPEED-LINE CANVAS and uses the speed-line draw path — one path
+// and one fill per (alpha bucket x ink), zero string work in the loop — because
+// a second full-screen 2D canvas to paint 85 quads on 120 ms a run would be a
+// second compositor layer for nothing. It does NOT sit in the speed-line FIELD:
+// its own little pool, its own clock, its own suppression answer. The field is a
+// level (how fast are you going) and this is an event (you just hit a tree), and
+// §4 is explicit that the second must fire when the first is dark — a wipe at
+// 6 m/s bursts even though the field was off.
+//
+// The trigger is the controller's own countdown going ≤ 0 → > 0.5, which is
+// where 0017's audio reads the same event, so there is no plumbing in main.js
+// and no third opinion about which frame the hit happened on.
+const IM = {
+  DUR: 0.12,            // s — the whole burst
+  LINES_MIN: 40,        // ...at V_MIN
+  LINES_MAX: 85,        // ...and at V_MAX and above
+  V_MIN: 4.0, V_MAX: 12.0,
+  // ...and how the count runs BETWEEN those two. Not linearly: §5.4 asks for
+  // ~45 lines at 6 m/s, and the straight line through (4, 40) and (12, 85)
+  // passes through 51 there. A wipe at walking pace is a stumble and should look
+  // like one; the frame is meant to escalate as you approach the speeds a trunk
+  // actually hurts at.
+  SHAPE: 1.6,
+  CAP: 96,              // pool ceiling: LINES_MAX plus slack
+  INNER: 0.35,          // stops 35 % of the way in from the edge
+  OUTER: 1.18,          // ...having started just outside the frame
+  LEN: 0.30,            // one line's own length, as a fraction of the half-frame
+  WIDTH: 9.0,           // px at the outer (trailing) end
+  TAPER: 0.14,          // ...and the fraction of that at the converging end
+  WIDTH_REF: 720,
+  ALPHA: 0.74,
+  INK_FRAC: 0.30,       // the same deep slate the ordinary field is 30 % made of
+  STAGGER: 0.34,        // how much of DUR the last line waits before it starts
+  FLASH_V: 12.0,        // m/s — below this there is no flash, ever
+  FLASH_A: 0.35,
+  FLASH_FRAMES: 2,      // ...and above it there are exactly two frames of it
+};
+
+const IMS = {
+  live: false, t: 0, lines: 0, speed: 0, why: null, flash: false,
+  n: 0, last: null, hold: null,
+  prevWipe: 0, prevSp: 0,
+  // struct-of-arrays, exactly as the field's pool is: a burst is 85 lines in one
+  // frame and 85 short-lived objects is 85 things for the GC to find later
+  ca: new Float32Array(IM.CAP), sa: new Float32Array(IM.CAP),
+  d: new Float32Array(IM.CAP), ln: new Float32Array(IM.CAP),
+  wd: new Float32Array(IM.CAP), a0: new Float32Array(IM.CAP),
+  ik: new Uint8Array(IM.CAP),
+  gx: new Float32Array(IM.CAP * 8), gb: new Uint8Array(IM.CAP),
+  drawn: 0, flashA: 0,
+};
+
+// ARM ONE. `speedMs` is the speed the frame BEFORE the scrub — `wipeout()` has
+// already taken 70 % of it by the time anything downstream can see the event,
+// and a burst sized off the remainder would make every hit look like a stumble.
+function imFire(speedMs, why) {
+  const sp = Math.max(0, +speedMs || 0);
+  const t = Math.pow(clamp((sp - IM.V_MIN) / (IM.V_MAX - IM.V_MIN), 0, 1), IM.SHAPE);
+  const n = Math.min(IM.CAP, Math.round(IM.LINES_MIN + (IM.LINES_MAX - IM.LINES_MIN) * t));
+  const wide = IM.WIDTH * clamp(Math.min(S.w || 1280, S.h || 720) / IM.WIDTH_REF, 0.7, 1.4);
+  for (let i = 0; i < n; i++) {
+    // an EVEN FAN with a jittered angle inside each slot. A uniform random ring
+    // leaves gaps big enough to read as gaps at 85 lines, and the one thing this
+    // frame has to say is "from every direction at once".
+    const a = ((i + rand(0.15, 0.85)) / n) * Math.PI * 2;
+    IMS.ca[i] = Math.cos(a); IMS.sa[i] = Math.sin(a);
+    IMS.d[i] = Math.random() * IM.STAGGER;
+    IMS.ln[i] = IM.LEN * rand(0.55, 1.45);
+    IMS.wd[i] = wide * rand(0.50, 1.50);
+    IMS.a0[i] = IM.ALPHA * rand(0.60, 1.20);
+    IMS.ik[i] = Math.random() < IM.INK_FRAC ? 1 : 0;
+  }
+  IMS.lines = n;
+  IMS.speed = +sp.toFixed(2);
+  IMS.why = why || null;
+  IMS.flash = sp >= IM.FLASH_V;
+  IMS.t = 0; IMS.live = true; IMS.n++;
+  IMS.last = { why: IMS.why, speed: IMS.speed, lines: n, flash: IMS.flash };
+  return IMS.last;
+}
+
+// Lay the frame's geometry at phase `p` (0 = the instant of the hit, 1 = the end
+// of the burst). A PURE FUNCTION of the phase and the pool: nothing here
+// integrates, which is what lets `hold()` photograph any instant of a 120 ms
+// event on a headless box that cannot render 60 of them a second.
+function imLay(p) {
+  const w = S.w || 1280, h = S.h || 720;
+  const cx = w * 0.5, cy = h * 0.5, HX = w * 0.5, HY = h * 0.5;
+  const step = SL_ALPHA_CEIL / SL_BUCKETS;
+  let drawn = 0;
+  for (let i = 0; i < IM.CAP; i++) IMS.gb[i] = 255;
+  for (let i = 0; i < IMS.lines; i++) {
+    const d = IMS.d[i];
+    const q = (p - d) / (1 - d);
+    if (q <= 0 || q >= 1) continue;
+    // fast off the edge and settling as it arrives — an impact line does not
+    // cruise in at a constant rate, it is thrown
+    const e = 1 - (1 - q) * (1 - q) * (1 - q);
+    const rh = IM.OUTER + (IM.INNER - IM.OUTER) * e;      // the converging head
+    const rt = rh + IMS.ln[i] * (1 - 0.45 * e);           // ...and the tail behind
+    const a = IMS.a0[i] * Math.min(1, q * 9) * Math.pow(1 - q, 0.55);
+    if (a < step * 0.5) continue;
+    let b = (a / step) | 0;
+    if (b >= SL_BUCKETS) b = SL_BUCKETS - 1;
+    IMS.gb[i] = b + (IMS.ik[i] ? SL_BUCKETS : 0);
+    drawn++;
+    const ca = IMS.ca[i], sa = IMS.sa[i];
+    const ax = cx + ca * rh * HX, ay = cy + sa * rh * HY;   // inner: the point
+    const bx = cx + ca * rt * HX, by = cy + sa * rt * HY;   // outer: the edge
+    let dx = bx - ax, dy = by - ay;
+    const dm = Math.hypot(dx, dy) || 1;
+    const nx = -dy / dm, ny = dx / dm;
+    // WIDE at the frame edge, tapering to nothing at the convergence point. That
+    // direction is the whole reason the burst reads as inward rather than as the
+    // ordinary field with the sign flipped.
+    const wo = IMS.wd[i] * 0.5, wi = wo * IM.TAPER;
+    const o = i * 8;
+    IMS.gx[o]     = ax + nx * wi; IMS.gx[o + 1] = ay + ny * wi;
+    IMS.gx[o + 2] = bx + nx * wo; IMS.gx[o + 3] = by + ny * wo;
+    IMS.gx[o + 4] = bx - nx * wo; IMS.gx[o + 5] = by - ny * wo;
+    IMS.gx[o + 6] = ax - nx * wi; IMS.gx[o + 7] = ay - ny * wi;
+  }
+  IMS.drawn = drawn;
+  // OPTION 5. Two frames at 60, and only over IM.FLASH_V — a crossed landing at
+  // 6 m/s is a shrug, and a white frame is not a shrug.
+  // The half-frame is not fussiness: at 60 fps the third shutter lands exactly on
+  // `FLASH_FRAMES / 60` and float equality decides whether the flash is two
+  // frames long or three.
+  IMS.flashA = IMS.flash && p * IM.DUR < (IM.FLASH_FRAMES - 0.5) / 60 ? IM.FLASH_A : 0;
+}
+
+// The phase this frame is being drawn at. `hold` is a TEST-ONLY WRITE, in the
+// shape `__aura.force()` already established, and it is a write to the PICTURE:
+// it pins the burst's clock in seconds since the hit and forces the overlay
+// visible so a paused headless page can photograph a 120 ms event frame by
+// frame. It cannot move a body, a velocity or a payout by a millimetre.
+function imPhase() {
+  const s = IMS.hold != null ? IMS.hold : IMS.t;
+  return clamp(s / IM.DUR, 0, 1.6);
+}
+
+// One step. Returns whether the overlay has anything to say this frame.
+function imStep(dt, paused) {
+  const c = R.ctrl;
+  if (IMS.hold != null) { imLay(imPhase()); return true; }
+  const wt = c ? c.wipeT : 0;
+  // THE EDGE: ≤ 0 → > 0.5, the same read 0017's audio makes, so the wipe cannot
+  // be spent twice or spent on a tumble already in progress.
+  if (wt > 0.5 && IMS.prevWipe <= 0) {
+    const lt = c.lastTrick;
+    imFire(IMS.prevSp, lt && lt.name === 'wipeout' ? (lt.why || null) : null);
+  }
+  IMS.prevWipe = wt;
+  // ...and the pre-scrub speed, which is simply "the last frame that was not a
+  // wipeout". Sampled here rather than in the emitters because those are gated
+  // on gear and this event is not: you can eat it on anything.
+  if (!(wt > 0) && c) IMS.prevSp = c.speed() / R.u;
+  if (IMS.live) {
+    IMS.t += dt;
+    if (IMS.t >= IM.DUR) { IMS.live = false; IMS.t = 0; IMS.flashA = 0; IMS.drawn = 0; return false; }
+  }
+  if (!IMS.live) return false;
+  // §4: every `slSuppressed` reason still applies — the intro, dev fly, the
+  // locker, the gear menu, a pause — and clean-frame alone is 0019's knob to
+  // govern, which is exactly what `slHidden` is.
+  if (slHidden(paused)) return false;
+  imLay(imPhase());
+  return true;
+}
+
+// ...and the paint, into the speed lines' own context, by the speed lines' own
+// method. Called from slUpdate() after the field and after 0006's coloured burst,
+// so the impact frame is on top of both: it is the loudest thing on the screen
+// for an eighth of a second and then it is gone.
+function imDraw(g) {
+  if (IMS.flashA > 0) {
+    g.fillStyle = `rgba(255,255,255,${IMS.flashA.toFixed(3)})`;
+    g.fillRect(0, 0, S.w, S.h);
+  }
+  const gx = IMS.gx, gb = IMS.gb;
+  for (let b = 0; b < SL_BUCKETS * 2; b++) {
+    let opened = false;
+    for (let i = 0; i < IMS.lines; i++) {
+      if (gb[i] !== b) continue;
+      if (!opened) { g.beginPath(); opened = true; }
+      const o = i * 8;
+      g.moveTo(gx[o], gx[o + 1]);
+      g.lineTo(gx[o + 2], gx[o + 3]);
+      g.lineTo(gx[o + 4], gx[o + 5]);
+      g.lineTo(gx[o + 6], gx[o + 7]);
+      g.closePath();
+    }
+    if (opened) { g.fillStyle = SL_FILL[b]; g.fill(); }
+  }
+}
+
+// The test handle, the shape `__speedlines`, `__aura` and `__sparks` already use.
+window.__impact = {
+  // §4's two required readings
+  count: () => IMS.n,
+  last: () => (IMS.last ? { ...IMS.last } : null),
+  // ...and what a gate needs beyond them
+  live: () => IMS.live || IMS.hold != null,
+  drawn: () => IMS.drawn,
+  flashAlpha: () => +IMS.flashA.toFixed(3),
+  phase: () => +imPhase().toFixed(4),
+  t: () => +IMS.t.toFixed(4),
+  suppressed: () => slHidden(!!(R.hud && R.hud.isPaused && R.hud.isPaused())),
+  tuning: IM,
+  reset: () => { IMS.live = false; IMS.t = 0; IMS.hold = null; IMS.drawn = 0; IMS.flashA = 0; IMS.lines = 0; IMS.prevWipe = 0; return true; },
+  // TEST-ONLY WRITES. `fire` arms a burst at a stated speed; `hold` pins its
+  // clock (seconds since the hit) and forces the overlay visible; `step` is the
+  // harness door `__sparks.step` opened for exactly the same reason — main.js
+  // drives `__playFX.update()` off the rAF line, which `stepFixed` does not run,
+  // and stepFixed has to pause the game to be deterministic at all.
+  fire: (speed, why) => imFire(speed === undefined ? IM.V_MAX : speed, why || 'tree'),
+  // lays the frame straight away, so a caller can read `drawn`/`flashAlpha` back
+  // without first waiting for a requestAnimationFrame it has no handle on
+  hold: (s) => {
+    IMS.hold = s == null ? null : Math.max(0, +s || 0);
+    if (IMS.hold != null) imLay(imPhase());
+    return IMS.hold;
+  },
+  step: (dt, paused = false) => imStep(clamp(dt || 0.016, 0.0005, 0.05), !!paused),
 };
 
 window.__playFX = { init, update, stats, spray, skis };

@@ -48,6 +48,10 @@ const S = {
   airT: 0, t: 0, runT: 0,
   // ---- comedy state
   quipCd: 0, streak: 0, treeHits: 0, recent: [], lastQuip: '',
+  // ---- specs/0018: the prop classes. One streak, one clock and one counter per
+  // `why`, kept apart from the tree streak because a tower and a fir are not the
+  // same run of bad luck.
+  prevWipeSolid: 0, solidStreak: {}, solidAt: {}, solidHits: {}, lastSolid: null,
   // ---- surprises
   regs: [], props: [], fired: 0,
   // ---- dom
@@ -150,6 +154,101 @@ const QUIPS_STREAK = [
   [3, '3rd tree this run — they are recruiting you.'],
   [2, 'Second tree. Coincidence.'],
 ];
+
+// ===========================================================================
+// specs/0018 — THE PROP POOLS.
+//
+// One pool per class the controller can now put you down with, in the shape the
+// tree pools already have (generic / rare / streak) so there is one register and
+// not five. The KEY is the controller's `why`, which is the only thing this
+// module reads — it never re-derives what was hit, and it never asks the soup.
+//
+// House rules, from the spec: short (<= 42 chars, the tree pool is the register),
+// no real names, no resort staff, nothing that reads as a safety notice, and
+// nothing that collides with verify.mjs's banned/debug/advert strip lists — so
+// no line here says LIFT, GEAR, LOCKER, SPRINT or RESPAWN, however much a tower
+// quip would like to.
+const SOLID_STREAK_S = 60;      // s — how long a same-class streak stays hot
+const SOLID_RARE_P = 0.08;      // chance a hit draws from the rare pool
+
+const QUIPS_SOLID = {
+  building: {
+    tag: 'BUILDING',
+    generic: [
+      'Planning permission: denied.',
+      'You are not on the guest list.',
+      'Doors are on the other side.',
+      'Structurally, it won.',
+      'The lodge remains undefeated.',
+      'That is a wall. It is doing wall things.',
+    ],
+    rare: [
+      'The building has filed a noise complaint.',
+      'Load-bearing. You are not.',
+    ],
+    streak: [
+      [6, 'Six walls. Try a door.'],
+      [3, 'Third wall. The village noticed.'],
+    ],
+  },
+  tower: {
+    tag: 'TOWER',
+    generic: [
+      'The tower is not a slalom pole.',
+      'Steel: 1. Ambition: 0.',
+      'That pole has a job. You are not it.',
+      'You have been towered.',
+      'It is bolted to the mountain. You are not.',
+      'Signs point away from the sign.',
+    ],
+    rare: [
+      'The tower rang. It is fine. You are not.',
+      'Galvanised, grounded and unimpressed.',
+    ],
+    streak: [
+      [6, 'Six towers. Ski the middle.'],
+      [3, 'Third tower. The line is between them.'],
+    ],
+  },
+  person: {
+    tag: 'PERSON',
+    generic: [
+      'They were standing right there.',
+      'That was somebody. They are fine.',
+      'You have made a new friend. Loudly.',
+      'Uphill yields. You were not uphill.',
+      'Bowling. But with people.',
+      'Excuse me. Sorry. Coming through.',
+    ],
+    rare: [
+      'They gave that a 4.2. Harsh but fair.',
+      'Everyone saw. Everyone will remember.',
+    ],
+    streak: [
+      [6, 'Six people. This is a pattern.'],
+      [3, 'Third person. Try the empty snow.'],
+    ],
+  },
+  bench: {
+    tag: 'BENCH',
+    generic: [
+      'The bench had one job. It did it.',
+      'Seating: aggressive.',
+      'Take a seat. You already did.',
+      'Furniture does not yield.',
+      'Outdoor dining, indoor damage.',
+      'You tabled that idea. Literally.',
+    ],
+    rare: [
+      'That bench is older than the run.',
+      'Table for one. Face down.',
+    ],
+    streak: [
+      [6, 'Six benches. The deck is winning.'],
+      [3, 'Third bench. The deck is a slalom now.'],
+    ],
+  },
+};
 
 function quipFor(mode, streak) {
   // streak lines take over on the milestones, so escalation reads clearly
@@ -890,6 +989,46 @@ function checkTrees(dt) {
   S.prevWipe = wipe;
 }
 
+// specs/0018 — THE PROP QUIP, fired off the wipeout itself.
+//
+// checkTrees() has to hunt for its cause (it sweeps the stem hash, because a
+// tree quip fires for a brush that is not a wipeout at all). This one does not:
+// the controller has already decided, and `lastTrick.why` is the verdict. So the
+// whole detector is one rising edge on `wipeT` plus a table lookup — no geometry,
+// no second opinion, and no way for this module and the controller to disagree
+// about what you hit.
+//
+// The edge is tracked on its OWN field rather than checkTrees' `prevWipe`: that
+// one is read a few lines later to decide whether a tree brush counts as a
+// crash, and sharing it would make the two features step on each other.
+function checkSolids() {
+  const c = S.ctrl;
+  if (!c) return;
+  const wipe = c.wipeT || 0;
+  const rising = wipe > 0 && S.prevWipeSolid <= 0;
+  S.prevWipeSolid = wipe;
+  if (!rising) return;
+  const t = c.lastTrick;
+  const why = (t && t.name === 'wipeout') ? t.why : null;
+  const P = QUIPS_SOLID[why];
+  if (!P) return;                       // landing / tree / rock / rotation: not ours
+  // a streak is same class, inside the window, however many other things
+  // happened in between
+  const last = S.solidAt[why];
+  S.solidStreak[why] = (last !== undefined && S.runT - last <= SOLID_STREAK_S)
+    ? (S.solidStreak[why] || 0) + 1 : 1;
+  S.solidAt[why] = S.runT;
+  S.solidHits[why] = (S.solidHits[why] || 0) + 1;
+  const n = S.solidStreak[why];
+  let line = null, rare = false;
+  for (const [k, l] of P.streak) if (n === k) { line = l; break; }
+  if (!line && Math.random() < SOLID_RARE_P) { line = notRecent(P.rare); rare = true; }
+  if (!line) line = notRecent(P.generic);
+  S.quipCd = QUIP_CD;                   // one crash, one line — shared with the trees
+  S.lastSolid = { why, tag: P.tag, streak: n, line, rare };
+  toast(line, n > 1 ? P.tag + ' × ' + n : P.tag, rare);
+}
+
 // ===========================================================================
 // public
 // ===========================================================================
@@ -939,6 +1078,7 @@ export function update(dt) {
     S.prevVy = c.velocity ? c.velocity.y : 0;
 
     checkTrees(dt);
+    checkSolids();
     checkSurprises(dt, land);
   } catch { S.errors++; }
 }
@@ -949,6 +1089,9 @@ export function stats() {
     stems: S.nStem, sources: S.sources.slice(),
     surprises: S.regs.length, fired: S.fired,
     treeHits: S.treeHits, streak: S.streak, unit: S.u,
+    // specs/0018 — one counter and one live streak per prop class
+    solidHits: { ...S.solidHits }, solidStreak: { ...S.solidStreak },
+    lastSolid: S.lastSolid ? { ...S.lastSolid } : null,
   };
 }
 
@@ -967,6 +1110,8 @@ const _test = {
     for (const e of S.regs) { e.fired = false; e.inside = false; e.enters = 0; e.ft = -1; }
     S.fired = 0; S.streak = 0; S.treeHits = 0; S.quipCd = 0; S.recent.length = 0;
     S.havePrev = false;
+    S.solidStreak = {}; S.solidAt = {}; S.solidHits = {}; S.lastSolid = null;
+    S.prevWipeSolid = 0;
     for (const r of S.live.slice()) killToast(r);
   },
   // toast surface
@@ -1023,11 +1168,48 @@ const _test = {
   pool: () => ({ generic: QUIPS_GENERIC, gear: QUIPS_GEAR, rare: QUIPS_RARE, streak: QUIPS_STREAK }),
   poolSize: () => QUIPS_GENERIC.length + QUIPS_RARE.length + QUIPS_STREAK.length +
     Object.values(QUIPS_GEAR).reduce((a, b) => a + b.length, 0),
+  // specs/0018 — the prop pools, whole, so a gate can measure them against the
+  // spec's own house rules (<= 42 chars, 6 + 2 + 2) instead of trusting a count
+  solidPool: () => JSON.parse(JSON.stringify(QUIPS_SOLID)),
+  solidWindow: () => SOLID_STREAK_S,
+  // run the detector by hand. The rAF loop owns `update()`, and a deterministic
+  // stepFixed() run never reaches it — the same door 0020 opened on fx.js. This
+  // reads the LIVE controller, so it is the real detector on the real state and
+  // not a re-enactment of it.
+  // `dt` advances this module's OWN clock, the one the 60 s streak window is
+  // measured on, so a stepFixed run's streak is sim time exactly as a played
+  // one's is. Returns the quip only if this call fired one — checkSolids builds
+  // a fresh object every time, so identity is the whole test.
+  pump: (dt) => {
+    if (dt > 0) S.runT += dt;
+    const before = S.lastSolid;
+    try { checkSolids(); } catch { S.errors++; }
+    return (S.lastSolid && S.lastSolid !== before) ? { ...S.lastSolid } : null;
+  },
+  lastSolid: () => (S.lastSolid ? { ...S.lastSolid } : null),
   // drive one hit / one surprise directly (DOM + no-repeat checks)
   forceTree: () => {
     S.streak++; S.treeHits++;
     const line = quipFor(S.ctrl ? S.ctrl.mode : 'boots', S.streak);
     toast(line, 'TREE', QUIPS_RARE.indexOf(line) >= 0);
+    return line;
+  },
+  // ...and the same for a prop class, for the DOM/no-repeat checks the tree pool
+  // gets from forceTree(). Takes the `why`, not a class byte: `why` is the only
+  // name this module knows a solid by.
+  forceSolid: (why) => {
+    const P = QUIPS_SOLID[why];
+    if (!P) return null;
+    S.solidStreak[why] = (S.solidStreak[why] || 0) + 1;
+    S.solidHits[why] = (S.solidHits[why] || 0) + 1;
+    S.solidAt[why] = S.runT;
+    const n = S.solidStreak[why];
+    let line = null, rare = false;
+    for (const [k, l] of P.streak) if (n === k) { line = l; break; }
+    if (!line && Math.random() < SOLID_RARE_P) { line = notRecent(P.rare); rare = true; }
+    if (!line) line = notRecent(P.generic);
+    S.lastSolid = { why, tag: P.tag, streak: n, line, rare };
+    toast(line, n > 1 ? P.tag + ' × ' + n : P.tag, rare);
     return line;
   },
   forceFire: (id) => { const e = S.regs.find((q) => q.id === id); if (e && !e.fired) fire(e, { air: 1, impact: 12 }); return !!e; },
