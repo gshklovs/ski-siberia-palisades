@@ -1,0 +1,11 @@
+{
+  "name": "ski-siberia-palisades",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Ski the Siberia sector and the Palisades cliff band at Palisades Tahoe, in a browser. Real USGS 3DEP terrain, real OpenStreetMap trails.",
+  "license": "MIT",
+  "scripts": {
+    "dev": "npx --yes serve public",
+    "start": "npx --yes serve public"
+  }
+}

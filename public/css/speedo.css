@@ -1,0 +1,81 @@
+/* The speedometer's frame. Everything that is actually drawn lives in the
+   canvas (js/play/speedo.js); this file only decides WHERE the canvas is and
+   makes sure it can never take an input event or push a layout.
+
+   PROMOTED to bench source by specs/0003 (was tools/export-red-dog/templates/).
+   It is ordinary player CSS now: edit it HERE, commit, bump the exporter pin. */
+
+/* Top-left, on exactly the 14 px inset `.phud__read` used before D43 cut it —
+   the gauge is that slot's replacement, so it stands where the readout stood.
+   `position: fixed` and no width/height in the flow means it can never
+   contribute to a layout pass; the canvas's own attribute size is set from JS
+   on DPR change only, never per frame.
+
+   z-index 22 puts it above the instrument HUD (20) and below the guide (44),
+   the pause panel (40), the locker (50) and the boot cards (60). It is
+   furniture on the world, never an overlay on somebody's open panel — and the
+   ones it sits under are all states in which speedo.js has already hidden it. */
+/* `body.play canvas.pspeedo`, NOT `.pspeedo`, and the extra selectors are load-
+   bearing rather than defensive. play.css opens with
+
+       body.play canvas { display: block; position: fixed; left: 0; top: 0; }
+
+   for the game's own render surface, and that is (0,1,2) against a bare class's
+   (0,1,0) — so a plain `.pspeedo { left: 14px }` LOSES the cascade and the gauge
+   paints in the corner of the screen rather than 14 px in from it. It looked
+   right in isolation and was wrong the moment it met the real stylesheet; the
+   build gate caught it by asserting the measured rect rather than the rule.
+   (0,2,2) beats it, and nothing in te.css or play.css is more specific still. */
+body.play canvas.pspeedo {
+  position: fixed;
+  left: 14px;
+  top: 14px;
+  z-index: 22;
+  width: 172px;
+  height: 172px;
+  pointer-events: none;
+  /* the canvas is transparent outside the scrim disc, so there is nothing to
+     paint here — but a stray background would show up as a square on the snow */
+  background: none;
+  /* left/top only, no transform: a transform would promote this to its own
+     compositor layer for no gain and cost a texture upload on a machine that
+     needs its bandwidth for the mountain */
+  contain: strict;
+}
+
+/* THE BOOT SCREEN, EXPLICITLY. intro.css's structural rule is
+   `body.intro-up > *:not(canvas)…` — and this element IS a canvas, so that rule
+   deliberately walks straight past it. The exemption is there for the game's own
+   render surface and it cannot be narrowed without the mountain disappearing
+   behind the intro card, so the gauge names itself here instead. speedo.js also
+   holds `hidden` through the whole boot, which is the load-bearing half; this is
+   the half that survives someone editing speedo.js's suppression list. */
+body.intro-up .pspeedo { display: none !important; }
+
+/* `hidden` is the real switch — the lesson `.pidle` and `.phud__prompt` both
+   carry. Nothing here sets `display` to anything but the UA default, so the
+   attribute keeps working on its own; this rule exists so a future layout
+   change (`display: block`, say) cannot silently outrank it the way
+   `.pidle`'s `inline-flex` once did. */
+.pspeedo[hidden] { display: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  /* nothing to disable: the gauge has no CSS animation and no transition. Its
+     only motion is the needle and the ring following the physics, which is the
+     instrument doing its job rather than decoration, and speedo.js's lerps are
+     what keep that motion from being jittery in the first place. */
+  .pspeedo { transition: none; }
+}
+
+/* A phone gets a smaller dial in a tighter corner: 172 px is a fifth of a
+   390 px viewport's width and the touch look-zone starts at the halfway line,
+   so the gauge stays well clear of it either way. Scaled from the top-left
+   corner so the 10 px inset is preserved. */
+@media (max-width: 560px) {
+  body.play canvas.pspeedo {
+    left: 10px;
+    top: 10px;
+    transform: scale(0.78);
+    transform-origin: 0 0;
+  }
+}

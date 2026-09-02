@@ -1,0 +1,12 @@
+node_modules/
+.vercel/
+.DS_Store
+
+# The two VERIFICATION logs. tools/build-report.json is tracked on purpose —
+# it is the provenance record: which poi-lab commit this was baked from, the
+# crop, the derived spawn, the measured sizes. These two are different: they
+# are about the machine that ran the checks (wall-clock timings, a headless
+# browser's heap, local paths), they churn on every run, and the only thing
+# anybody needs from them is the pass or fail that already gated the ship.
+tools/verify-report.json
+tools/smoke-report.json

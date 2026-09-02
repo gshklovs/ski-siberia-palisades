@@ -1,0 +1,9 @@
+# Generated artifact. The scene data modules are megabytes of base64 on one
+# line each: never let git normalise them, never let a diff tool try to read
+# them, and keep them out of language statistics.
+* text=auto eol=lf
+
+public/scene/*.mjs      -text -diff linguist-generated=true
+public/vendor/*.js      -text -diff linguist-vendored=true
+public/js/play/*.js     linguist-generated=true
+tools/build-report.json linguist-generated=true

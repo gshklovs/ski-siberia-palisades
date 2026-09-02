@@ -1,0 +1,708 @@
+/* poi-lab bench — "enter the world" first-person player.
+   Same TE front panel language as the bench, but as an instrument overlay:
+   ink panels, cream silkscreen, one orange signal, sitting on top of the 3D. */
+
+/* scoped to the player document only — this sheet is also loaded by the SPA
+   for the portal control, and must not touch the bench's own page */
+body.play {
+  margin: 0; padding: 0; height: 100vh; min-height: 0;
+  background: #0b1a2a; overflow: hidden;
+}
+body.play canvas { display: block; position: fixed; left: 0; top: 0; }
+body.play > div[hidden], body.play .play-donor { display: none !important; }
+
+/* ------------------------------------------------------------------ booting */
+.pboot {
+  position: fixed; inset: 0; z-index: 60;
+  display: grid; place-items: center;
+  background: var(--ground);
+  transition: opacity .25s ease-out;
+}
+.pboot.is-gone { opacity: 0; pointer-events: none; }
+.pboot__card {
+  width: min(420px, 86vw);
+  background: var(--panel); border: 1px solid var(--seam-hard); border-radius: var(--r);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, .28);
+}
+.pboot__hd {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 12px; border-bottom: 1px solid var(--seam);
+}
+.pboot__bd { padding: 13px 12px 14px; display: grid; gap: 10px; }
+.pboot__bar { height: 6px; background: var(--panel-3); border: 1px solid var(--seam-hard); border-radius: 2px; overflow: hidden; }
+.pboot__bar i { display: block; height: 100%; width: 38%; background: var(--accent); animation: pslide 1.15s ease-in-out infinite; }
+@keyframes pslide { 0% { margin-left: -40% } 100% { margin-left: 102% } }
+.pboot__msg {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--muted);
+}
+
+/* --------------------------------------------------------------- not playable */
+.pfail { position: fixed; inset: 0; display: grid; place-items: center; padding: 22px; background: var(--ground); }
+.pfail__panel { width: min(560px, 92vw); }
+.pfail__reason { font-size: 14px; font-weight: 650; margin-bottom: 9px; }
+.pfail__detail {
+  font-family: var(--mono); font-size: 11px; background: var(--panel-2);
+  border: 1px solid var(--seam); border-radius: var(--r-sm);
+  padding: 8px 9px; margin: 0 0 10px; white-space: pre-wrap; word-break: break-word; color: var(--ink-2);
+}
+.pfail__hint { font-size: 12.5px; color: var(--ink-2); }
+.pfail__hint code { font-family: var(--mono); font-size: 11.5px; background: var(--panel-2); padding: 1px 4px; border-radius: 3px; }
+
+/* ---------------------------------------------------------------------- hud */
+.phud { position: fixed; inset: 0; z-index: 20; pointer-events: none; }
+
+.phud__cross {
+  position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px;
+  border-radius: 50%; background: rgba(255, 255, 255, .92);
+  box-shadow: 0 0 0 1.5px rgba(23, 22, 20, .55), 0 0 6px rgba(0, 0, 0, .35);
+}
+.phud .is-hidden { display: none; }
+.phud__cross.is-hidden { display: none; }
+
+.pchip {
+  background: rgba(23, 22, 20, .82); color: var(--panel);
+  border: 1px solid rgba(244, 241, 234, .22); border-radius: var(--r-sm);
+  font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; padding: 6px 9px; line-height: 1.5;
+}
+
+.phud__read {
+  position: absolute; left: 14px; top: 14px;
+  display: grid; gap: 3px; min-width: 168px;
+}
+.phud__read .k { color: #a49d90; }
+.phud__read .v { color: var(--panel); font-variant-numeric: tabular-nums; }
+.phud__read .r { display: flex; justify-content: space-between; gap: 14px; }
+.phud__title { display: flex; align-items: center; gap: 7px; }
+.phud__title .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; }
+.phud__title b { color: var(--panel); font-weight: 700; letter-spacing: .1em; }
+
+.phud__legend {
+  position: absolute; left: 14px; bottom: 14px;
+  display: flex; gap: 5px; flex-wrap: wrap; max-width: 60vw;
+}
+.pkey {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(23, 22, 20, .82); color: #cdc7ba;
+  border: 1px solid rgba(244, 241, 234, .22); border-radius: var(--r-sm);
+  font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; padding: 5px 8px;
+}
+.pkey b { color: var(--panel); background: rgba(244, 241, 234, .13); border-radius: 2px; padding: 1px 4px; letter-spacing: .06em; }
+.pkey.is-on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pkey.is-on b { background: rgba(0, 0, 0, .22); color: #fff; }
+
+.phud__read .v.is-hot { color: var(--accent); }
+
+/* trick stamp: the big centre-screen "360!" (the in-world 3D skis replaced the
+   old CSS rails — see main.js). One orange signal, briefly enormous. */
+.phud__trick {
+  position: absolute; left: 50%; top: 30%; transform: translateX(-50%);
+  text-align: center; pointer-events: none;
+}
+.phud__trick[hidden] { display: none; }
+.phud__trick-big {
+  font-family: var(--mono); font-size: 46px; font-weight: 800; letter-spacing: .14em;
+  color: var(--accent);
+  text-shadow: 0 0 1.5px rgba(23, 22, 20, .9), 0 2px 14px rgba(0, 0, 0, .5);
+}
+.phud__trick-sub {
+  margin-top: 2px;
+  font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: .3em;
+  text-transform: uppercase; color: var(--panel);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, .6);
+}
+.phud__trick.is-wipe .phud__trick-big { color: #f4f1ea; }
+.phud__trick.is-pop { animation: ptrick .45s cubic-bezier(.2, 1.6, .4, 1) both; }
+@keyframes ptrick {
+  0% { transform: translateX(-50%) scale(.4); opacity: 0; }
+  100% { transform: translateX(-50%) scale(1); opacity: 1; }
+}
+
+/* rocket fuel (boost.js) — one slim bar, on screen only while it is burning or
+   refilling. Bottom RIGHT: the legend owns the bottom-left and wraps to two or
+   three rows as keys are added, so anything centred there eventually collides
+   with it. */
+.phud__fuel {
+  position: absolute; right: 14px; bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .18em;
+  text-transform: uppercase; color: #cdc7ba;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, .7);
+}
+.phud__fuel[hidden], .phud__fuel.is-hidden { display: none; }
+.phud__fuel-bar {
+  display: block; width: 148px; height: 5px;
+  background: rgba(23, 22, 20, .82);
+  border: 1px solid rgba(244, 241, 234, .28); border-radius: 2px;
+  overflow: hidden;
+}
+.phud__fuel-bar i {
+  display: block; height: 100%; width: 100%;
+  background: #cdc7ba;
+  transition: width .06s linear;
+}
+.phud__fuel.is-burn { color: var(--accent); }
+.phud__fuel.is-burn .phud__fuel-bar { border-color: var(--accent); }
+.phud__fuel.is-burn .phud__fuel-bar i { background: var(--accent); box-shadow: 0 0 7px rgba(255, 77, 0, .85); }
+/* ran dry — dim until there is enough charge to relight */
+.phud__fuel.is-dry { color: #7d766c; }
+.phud__fuel.is-dry .phud__fuel-bar i { background: #7d766c; }
+
+/* pump arc (§1.10) — a thin arc under the crosshair, drawn as the bottom 100°
+   of a conic-gradient ring: the fill sweep is a custom property the HUD writes
+   each frame, the ring is a radial mask, and the rest of the circle is simply
+   transparent. No SVG, no library, one element.
+   `scaleX(-1)` mirrors the sweep so it fills left → right; a conic gradient can
+   only run clockwise, which on the bottom of a circle is right → left. */
+.phud__pump {
+  position: absolute; left: 50%; top: 50%;
+  width: 58px; height: 58px; margin: -29px 0 0 -29px;
+  color: #a49d90;                      /* the arc's own colour — see is-hot/is-cold */
+}
+.phud__pump[hidden], .phud__pump.is-hidden { display: none; }
+.phud__pump-arc {
+  --pf: 0deg;
+  display: block; position: absolute; inset: 0; border-radius: 50%;
+  transform: scaleX(-1);
+  background: conic-gradient(from 130deg,
+    currentColor 0 var(--pf),
+    rgba(244, 241, 234, .16) var(--pf) 100deg,
+    transparent 100deg 360deg);
+  -webkit-mask: radial-gradient(circle at 50% 50%, transparent 0 24px, #000 24.5px);
+  mask: radial-gradient(circle at 50% 50%, transparent 0 24px, #000 24.5px);
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, .6));
+}
+/* colour is the verdict on the transition you just made: white = you got more
+   back than you put in, dim red = you gave it away */
+.phud__pump.is-hot { color: #f4f1ea; }
+.phud__pump.is-cold { color: #a8452e; }
+.phud__pump.is-rel { color: var(--accent); }
+.phud__pump.is-rel .phud__pump-arc { filter: drop-shadow(0 0 6px rgba(255, 77, 0, .8)); }
+
+/* live combo strip (§3.7) — bottom-centre. `bottom` clears three rows of the
+   legend (14px + 3 × 30px), because the legend is 60vw wide from the left and
+   reaches past the centre line the moment it wraps. Bare type on the world, not
+   a chip: an unbanked score is not a thing you own yet and it should not sit in
+   the same panel furniture as the instruments. */
+.phud__combo {
+  position: absolute; left: 50%; bottom: 112px; transform: translateX(-50%);
+  display: flex; align-items: baseline; gap: 7px; white-space: nowrap;
+  font-family: var(--mono); font-weight: 800;
+  text-shadow: 0 0 2px rgba(23, 22, 20, .9), 0 2px 10px rgba(0, 0, 0, .55);
+}
+.phud__combo[hidden], .phud__combo.is-hidden { display: none; }
+.phud__combo-score { font-size: 22px; letter-spacing: .06em; color: var(--panel); font-variant-numeric: tabular-nums; }
+.phud__combo-x { font-size: 13px; color: #a49d90; }
+.phud__combo-mult { font-size: 22px; letter-spacing: .04em; color: var(--accent); font-variant-numeric: tabular-nums; }
+.phud__combo-n {
+  font-size: 9px; font-weight: 700; letter-spacing: .18em;
+  text-transform: uppercase; color: #a49d90;
+}
+.phud__combo-n.is-hidden { display: none; }
+
+/* end-of-combo banner (§3.7) — the receipt, 2.4 s, low on the screen so it
+   never fights the big rotation stamp at 30% */
+.phud__cend {
+  position: absolute; left: 50%; top: 62%; transform: translateX(-50%);
+  text-align: center; max-width: 62vw;
+  font-family: var(--mono);
+  text-shadow: 0 0 2px rgba(23, 22, 20, .9), 0 2px 12px rgba(0, 0, 0, .55);
+}
+.phud__cend[hidden], .phud__cend.is-hidden { display: none; }
+.phud__cend-cap {
+  font-size: 10px; font-weight: 700; letter-spacing: .3em;
+  text-transform: uppercase; color: #a49d90;
+}
+.phud__cend-tot { display: flex; align-items: baseline; justify-content: center; gap: 9px; margin-top: 2px; }
+.phud__cend-score { font-size: 34px; font-weight: 800; letter-spacing: .04em; color: var(--panel); font-variant-numeric: tabular-nums; }
+.phud__cend-mult { font-size: 20px; font-weight: 800; letter-spacing: .04em; color: var(--accent); font-variant-numeric: tabular-nums; }
+.phud__cend-list {
+  margin-top: 4px; font-size: 11px; font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--panel); line-height: 1.5;
+}
+.phud__cend-sub {
+  margin-top: 2px; font-size: 9.5px; font-weight: 700; letter-spacing: .22em;
+  text-transform: uppercase; color: #a49d90;
+}
+.phud__cend-list.is-hidden, .phud__cend-sub.is-hidden { display: none; }
+.phud__cend.is-pb .phud__cend-cap { color: var(--accent); }
+.phud__cend.is-pb .phud__cend-score { color: var(--accent); }
+.phud__cend.is-pop { animation: pcend .5s cubic-bezier(.2, 1.5, .4, 1) both; }
+@keyframes pcend {
+  0% { transform: translateX(-50%) translateY(10px); opacity: 0; }
+  100% { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+
+/* leaderboard breadcrumb (§4.3) — one dim dot under the fps chip. It is the
+   only thing on screen that admits the board exists, and its title is `L L`. */
+.phud__bdot {
+  position: absolute; right: 19px; top: 44px;
+  width: 5px; height: 5px; border-radius: 50%;
+  background: rgba(244, 241, 234, .34);
+  box-shadow: 0 0 0 1px rgba(23, 22, 20, .5);
+  pointer-events: auto; cursor: help;
+}
+.phud__bdot[hidden], .phud__bdot.is-hidden { display: none; }
+.phud__bdot:hover { background: var(--accent); }
+
+.phud__toast {
+  position: absolute; left: 50%; top: 58%; transform: translateX(-50%);
+  border-color: var(--accent); color: var(--panel);
+}
+.phud__toast[hidden] { display: none; }
+
+/* contextual offer under the crosshair — "F ride red dog express" (lift.js) */
+.phud__prompt {
+  position: absolute; left: 50%; top: calc(50% + 26px); transform: translateX(-50%);
+  display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+  border-color: var(--accent); color: var(--panel);
+}
+.phud__prompt[hidden] { display: none; }
+.phud__prompt b {
+  color: #fff; background: var(--accent); border-radius: 2px;
+  padding: 1px 5px; letter-spacing: .06em;
+}
+
+.phud__fps { position: absolute; right: 14px; top: 14px; }
+.phud__fps .v { color: var(--panel); font-variant-numeric: tabular-nums; }
+
+/* reference-bundle viewer: B toggles, [ ] cycle */
+.phud__ref {
+  position: absolute; right: 14px; top: 52px;
+  width: min(38vw, 560px); padding: 6px;
+  display: grid; gap: 5px;
+}
+/* `display: grid` above outranks the UA's [hidden] rule, so say it here or the
+   viewer sits on screen as an empty black bar with B never having been pressed */
+.phud__ref[hidden] { display: none; }
+.phud__ref-img {
+  display: block; width: 100%; max-height: 58vh; object-fit: contain;
+  background: #000; border-radius: 2px;
+}
+.phud__ref-cap { color: #cdc7ba; letter-spacing: .1em; }
+
+/* ---------------------------------------------------------------- dev mode
+   F8. A fly-camera readout, a reference-compare layer under the HUD chips, a
+   toolbar, and the "match this view" dialog. See harness/TUNING.md. */
+
+.phud__dev {
+  position: absolute; left: 14px; top: 14px;
+  display: grid; gap: 3px; min-width: 230px; max-width: 300px;
+  border-color: var(--accent);
+}
+.phud__dev[hidden] { display: none; }
+.phud__dev.is-hidden { display: none; }
+.phud__dev .k { color: #a49d90; }
+.phud__dev .v { color: var(--panel); font-variant-numeric: tabular-nums; }
+.phud__dev .r { display: flex; justify-content: space-between; gap: 14px; }
+.phud__dev-url {
+  margin-top: 4px; padding: 5px 6px;
+  background: rgba(244, 241, 234, .1); border-radius: 2px;
+  color: #ffd9c8; letter-spacing: .04em; text-transform: none;
+  word-break: break-all; user-select: text;
+}
+.phud__dev-btns { display: flex; gap: 5px; margin-top: 4px; pointer-events: auto; }
+
+.pdev-btn {
+  font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: #cdc7ba; cursor: pointer;
+  background: rgba(244, 241, 234, .1); border: 1px solid rgba(244, 241, 234, .28);
+  border-radius: var(--r-sm); padding: 5px 8px;
+}
+.pdev-btn:hover { background: rgba(244, 241, 234, .2); color: var(--panel); }
+.pdev-btn.is-on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pdev-btn--accent { background: var(--accent); border-color: #a83300; color: #fff; }
+.pdev-btn--accent:hover { background: #f04800; color: #fff; }
+.pdev-btn:disabled { opacity: .4; cursor: default; }
+.pdev-btn--sm { padding: 3px 6px; font-size: 9px; }
+
+.pdev-lbl {
+  font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: #a49d90;
+}
+.pdev-lbl--v { color: var(--panel); font-variant-numeric: tabular-nums; min-width: 34px; text-align: right; }
+
+/* compare layer — deliberately BELOW the hud chips (z 20) and above the canvas */
+.pdev-compare { position: fixed; inset: 0; z-index: 15; pointer-events: none; }
+.pdev-compare[hidden] { display: none; }
+.pdev-compare__ref { position: absolute; inset: 0; overflow: hidden; background: #0b1a2a; }
+.pdev-compare__ref--side { right: 50%; border-right: 1px solid var(--accent); }
+.pdev-compare__ref--overlay, .pdev-compare__ref--wipe { background: transparent; }
+.pdev-compare__img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.pdev-compare__seam {
+  position: absolute; top: 0; bottom: 0; width: 1px; margin-left: -.5px;
+  background: var(--accent);
+}
+.pdev-compare__seam[hidden], .pdev-compare__handle[hidden] { display: none; }
+.pdev-compare__handle {
+  position: absolute; top: 50%; width: 26px; height: 54px; margin: -27px 0 0 -13px;
+  border-radius: var(--r-sm); background: var(--accent); border: 1px solid #a83300;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .4);
+  cursor: ew-resize; pointer-events: auto; touch-action: none;
+}
+
+/* toolbar */
+.pdev-bar {
+  position: fixed; right: 14px; bottom: 14px; z-index: 22;
+  width: 232px; display: grid; gap: 7px; pointer-events: auto;
+  background: rgba(23, 22, 20, .88); color: var(--panel);
+  border: 1px solid var(--accent); border-radius: var(--r-sm); padding: 9px;
+}
+.pdev-bar[hidden] { display: none; }
+.pdev-bar__title {
+  display: flex; align-items: center; gap: 7px;
+  font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.pdev-bar__title .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; }
+.pdev-bar__ref {
+  flex: 1; min-width: 0; color: #a49d90; font-size: 9px; letter-spacing: .06em;
+  text-transform: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pdev-bar__row { display: flex; align-items: center; gap: 5px; }
+.pdev-bar__row .pdev-btn { flex: 1; text-align: center; padding: 5px 4px; letter-spacing: .06em; }
+.pdev-slider { flex: 1; min-width: 0; accent-color: var(--accent); }
+.pdev-bar .pdev-btn--accent { padding: 8px; text-align: center; }
+
+/* match dialog */
+.pdev-modal {
+  position: fixed; inset: 0; z-index: 45;
+  display: grid; place-items: center; padding: 20px;
+  background: rgba(23, 22, 20, .5); backdrop-filter: blur(3px);
+}
+.pdev-modal[hidden] { display: none; }
+.pdev-modal__panel { width: min(680px, 94vw); box-shadow: 0 18px 50px rgba(0, 0, 0, .35); }
+.pdev-modal__bd { display: grid; gap: 11px; }
+.pdev-modal__shots { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.pdev-shot { margin: 0; display: grid; gap: 5px; }
+.pdev-shot__img {
+  display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: contain;
+  background: #0b1a2a; border: 1px solid var(--seam-hard); border-radius: var(--r-sm);
+}
+.pdev-shot__cap {
+  font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--muted);
+}
+.pdev-modal__ask { font-size: 14px; font-weight: 650; color: var(--ink); }
+.pdev-modal__note { display: grid; gap: 4px; }
+.pdev-note {
+  width: 100%; box-sizing: border-box; resize: vertical;
+  font-family: var(--mono); font-size: 11.5px; line-height: 1.5; color: var(--ink);
+  background: var(--panel-2); border: 1px solid var(--seam-hard); border-radius: var(--r-sm);
+  padding: 7px 8px;
+}
+.pdev-note:focus { outline: none; border-color: var(--accent); }
+.pdev-modal__row { display: flex; gap: 8px; align-items: center; }
+.pdev-modal__stat { color: var(--muted); }
+
+/* --------------------------------------------------------------- gear menu
+   Hold E. Same panel language as pause, sized like a context menu. */
+.pgearmenu {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  pointer-events: auto; z-index: 30;
+}
+.pgearmenu[hidden] { display: none; }
+.pgearmenu__panel { width: min(280px, 80vw); box-shadow: 0 14px 40px rgba(0, 0, 0, .3); }
+.pgearmenu__bd { display: grid; gap: 4px; padding: 8px; }
+.pgearmenu__row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 9px; border-radius: var(--r-sm); border: 1px solid transparent;
+  cursor: pointer; user-select: none;
+}
+.pgearmenu__row .cap {
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  background: var(--panel-2); border: 1px solid var(--ink); border-radius: 3px;
+  padding: 2px 6px; box-shadow: 0 1px 0 var(--seam-hard);
+}
+.pgearmenu__row .name {
+  flex: 1; font-family: var(--mono); font-size: 11px; font-weight: 700;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--ink);
+}
+.pgearmenu__row .tag {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--muted);
+}
+.pgearmenu__row.is-sel { background: var(--accent); border-color: #a83300; }
+.pgearmenu__row.is-sel .name, .pgearmenu__row.is-sel .tag { color: #fff; }
+.pgearmenu__row.is-sel .cap { background: rgba(0, 0, 0, .22); color: #fff; border-color: #a83300; box-shadow: none; }
+
+/* --------------------------------------------------------------- inventory
+   I. The locker: tabs across the top, a live 3D preview of the body on the
+   left, a grid of equipment squares on the right, and the stat strip under it.
+   Same TE panel language as pause — this is an instrument, not a storefront. */
+.pinv {
+  position: fixed; inset: 0; z-index: 50;
+  display: grid; place-items: center; padding: 18px;
+  background: rgba(23, 22, 20, .58);
+  backdrop-filter: blur(5px) saturate(.85);
+  pointer-events: auto;
+}
+.pinv[hidden] { display: none; }
+.pinv__panel {
+  width: min(1180px, 96vw); height: min(780px, 92vh);
+  display: flex; flex-direction: column; min-height: 0;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, .42);
+}
+.pinv__bd {
+  flex: 1; min-height: 0;
+  display: grid; grid-template-rows: auto 1fr; gap: 11px;
+}
+.pinv__tabs {
+  display: flex; align-items: center; gap: 6px;
+  border-bottom: 1px solid var(--seam); padding-bottom: 9px;
+}
+.pinv__tab {
+  font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--ink-2); cursor: pointer;
+  background: var(--panel-2); border: 1px solid var(--seam-hard);
+  border-radius: var(--r-sm); padding: 7px 13px;
+}
+.pinv__tab:hover { background: var(--panel-3); color: var(--ink); }
+.pinv__tab.is-on { background: var(--accent); border-color: #a83300; color: #fff; }
+.pinv__hint {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--muted);
+}
+
+.pinv__body {
+  min-height: 0; display: grid; grid-template-columns: 330px 1fr; gap: 14px;
+}
+.pinv__preview {
+  min-height: 0; display: grid; grid-template-rows: 1fr auto;
+  background: linear-gradient(180deg, #16283a 0%, #0b1a2a 62%, #091420 100%);
+  border: 1px solid var(--seam-hard); border-radius: var(--r-sm); overflow: hidden;
+}
+.pinv__stage { position: relative; min-height: 0; }
+/* two selectors deep on purpose: `body.play canvas` above pins every canvas in
+   this document to fixed 0,0 for the world renderer, and the preview is the one
+   canvas that must stay inside its box */
+.pinv__stage .pinv__canvas { display: block; position: absolute; inset: 0; width: 100%; height: 100%; }
+.pinv__cap {
+  padding: 9px 11px; border-top: 1px solid rgba(244, 241, 234, .16);
+  background: rgba(11, 26, 42, .7);
+}
+.pinv__cap-brand {
+  font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .22em;
+  text-transform: uppercase; color: #8fa3b5;
+}
+.pinv__cap-name {
+  font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .06em;
+  color: var(--panel); margin-top: 3px;
+}
+
+/* rows are named explicitly because a tab with one filter group hides the chip
+   row entirely, and implicit placement would then hand the 1fr to the detail
+   strip instead of to the grid */
+.pinv__right { min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 10px; }
+.pinv__filters { grid-row: 1; display: flex; gap: 5px; flex-wrap: wrap; }
+.pinv__filters[hidden] { display: none; }
+.pinv__chip {
+  font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--muted); cursor: pointer;
+  background: transparent; border: 1px solid var(--seam-hard);
+  border-radius: 999px; padding: 4px 11px;
+}
+.pinv__chip:hover { color: var(--ink); border-color: var(--ink); }
+.pinv__chip.is-on { background: var(--ink); border-color: var(--ink); color: var(--panel); }
+
+.pinv__grid {
+  grid-row: 2; min-height: 0; overflow-y: auto; align-content: start;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(152px, 1fr)); gap: 10px;
+  padding-right: 4px;
+}
+.pinv__card {
+  position: relative; display: grid; gap: 6px; text-align: left; cursor: pointer;
+  background: var(--panel-2); border: 1px solid var(--seam);
+  border-radius: var(--r-sm); padding: 8px;
+}
+.pinv__card:hover { border-color: var(--seam-hard); }
+.pinv__card.is-sel {
+  background: var(--panel); border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-dim);
+}
+.pinv__art {
+  display: block; background: var(--panel-3); border: 1px solid var(--seam);
+  border-radius: 3px; padding: 5px 4px;
+}
+.pinv__img { display: block; width: 100%; height: auto; }
+.pinv__name {
+  font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .04em;
+  color: var(--ink); line-height: 1.35;
+  min-height: 2.7em;               /* two lines, so a wrapped name never jogs the row */
+}
+.pinv__tag {
+  font-family: var(--mono); font-size: 8.5px; font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--muted);
+}
+.pinv__eq {
+  position: absolute; right: 6px; top: 6px;
+  font-family: var(--mono); font-size: 7.5px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: #fff; background: var(--accent);
+  border-radius: 2px; padding: 2px 5px;
+}
+
+.pinv__detail { grid-row: 3; border-top: 1px solid var(--seam); padding-top: 10px; display: grid; gap: 7px; align-content: start; }
+.pinv__d-top { display: flex; align-items: baseline; gap: 10px; }
+.pinv__d-name { font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .04em; color: var(--ink); }
+.pinv__d-tag {
+  font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--accent);
+}
+.pinv__d-blurb { font-size: 12px; line-height: 1.5; color: var(--ink-2); max-width: 78ch; }
+.pinv__d-cols { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr); gap: 8px 22px; }
+
+.pinv__bars { display: grid; gap: 5px; align-content: start; }
+.pinv__bar { display: grid; grid-template-columns: 64px 1fr 26px; align-items: center; gap: 9px; }
+.pinv__bar-k {
+  font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--muted);
+}
+.pinv__bar-t {
+  display: block; height: 7px; background: var(--panel-3);
+  border: 1px solid var(--seam-hard); border-radius: 2px; overflow: hidden;
+}
+.pinv__bar-t i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .12s ease-out; }
+.pinv__bar-v {
+  font-family: var(--mono); font-size: 9.5px; font-weight: 700; color: var(--ink);
+  font-variant-numeric: tabular-nums; text-align: right;
+}
+
+.pinv__facts { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 16px; align-content: start; }
+.pinv__fact { display: flex; justify-content: space-between; gap: 10px; }
+.pinv__fact .k {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--muted);
+}
+.pinv__fact .v {
+  font-family: var(--mono); font-size: 9.5px; font-weight: 700; color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 880px) {
+  .pinv__body { grid-template-columns: 1fr; grid-template-rows: 220px 1fr; }
+  .pinv__d-cols { grid-template-columns: 1fr; }
+}
+
+/* ------------------------------------------------------------------- pause */
+.ppause {
+  position: fixed; inset: 0; z-index: 40;
+  display: grid; place-items: center;
+  background: rgba(23, 22, 20, .34);
+  backdrop-filter: blur(4px) saturate(.8);
+}
+.ppause[hidden] { display: none; }
+.ppause__panel { width: min(460px, 90vw); box-shadow: 0 18px 50px rgba(0, 0, 0, .3); }
+.ppause__bd { display: grid; gap: 12px; }
+.ppause__keys { display: grid; grid-template-columns: auto 1fr; gap: 5px 14px; align-items: center; }
+.ppause__keys .cap {
+  font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .1em;
+  background: var(--panel-2); border: 1px solid var(--ink); border-radius: 3px;
+  padding: 3px 7px; text-align: center; box-shadow: 0 1px 0 var(--seam-hard);
+}
+.ppause__keys .what { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); }
+.ppause__row { display: flex; gap: 8px; align-items: center; }
+.ppause__big {
+  flex: 1; justify-content: center; padding: 11px 12px; font-size: 11px;
+}
+
+/* -------------------------------------------------------------- leaderboard
+   Double-tap L (§4.3). Same panel language as pause and the gear menu, one
+   row per banked combo. Not listed in the pause panel — that is the point. */
+.pboard {
+  position: fixed; inset: 0; z-index: 42;
+  display: grid; place-items: center;
+  background: rgba(23, 22, 20, .38);
+  backdrop-filter: blur(4px) saturate(.8);
+}
+.pboard[hidden] { display: none; }
+.pboard__panel { width: min(660px, 94vw); box-shadow: 0 18px 50px rgba(0, 0, 0, .3); }
+.pboard__bd { display: grid; gap: 2px; }
+.pboard__row {
+  display: grid; align-items: center; gap: 10px;
+  grid-template-columns: 18px 74px 34px minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) 88px;
+  padding: 5px 7px; border-radius: var(--r-sm); border: 1px solid transparent;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .06em; color: var(--ink);
+}
+.pboard__row > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pboard__row .rk { color: var(--muted); font-variant-numeric: tabular-nums; }
+.pboard__row .sc { font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; }
+.pboard__row .mu { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+.pboard__row .bt { font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
+.pboard__row .sk, .pboard__row .tr, .pboard__row .wh { color: var(--ink-2); }
+.pboard__row .wh { text-align: right; color: var(--muted); }
+.pboard__row--hd {
+  font-size: 9px; font-weight: 700; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--muted);
+  border-bottom: 1px solid var(--seam); border-radius: 0; padding-bottom: 7px; margin-bottom: 3px;
+}
+.pboard__row--hd .sc, .pboard__row--hd .mu, .pboard__row--hd .bt { color: var(--muted); font-weight: 700; }
+/* the header is child 1, so `even` stripes ranks 1, 3, 5 — zebra without a
+   second class on every row */
+.pboard__row:nth-child(even) { background: var(--panel-2); }
+.pboard__row.is-you { background: var(--accent); border-color: #a83300; color: #fff; }
+.pboard__row.is-you .rk, .pboard__row.is-you .sk, .pboard__row.is-you .tr, .pboard__row.is-you .wh { color: rgba(255, 255, 255, .82); }
+.pboard__row.is-you .mu { color: #fff; }
+.pboard__empty {
+  font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--muted); padding: 14px 7px; text-align: center;
+}
+
+/* ------------------------------------------------------------------- portal
+   A physical hatch: bezel, screwed-down corners, a caged key that lights
+   orange when a world is behind it. Lives on run pages and run rows. */
+.portal {
+  display: inline-flex; align-items: stretch; gap: 0;
+  border: 1px solid var(--ink); border-radius: var(--r-sm);
+  background: var(--panel-2); overflow: hidden;
+  box-shadow: 0 2px 0 var(--seam-hard);
+  cursor: pointer; user-select: none; text-decoration: none;
+}
+.portal:active { transform: translateY(2px); box-shadow: 0 0 0 var(--seam-hard); }
+.portal__hatch {
+  width: 34px; flex: none; position: relative;
+  background:
+    repeating-linear-gradient(45deg, rgba(0, 0, 0, .05) 0 3px, transparent 3px 6px),
+    var(--panel-3);
+  border-right: 1px solid var(--ink);
+  display: grid; place-items: center;
+}
+.portal__iris {
+  width: 15px; height: 15px; border-radius: 50%;
+  background: var(--panel); border: 1px solid var(--ink);
+  box-shadow: inset 0 0 0 3px var(--panel-3);
+}
+.portal__lbl {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 12px 7px 10px;
+  font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--ink);
+}
+.portal__sub { color: var(--muted); letter-spacing: .1em; }
+
+.portal.is-armed { background: var(--accent); border-color: #a83300; }
+.portal.is-armed .portal__lbl { color: #fff; }
+.portal.is-armed .portal__sub { color: rgba(255, 255, 255, .78); }
+.portal.is-armed .portal__hatch {
+  background:
+    repeating-linear-gradient(45deg, rgba(0, 0, 0, .13) 0 3px, transparent 3px 6px),
+    #7a2600;
+  border-right-color: #4d1800;
+}
+.portal.is-armed .portal__iris {
+  background: #ffd9c8; border-color: #4d1800;
+  box-shadow: inset 0 0 0 3px #ff7a3d, 0 0 7px rgba(255, 217, 200, .9);
+  animation: pblink 2.2s ease-in-out infinite;
+}
+@keyframes pblink { 0%, 100% { opacity: 1 } 50% { opacity: .72 } }
+.portal.is-armed:hover { background: #f04800; }
+
+.portal.is-dead { cursor: default; opacity: .55; box-shadow: none; background: var(--panel-2); }
+.portal.is-dead:active { transform: none; }
+
+.portal--sm { box-shadow: 0 1px 0 var(--seam-hard); }
+.portal--sm .portal__hatch { width: 22px; }
+.portal--sm .portal__iris { width: 10px; height: 10px; box-shadow: inset 0 0 0 2px var(--panel-3); }
+.portal--sm .portal__lbl { padding: 4px 8px 4px 7px; font-size: 9px; letter-spacing: .12em; }
+.portal--sm.is-armed .portal__iris { box-shadow: inset 0 0 0 2px #ff7a3d, 0 0 6px rgba(255, 217, 200, .9); }

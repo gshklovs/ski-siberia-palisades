@@ -1,0 +1,504 @@
+{
+  "generator": "poi-lab tools/export-red-dog/build.mjs",
+  "spec": "specs/0001-ski-red-dog-face-architecture.md",
+  "world": "siberia",
+  "pin": "6a7a2b9a8b39367caded3c01d651ab1fb019d844",
+  "builtAt": "2026-09-02T01:17:27.049Z",
+  "tier": "A",
+  "crop": {
+    "$doc": [
+      "NO CROP. `core` is layout.mjs's own CORE box, transcribed here so the",
+      "fence has a box to be a backstop around — and build.mjs ASSERTS it",
+      "against the CORE it imports from the built layout.mjs, so a re-bake that",
+      "moves the box fails this build instead of silently shipping a stale one.",
+      "",
+      "`markerFilter` is null: world.mjs declares no markers at all in this run,",
+      "so there is nothing to filter and scene-world.patch.mjs does not apply."
+    ],
+    "coreFrom": "layout",
+    "core": {
+      "x0": -640,
+      "x1": 850,
+      "y0": -470,
+      "y1": 540
+    },
+    "box": {
+      "x0": -640,
+      "x1": 850,
+      "y0": -470,
+      "y1": 540
+    },
+    "markerFilter": null,
+    "$fence": "D16.2 SURFACE-AWARE, identical to world #1's: the rule lives in bench/public/js/play/main.js and fires on the absence of recoverable ground, never on a coordinate. fenceHardPadM is a backstop no physics can reach.",
+    "fenceHardPadM": 8000,
+    "fenceVoidMarginM": 60,
+    "fenceGraceMs": 2000
+  },
+  "raster": {
+    "mode": "core",
+    "RES": 2,
+    "RX0": -710,
+    "RY0": -540,
+    "RNX": 816,
+    "RNY": 576,
+    "arrays": 14,
+    "cells": 470016,
+    "bytes": 26320896
+  },
+  "fence": {
+    "x0": -8640,
+    "x1": 8850,
+    "y0": -8470,
+    "y1": 8540,
+    "graceMs": 2000,
+    "voidMarginM": 60,
+    "rule": "surface-aware"
+  },
+  "spawn": {
+    "mode": "source",
+    "note": "the run's own authored spawn, shipped unchanged — world.mjs derives it at runtime from the lift top terminal"
+  },
+  "files": 52,
+  "sizes": {
+    "n": 52,
+    "raw": 6540676,
+    "gz": 2672674,
+    "br": 1938058,
+    "byGroup": {
+      "css": {
+        "n": 4,
+        "raw": 67428,
+        "gz": 17493,
+        "br": 14865
+      },
+      "html": {
+        "n": 1,
+        "raw": 9655,
+        "gz": 4493,
+        "br": 3636
+      },
+      "player": {
+        "n": 29,
+        "raw": 1101412,
+        "gz": 387730,
+        "br": 332002
+      },
+      "scene:data": {
+        "n": 2,
+        "raw": 4196329,
+        "gz": 1934622,
+        "br": 1306794
+      },
+      "scene:code": {
+        "n": 15,
+        "raw": 465422,
+        "gz": 148592,
+        "br": 134469
+      },
+      "vendor": {
+        "n": 1,
+        "raw": 700430,
+        "gz": 179744,
+        "br": 146292
+      }
+    },
+    "top": [
+      {
+        "file": "scene/dem-data.mjs",
+        "raw": 3496465,
+        "gzip": 1812931,
+        "brotli": 1196575
+      },
+      {
+        "file": "vendor/three.module.min.js",
+        "raw": 700430,
+        "gzip": 179744,
+        "brotli": 146292
+      },
+      {
+        "file": "scene/canopy-data.mjs",
+        "raw": 699864,
+        "gzip": 121691,
+        "brotli": 110219
+      },
+      {
+        "file": "scene/cliff-data.mjs",
+        "raw": 264017,
+        "gzip": 73595,
+        "brotli": 70696
+      },
+      {
+        "file": "js/play/ski.js",
+        "raw": 121143,
+        "gzip": 40511,
+        "brotli": 34524
+      },
+      {
+        "file": "js/play/guide.js",
+        "raw": 104902,
+        "gzip": 35688,
+        "brotli": 30280
+      },
+      {
+        "file": "js/play/main.js",
+        "raw": 99611,
+        "gzip": 34718,
+        "brotli": 29763
+      },
+      {
+        "file": "js/play/fx.js",
+        "raw": 93655,
+        "gzip": 33322,
+        "brotli": 27766
+      },
+      {
+        "file": "js/play/markers.js",
+        "raw": 84596,
+        "gzip": 29863,
+        "brotli": 25367
+      },
+      {
+        "file": "js/play/bike.js",
+        "raw": 70287,
+        "gzip": 23355,
+        "brotli": 19980
+      },
+      {
+        "file": "js/play/inventory.js",
+        "raw": 64280,
+        "gzip": 20598,
+        "brotli": 17899
+      },
+      {
+        "file": "js/play/hud.js",
+        "raw": 47457,
+        "gzip": 16486,
+        "brotli": 14217
+      }
+    ],
+    "perFile": [
+      {
+        "file": "scene/dem-data.mjs",
+        "raw": 3496465,
+        "gzip": 1812931,
+        "brotli": 1196575
+      },
+      {
+        "file": "vendor/three.module.min.js",
+        "raw": 700430,
+        "gzip": 179744,
+        "brotli": 146292
+      },
+      {
+        "file": "scene/canopy-data.mjs",
+        "raw": 699864,
+        "gzip": 121691,
+        "brotli": 110219
+      },
+      {
+        "file": "scene/cliff-data.mjs",
+        "raw": 264017,
+        "gzip": 73595,
+        "brotli": 70696
+      },
+      {
+        "file": "js/play/ski.js",
+        "raw": 121143,
+        "gzip": 40511,
+        "brotli": 34524
+      },
+      {
+        "file": "js/play/guide.js",
+        "raw": 104902,
+        "gzip": 35688,
+        "brotli": 30280
+      },
+      {
+        "file": "js/play/main.js",
+        "raw": 99611,
+        "gzip": 34718,
+        "brotli": 29763
+      },
+      {
+        "file": "js/play/fx.js",
+        "raw": 93655,
+        "gzip": 33322,
+        "brotli": 27766
+      },
+      {
+        "file": "js/play/markers.js",
+        "raw": 84596,
+        "gzip": 29863,
+        "brotli": 25367
+      },
+      {
+        "file": "js/play/bike.js",
+        "raw": 70287,
+        "gzip": 23355,
+        "brotli": 19980
+      },
+      {
+        "file": "js/play/inventory.js",
+        "raw": 64280,
+        "gzip": 20598,
+        "brotli": 17899
+      },
+      {
+        "file": "js/play/hud.js",
+        "raw": 47457,
+        "gzip": 16486,
+        "brotli": 14217
+      },
+      {
+        "file": "js/play/surprise.js",
+        "raw": 46558,
+        "gzip": 16180,
+        "brotli": 13938
+      },
+      {
+        "file": "js/play/snowmobile.js",
+        "raw": 42774,
+        "gzip": 14457,
+        "brotli": 12647
+      },
+      {
+        "file": "scene/runs-data.mjs",
+        "raw": 43285,
+        "gzip": 15607,
+        "brotli": 12434
+      },
+      {
+        "file": "js/play/snowball.js",
+        "raw": 38564,
+        "gzip": 13144,
+        "brotli": 11438
+      },
+      {
+        "file": "js/play/sled.js",
+        "raw": 31406,
+        "gzip": 11630,
+        "brotli": 10143
+      },
+      {
+        "file": "js/play/controller.js",
+        "raw": 28333,
+        "gzip": 10098,
+        "brotli": 8827
+      },
+      {
+        "file": "scene/world.mjs",
+        "raw": 28703,
+        "gzip": 10134,
+        "brotli": 8795
+      },
+      {
+        "file": "js/play/speedo.js",
+        "raw": 26476,
+        "gzip": 9969,
+        "brotli": 8530
+      },
+      {
+        "file": "js/play/tricks.js",
+        "raw": 25771,
+        "gzip": 9641,
+        "brotli": 8418
+      },
+      {
+        "file": "js/play/lift.js",
+        "raw": 24185,
+        "gzip": 8642,
+        "brotli": 7529
+      },
+      {
+        "file": "scene/terrain.mjs",
+        "raw": 23285,
+        "gzip": 8135,
+        "brotli": 7133
+      },
+      {
+        "file": "js/play/glider.js",
+        "raw": 20467,
+        "gzip": 8119,
+        "brotli": 7081
+      },
+      {
+        "file": "scene/ground.mjs",
+        "raw": 19146,
+        "gzip": 7578,
+        "brotli": 6609
+      },
+      {
+        "file": "js/play/boost.js",
+        "raw": 19308,
+        "gzip": 7529,
+        "brotli": 6519
+      },
+      {
+        "file": "scene/layout.mjs",
+        "raw": 20524,
+        "gzip": 7747,
+        "brotli": 6516
+      },
+      {
+        "file": "css/play.css",
+        "raw": 33166,
+        "gzip": 7423,
+        "brotli": 6402
+      },
+      {
+        "file": "js/play/touch.js",
+        "raw": 18300,
+        "gzip": 6993,
+        "brotli": 5984
+      },
+      {
+        "file": "js/play/audio.js",
+        "raw": 19881,
+        "gzip": 6455,
+        "brotli": 5580
+      },
+      {
+        "file": "scene/kit.mjs",
+        "raw": 15745,
+        "gzip": 5315,
+        "brotli": 4635
+      },
+      {
+        "file": "js/play/spawn.js",
+        "raw": 13562,
+        "gzip": 5339,
+        "brotli": 4620
+      },
+      {
+        "file": "css/te.css",
+        "raw": 21769,
+        "gzip": 4702,
+        "brotli": 4107
+      },
+      {
+        "file": "js/play/intro.js",
+        "raw": 11171,
+        "gzip": 4817,
+        "brotli": 3986
+      },
+      {
+        "file": "js/play/rocket.js",
+        "raw": 10793,
+        "gzip": 4426,
+        "brotli": 3793
+      },
+      {
+        "file": "index.html",
+        "raw": 9655,
+        "gzip": 4493,
+        "brotli": 3636
+      },
+      {
+        "file": "scene/lift.mjs",
+        "raw": 12118,
+        "gzip": 4111,
+        "brotli": 3622
+      },
+      {
+        "file": "js/play/collision.js",
+        "raw": 10970,
+        "gzip": 4030,
+        "brotli": 3515
+      },
+      {
+        "file": "js/play/loader.js",
+        "raw": 10078,
+        "gzip": 3951,
+        "brotli": 3341
+      },
+      {
+        "file": "scene/cliff.mjs",
+        "raw": 8523,
+        "gzip": 3814,
+        "brotli": 3275
+      },
+      {
+        "file": "scene/forest.mjs",
+        "raw": 8844,
+        "gzip": 3505,
+        "brotli": 2961
+      },
+      {
+        "file": "scene/lib/core.mjs",
+        "raw": 8723,
+        "gzip": 3303,
+        "brotli": 2919
+      },
+      {
+        "file": "css/intro.css",
+        "raw": 8400,
+        "gzip": 3376,
+        "brotli": 2758
+      },
+      {
+        "file": "js/play/clean.js",
+        "raw": 5695,
+        "gzip": 2644,
+        "brotli": 2143
+      },
+      {
+        "file": "js/play/idle.js",
+        "raw": 5543,
+        "gzip": 2548,
+        "brotli": 2062
+      },
+      {
+        "file": "scene/signs.mjs",
+        "raw": 5654,
+        "gzip": 2332,
+        "brotli": 2006
+      },
+      {
+        "file": "js/play/flags.js",
+        "raw": 5084,
+        "gzip": 2235,
+        "brotli": 1817
+      },
+      {
+        "file": "scene/env.mjs",
+        "raw": 3906,
+        "gzip": 1835,
+        "brotli": 1602
+      },
+      {
+        "file": "css/speedo.css",
+        "raw": 4093,
+        "gzip": 1992,
+        "brotli": 1598
+      },
+      {
+        "file": "scene/canopy.mjs",
+        "raw": 1541,
+        "gzip": 800,
+        "brotli": 705
+      },
+      {
+        "file": "scene/ridge-data.mjs",
+        "raw": 1408,
+        "gzip": 781,
+        "brotli": 561
+      },
+      {
+        "file": "js/play/dev.js",
+        "raw": 562,
+        "gzip": 342,
+        "brotli": 295
+      }
+    ]
+  },
+  "budget": {
+    "$doc": "D23/D42 — THE SAME CAPS AS WORLD #1, deliberately unrelaxed. Measured against world.report.stats out of a real headless load, never by eye.",
+    "drawCalls": 250,
+    "triangles": 1900000,
+    "collidableTriangles": 900000,
+    "transferBrotliBytes": 2621440,
+    "rasterHeapBytes": 34000000,
+    "usedJSHeapBytes": 420000000,
+    "buildMs": 20000
+  }
+}
