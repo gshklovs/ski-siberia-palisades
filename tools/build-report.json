@@ -2,8 +2,8 @@
   "generator": "poi-lab tools/export-red-dog/build.mjs",
   "spec": "specs/0001-ski-red-dog-face-architecture.md",
   "world": "siberia",
-  "pin": "7792863f5733b1ce0f80f91d93d3beee6c6eae9b",
-  "builtAt": "2026-09-02T23:58:22.214Z",
+  "pin": "66b950e5e9778023a6dbed419db6dcff5d841c56",
+  "builtAt": "2026-09-03T01:24:44.579Z",
   "tier": "A",
   "crop": {
     "$doc": [
@@ -61,9 +61,9 @@
   "files": 57,
   "sizes": {
     "n": 56,
-    "raw": 6838538,
-    "gz": 2779749,
-    "br": 2029215,
+    "raw": 6844316,
+    "gz": 2782030,
+    "br": 2031040,
     "byGroup": {
       "css": {
         "n": 4,
@@ -79,9 +79,9 @@
       },
       "player": {
         "n": 33,
-        "raw": 1387849,
-        "gz": 490340,
-        "br": 419293
+        "raw": 1393627,
+        "gz": 492621,
+        "br": 421118
       },
       "scene:data": {
         "n": 2,
@@ -129,15 +129,15 @@
       },
       {
         "file": "js/play/fx.js",
-        "raw": 142341,
-        "gzip": 50561,
-        "brotli": 41814
+        "raw": 147095,
+        "gzip": 52450,
+        "brotli": 43354
       },
       {
         "file": "js/play/main.js",
-        "raw": 138055,
-        "gzip": 48426,
-        "brotli": 41608
+        "raw": 139079,
+        "gzip": 48818,
+        "brotli": 41893
       },
       {
         "file": "js/play/ski.js",
@@ -203,15 +203,15 @@
       },
       {
         "file": "js/play/fx.js",
-        "raw": 142341,
-        "gzip": 50561,
-        "brotli": 41814
+        "raw": 147095,
+        "gzip": 52450,
+        "brotli": 43354
       },
       {
         "file": "js/play/main.js",
-        "raw": 138055,
-        "gzip": 48426,
-        "brotli": 41608
+        "raw": 139079,
+        "gzip": 48818,
+        "brotli": 41893
       },
       {
         "file": "js/play/ski.js",

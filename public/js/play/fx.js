@@ -406,23 +406,16 @@ for (let b = 0; b < SL_BUCKETS; b++) {
   SL_FILL.push(`rgba(46,60,84,${a.toFixed(3)})`);   // ink, not a grey — see INK_FRAC
 }
 
-// ---- specs/0033 §2: the impact frame's OWN table, built once, right here.
+// ---- specs/0035 §1: THE THIRD INK IS GONE, and with it its whole table.
 //
-// The field has two inks and the impact frame has three: white, the same slate,
-// and HEAT — `rgba(255,120,40)`, the exact colour 0006's ski flame burns
-// (`FL_FILL`), so a hit and a flame read as one language rather than as two
-// unrelated effects that happen to be on screen together. It is a SEPARATE
-// array, not three more pushes onto `SL_FILL`, because the field indexes its own
-// two inks by `b + ink * SL_BUCKETS` and a third ink appended there would be
-// dead entries the field walks past 240 lines at a time. Same buckets, same
-// ceiling, so an impact line and a field line at the same alpha are the same
-// opacity. Heat occupies the HIGHEST indices, which is what makes `imDraw`'s
-// ascending bucket walk draw orange last (§2) for free.
-const IM_FILL = SL_FILL.slice();
-for (let b = 0; b < SL_BUCKETS; b++) {
-  const a = (b + 1) / SL_BUCKETS * SL_ALPHA_CEIL;
-  IM_FILL.push(`rgba(255,120,40,${a.toFixed(3)})`);
-}
+// 0033 built a separate 24-entry `IM_FILL` here (`SL_FILL.slice()` plus eight
+// buckets of `rgba(255,120,40)`) so the impact frame could burn the ski flame's
+// orange. That was a misread of the lookbook: the orange Greg asked for is the
+// INVERSION of a blue-white mountain (§2), not ink on the spokes. So the table
+// goes and `imDraw` indexes `SL_FILL` directly — the impact frame and the
+// ordinary field are two inks each, the same two, at the same buckets and the
+// same ceiling. Deleting the array rather than leaving it at `SL_FILL.slice()`
+// is the point: an alias nobody needs is a second thing to keep in step.
 
 const S = {
   cv: null, cx: null, w: 0, h: 0, dpr: 0, shown: false,
@@ -2661,6 +2654,23 @@ window.__sparks = {
 // `FLASH_V`, `V_MIN`/`V_MAX`, `SHAPE`, `INNER`/`OUTER`/`LEN`/`TAPER`/`STAGGER`
 // are 0030's untouched — the frame lasts exactly as long, flashes exactly as
 // hard, and fires exactly as often. Only the lines are quieter.
+// ---- specs/0035 §1 + §2: THE ORANGE WAS NEVER INK. IT IS THE INVERSION.
+//
+// 0033 read the lookbook wrong. The panel Greg picked is option 4, "flash
+// frame — two frames of INVERSION (the 'colour changes for a split second'
+// one)", and the note under it says the white-flash variant is the same code
+// with a white rect. A blue-white mountain run through `difference` comes back
+// as a dark frame with an ORANGE sky: THAT is the orange tint he asked for, and
+// it is a property of the whole picture rather than a colour on 35 spokes.
+//
+// So 0033's heat ink is deleted outright (§1) — the third fill table, the third
+// quota slot and `HEAT_FRAC` — and the flash stops being a white veil and starts
+// being the inversion (§2, `imBlend`). The two changes are one change: the
+// frame's colour event moved out of the ink and into the compositor.
+//
+// `LINES_MIN/MAX`, `WIDTH`, `ALPHA` and `DUR` are 0033's, to the digit. The
+// lines are exactly as quiet as Greg signed off on; only their palette is back
+// to 0015's white and slate.
 const IM = {
   DUR: 0.21,            // s — the whole burst (0030's; §1 does not move it)
   LINES_MIN: 49,        // ...at V_MIN      (0030: 70,  −30 %)
@@ -2682,10 +2692,17 @@ const IM = {
   WIDTH_REF: 720,
   ALPHA: 0.70,          // 0030: 1.0. Still bucketed and capped by SL_ALPHA_CEIL
   INK_FRAC: 0.30,       // the same deep slate the ordinary field is 30 % made of
-  HEAT_FRAC: 0.35,      // ...and §2's orange, rgba(255,120,40) — the flame's own
+  // 0033's `HEAT_FRAC` is DELETED, not set to zero: 0035 §1 takes out the third
+  // fill table and the third quota slot, so a constant naming a share of an ink
+  // that no longer exists would have no reader. White and slate, 70/30, as 0015
+  // and 0030 had it.
   STAGGER: 0.34,        // how much of DUR the last line waits before it starts
   FLASH_V: 12.0,        // m/s — below this there is no flash, ever
-  FLASH_A: 0.61,
+  // ---- specs/0035 §2: FLASH_A is no longer "how white", it is HOW INVERTED.
+  // The flash is now a `difference` composite of an `rgba(255,255,255,A)` rect
+  // against the composited page, so A = 1 is a full inversion and A = 0.85 is
+  // 85 % of the way there: out = A*(1 - backdrop) + (1 - A)*backdrop.
+  FLASH_A: 0.85,
   FLASH_FRAMES: 4,      // ...and above it there are exactly four frames of it
 };
 
@@ -2698,8 +2715,8 @@ const IMS = {
   ca: new Float32Array(IM.CAP), sa: new Float32Array(IM.CAP),
   d: new Float32Array(IM.CAP), ln: new Float32Array(IM.CAP),
   wd: new Float32Array(IM.CAP), a0: new Float32Array(IM.CAP),
-  ik: new Uint8Array(IM.CAP),          // 0 white, 1 slate, 2 heat (0033 §2)
-  inkN: [0, 0, 0],                     // ...and how many of each the last burst armed
+  ik: new Uint8Array(IM.CAP),          // 0 white, 1 slate (0035 §1 dropped heat)
+  inkN: [0, 0],                        // ...and how many of each the last burst armed
   gx: new Float32Array(IM.CAP * 8), gb: new Uint8Array(IM.CAP),
   drawn: 0, flashA: 0,
 };
@@ -2720,12 +2737,17 @@ function imFire(speedMs, why) {
   // time, and the misses would be a colour the eye can see going missing. So
   // each line goes to whichever ink is furthest BEHIND its share so far
   // (largest-remainder): the counts land within one line of the quota every
-  // time, and because `i` is the fan slot the three inks come out interleaved
+  // time, and because `i` is the fan slot the two inks come out interleaved
   // around the ring instead of clumped into arcs. `off` is a random phase per
-  // burst so the repeat is not the same three-cycle on every hit.
-  const frac = [1 - IM.INK_FRAC - IM.HEAT_FRAC, IM.INK_FRAC, IM.HEAT_FRAC];
-  const off = [Math.random(), Math.random(), Math.random()];
-  const got = [0, 0, 0];
+  // burst so the repeat is not the same two-cycle on every hit.
+  //
+  // 0035 §1 keeps the quota and drops the third slot. It still earns its keep at
+  // two inks — a coin on a 30 % share of 104 lines is σ ≈ 4.7 lines — and it is
+  // what makes "70/30" a fact about EVERY burst rather than about the average of
+  // many of them.
+  const frac = [1 - IM.INK_FRAC, IM.INK_FRAC];
+  const off = [Math.random(), Math.random()];
+  const got = [0, 0];
   for (let i = 0; i < n; i++) {
     // an EVEN FAN with a jittered angle inside each slot. A uniform random ring
     // leaves gaps big enough to read as gaps at 85 lines, and the one thing this
@@ -2737,7 +2759,7 @@ function imFire(speedMs, why) {
     IMS.wd[i] = wide * rand(0.50, 1.50);
     IMS.a0[i] = IM.ALPHA * rand(0.60, 1.20);
     let k = 0, bestD = -Infinity;
-    for (let j = 0; j < 3; j++) {
+    for (let j = 0; j < 2; j++) {
       const d = frac[j] * (i + 1) + off[j] - got[j];
       if (d > bestD) { bestD = d; k = j; }
     }
@@ -2751,7 +2773,7 @@ function imFire(speedMs, why) {
   IMS.flash = sp >= IM.FLASH_V;
   IMS.t = 0; IMS.live = true; IMS.n++;
   IMS.last = { why: IMS.why, speed: IMS.speed, lines: n, flash: IMS.flash,
-               ink: { white: got[0], slate: got[1], heat: got[2] } };
+               ink: { white: got[0], slate: got[1] } };
   return IMS.last;
 }
 
@@ -2778,7 +2800,7 @@ function imLay(p) {
     if (a < step * 0.5) continue;
     let b = (a / step) | 0;
     if (b >= SL_BUCKETS) b = SL_BUCKETS - 1;
-    IMS.gb[i] = b + IMS.ik[i] * SL_BUCKETS;    // 0033: three inks, not two
+    IMS.gb[i] = b + IMS.ik[i] * SL_BUCKETS;    // 0035: back to the field's two
     drawn++;
     const ca = IMS.ca[i], sa = IMS.sa[i];
     const ax = cx + ca * rh * HX, ay = cy + sa * rh * HY;   // inner: the point
@@ -2797,8 +2819,9 @@ function imLay(p) {
     IMS.gx[o + 6] = ax - nx * wi; IMS.gx[o + 7] = ay - ny * wi;
   }
   IMS.drawn = drawn;
-  // OPTION 5. Two frames at 60, and only over IM.FLASH_V — a crossed landing at
-  // 6 m/s is a shrug, and a white frame is not a shrug.
+  // OPTION 4 in the lookbook, "flash frame": FLASH_FRAMES frames at 60, and only
+  // over IM.FLASH_V — a crossed landing at 6 m/s is a shrug, and the colour of
+  // the world changing is not a shrug.
   // The half-frame is not fussiness: at 60 fps the third shutter lands exactly on
   // `FLASH_FRAMES / 60` and float equality decides whether the flash is two
   // frames long or three.
@@ -2813,6 +2836,40 @@ function imLay(p) {
 function imPhase() {
   const s = IMS.hold != null ? IMS.hold : IMS.t;
   return clamp(s / IM.DUR, 0, 1.6);
+}
+
+// ---- specs/0035 §2: THE INVERSION, and why it is a CSS property and not a fill.
+//
+// The lookbook's option 4 is `globalCompositeOperation = 'difference'` plus a
+// white rect: a blue-white mountain comes back dark with an ORANGE sky, which is
+// the "colour changes for a split second" Greg picked and the orange he has been
+// asking for since. 0015 wrote it up as the white-rect variant and 0030/0033
+// built on that; 0033's orange ink was my misread of the same note.
+//
+// It cannot be done with `globalCompositeOperation` here. The 3D scene is a
+// WebGL canvas and these lines are a SECOND canvas above it (z-index 16); a 2D
+// `difference` fill can only see the pixels in its own bitmap, which are the
+// speed lines and nothing else, so it would inverse-tint the spokes and leave
+// the mountain exactly as it was. The inversion has to happen where the two
+// canvases meet, and that is the compositor.
+//
+// So: `mix-blend-mode: difference` on the overlay ELEMENT, for the flash frames
+// only. Both canvases are position:fixed children of <body> (`body.play canvas`
+// in play.css pins them; slBuild appends this one to body, or before the HUD
+// root which is also a body child), body has no `isolation`, no `opacity`, no
+// `filter` and no transform — so the overlay is a compositing sibling of the
+// WebGL canvas in the root stacking context and its backdrop IS the drawn
+// scene. The `filter: invert()` fallback §2 allows is not needed and is not
+// used; it would also have been worse, because it inverts the WebGL canvas ONLY
+// and would leave the vignette at z 15 uninverted on top of an inverted world.
+//
+// `mixBlendMode` is written only when it CHANGES, so a burst is two style
+// writes (on at the first flash frame, off at the fifth) and not one per frame.
+function imBlend(on) {
+  const cv = S.cv;
+  if (!cv) return;
+  const want = on ? 'difference' : '';
+  if (cv.style.mixBlendMode !== want) cv.style.mixBlendMode = want;
 }
 
 // One step. Returns whether the overlay has anything to say this frame.
@@ -2831,15 +2888,22 @@ function imStep(dt, paused) {
   // wipeout". Sampled here rather than in the emitters because those are gated
   // on gear and this event is not: you can eat it on anything.
   if (!(wt > 0) && c) IMS.prevSp = c.speed() / R.u;
+  // EVERY path that ends the overlay's frame clears the blend mode, because
+  // `imDraw` — which is where it is turned ON — is only called on the frames
+  // this function returns true for. A `difference` left standing on a canvas
+  // nobody is drawing into any more would invert the whole world for good.
   if (IMS.live) {
     IMS.t += dt;
-    if (IMS.t >= IM.DUR) { IMS.live = false; IMS.t = 0; IMS.flashA = 0; IMS.drawn = 0; return false; }
+    if (IMS.t >= IM.DUR) {
+      IMS.live = false; IMS.t = 0; IMS.flashA = 0; IMS.drawn = 0;
+      imBlend(false); return false;
+    }
   }
-  if (!IMS.live) return false;
+  if (!IMS.live) { imBlend(false); return false; }
   // §4: every `slSuppressed` reason still applies — the intro, dev fly, the
   // locker, the gear menu, a pause — and clean-frame alone is 0019's knob to
   // govern, which is exactly what `slHidden` is.
-  if (slHidden(paused)) return false;
+  if (slHidden(paused)) { imBlend(false); return false; }
   imLay(imPhase());
   return true;
 }
@@ -2849,15 +2913,22 @@ function imStep(dt, paused) {
 // so the impact frame is on top of both: it is the loudest thing on the screen
 // for an eighth of a second and then it is gone.
 function imDraw(g) {
+  // The rect goes down FIRST and the lines on top of it, per §2: with the
+  // element in `difference` the whole canvas is one blended layer, so anything
+  // painted after the rect is what the compositor inverts at that pixel and the
+  // spokes still read as spokes rather than as a rect drawn over them.
   if (IMS.flashA > 0) {
+    imBlend(true);
     g.fillStyle = `rgba(255,255,255,${IMS.flashA.toFixed(3)})`;
     g.fillRect(0, 0, S.w, S.h);
+  } else {
+    imBlend(false);
   }
   const gx = IMS.gx, gb = IMS.gb;
-  // 0033 §2: three inks, and the walk is ASCENDING, so white (0–7) goes down
-  // first, slate (8–15) over it, and heat (16–23) LAST — the orange is never
-  // buried under a white line drawn after it.
-  for (let b = 0; b < SL_BUCKETS * 3; b++) {
+  // 0035 §1: two inks, and the walk is ASCENDING, so white (0–7) goes down
+  // first and slate (8–15) over it — the same two the field draws, out of the
+  // field's own table now that 0033's heat bucket is gone.
+  for (let b = 0; b < SL_BUCKETS * 2; b++) {
     let opened = false;
     for (let i = 0; i < IMS.lines; i++) {
       if (gb[i] !== b) continue;
@@ -2869,7 +2940,7 @@ function imDraw(g) {
       g.lineTo(gx[o + 6], gx[o + 7]);
       g.closePath();
     }
-    if (opened) { g.fillStyle = IM_FILL[b]; g.fill(); }
+    if (opened) { g.fillStyle = SL_FILL[b]; g.fill(); }
   }
 }
 
@@ -2888,20 +2959,26 @@ window.__impact = {
   tuning: IM,
   // 0033 §2's required reading: the per-ink counts of the last burst, as counts
   // and as the shares the spec states them in, alongside the flash so one call
-  // answers §3.2 whole.
+  // answers the acceptance whole. 0035: two inks, and `flashMode` names what the
+  // flash now IS, because "flashAlpha 0.85" means the opposite thing under a
+  // difference composite than it did under a plain white fill.
   state: () => {
     const n = IMS.lines || 0;
     const pct = (k) => (n ? +(IMS.inkN[k] / n * 100).toFixed(1) : 0);
     return {
       lines: n, speed: IMS.speed, why: IMS.why, live: IMS.live || IMS.hold != null,
-      ink: { white: IMS.inkN[0], slate: IMS.inkN[1], heat: IMS.inkN[2] },
-      inkPct: { white: pct(0), slate: pct(1), heat: pct(2) },
+      ink: { white: IMS.inkN[0], slate: IMS.inkN[1] },
+      inkPct: { white: pct(0), slate: pct(1) },
       flash: !!IMS.flash, flashFrames: IMS.flash ? IM.FLASH_FRAMES : 0,
+      flashMode: 'invert',
       flashA: IM.FLASH_A, flashAlpha: +IMS.flashA.toFixed(3),
+      // ...and the blend mode as the DOM actually holds it, so a gate can prove
+      // §5's "off outside the flash" from the element rather than from intent
+      blend: S.cv ? (S.cv.style.mixBlendMode || '') : '',
       drawn: IMS.drawn, phase: +imPhase().toFixed(4), count: IMS.n,
     };
   },
-  reset: () => { IMS.live = false; IMS.t = 0; IMS.hold = null; IMS.drawn = 0; IMS.flashA = 0; IMS.lines = 0; IMS.inkN = [0, 0, 0]; IMS.prevWipe = 0; return true; },
+  reset: () => { IMS.live = false; IMS.t = 0; IMS.hold = null; IMS.drawn = 0; IMS.flashA = 0; IMS.lines = 0; IMS.inkN = [0, 0]; IMS.prevWipe = 0; imBlend(false); return true; },
   // TEST-ONLY WRITES. `fire` arms a burst at a stated speed; `hold` pins its
   // clock (seconds since the hit) and forces the overlay visible; `step` is the
   // harness door `__sparks.step` opened for exactly the same reason — main.js
@@ -2913,6 +2990,7 @@ window.__impact = {
   hold: (s) => {
     IMS.hold = s == null ? null : Math.max(0, +s || 0);
     if (IMS.hold != null) imLay(imPhase());
+    else imBlend(false);          // letting go of the clock also lets go of §2's blend
     return IMS.hold;
   },
   step: (dt, paused = false) => imStep(clamp(dt || 0.016, 0.0005, 0.05), !!paused),

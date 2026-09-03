@@ -653,14 +653,28 @@ const TUM = {
   KICK_PITCH: 0.25,  // rad — 14 deg of nose-down that goes with it
   ROLL: 0.50,        // rad — the prone roll's CHATTER, ±0.50 at 7 Hz, decaying
   ROLL_HZ: 7.0,      // Hz
-  // ...over 0.8 s, not 0.34. At 0.34 the body was shuddering for half a second
-  // and lying dead for the other 1.5 of a 2 s slide, which is a corpse with a
-  // twitch at the start rather than something being dragged across snow.
-  // ...and 0034 §2 stretches it again, to 1.20, for the same reason 0030 grew it
-  // to 0.80: the slide is now 75 % longer, and at 0.80 the chatter is down to a
-  // twentieth of itself by the time the body is still doing 4 m/s across the
-  // snow. The envelope tracks the SLIDE, not the clock.
-  ROLL_DAMP: 1.20,   // s — its envelope
+  // ---- specs/0035 §3: HOLD, THEN COLLAPSE — not a single decaying exponential.
+  //
+  // 0030 and 0034 both answered "the chatter dies too early" by lengthening one
+  // `exp(-st / ROLL_DAMP)`, and at 1.20 s that envelope is still at 37 % a full
+  // second and a bit after the hit. Greg's note is the other shape: "vibrating
+  // in first .5s is good but it should exponentially get lower". A single
+  // exponential cannot do both — it is already below 1 the instant it starts, so
+  // making the tail short makes the first half second wrong too.
+  //
+  // Two constants instead. FULL amplitude for CHATTER_HOLD, then a genuine
+  // exponential collapse with time constant CHATTER_TAU:
+  //     env = st < HOLD ? 1 : exp(-(st - HOLD) / TAU)
+  // At 0.18 s that is 33 % at 0.7 s, 11 % at 0.9, 5 % at 1.05 and 1 % at 1.35 —
+  // the body rattles across the snow for exactly the half second Greg watched
+  // and is then still, well before the get-up at 1.6. `ROLL_DAMP` is retired:
+  // nothing reads it, so it is deleted rather than left as a dead 1.20.
+  //
+  // `st` is the clock the whole envelope has always run on — seconds since the
+  // FOLD ends, i.e. since the body is down — which is what "after I hit the
+  // floor" means. On the tumble's own clock `t`, HOLD ends at 0.15 + 0.50.
+  CHATTER_HOLD: 0.50,   // s at full amplitude, from the end of the fold
+  CHATTER_TAU: 0.18,    // s — and the collapse after it
   // ---- specs/0034 §2: AND IT SHOULD LOOK LIKE TUMBLING, NOT SLIDING.
   //
   // A longer slide on the same pose is a longer plank. Between LOG_IN and
@@ -925,7 +939,11 @@ function tumbleStep() {
   // expression, so fp and tp cannot drift apart by a frame.
   const fold = Math.min(1, t / TUM.FOLD);
   const st = Math.max(0, t - TUM.FOLD);
-  const osc = Math.sin(st * Math.PI * 2 * TUM.ROLL_HZ) * Math.exp(-st / TUM.ROLL_DAMP);
+  // specs/0035 §3: hold at full for CHATTER_HOLD, then collapse at CHATTER_TAU.
+  const env = st < TUM.CHATTER_HOLD
+    ? 1
+    : Math.exp(-(st - TUM.CHATTER_HOLD) / TUM.CHATTER_TAU);
+  const osc = Math.sin(st * Math.PI * 2 * TUM.ROLL_HZ) * env;
   const prone = t > TUM.FOLD ? 1 : 0;
   tum.roll = tum.sign * (TUM.FOLD_ROLL * fold * fold
     + TUM.PRONE_ROLL * tumAt(TUM_KF.rollHold, t)
