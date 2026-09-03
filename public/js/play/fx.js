@@ -406,6 +406,24 @@ for (let b = 0; b < SL_BUCKETS; b++) {
   SL_FILL.push(`rgba(46,60,84,${a.toFixed(3)})`);   // ink, not a grey — see INK_FRAC
 }
 
+// ---- specs/0033 §2: the impact frame's OWN table, built once, right here.
+//
+// The field has two inks and the impact frame has three: white, the same slate,
+// and HEAT — `rgba(255,120,40)`, the exact colour 0006's ski flame burns
+// (`FL_FILL`), so a hit and a flame read as one language rather than as two
+// unrelated effects that happen to be on screen together. It is a SEPARATE
+// array, not three more pushes onto `SL_FILL`, because the field indexes its own
+// two inks by `b + ink * SL_BUCKETS` and a third ink appended there would be
+// dead entries the field walks past 240 lines at a time. Same buckets, same
+// ceiling, so an impact line and a field line at the same alpha are the same
+// opacity. Heat occupies the HIGHEST indices, which is what makes `imDraw`'s
+// ascending bucket walk draw orange last (§2) for free.
+const IM_FILL = SL_FILL.slice();
+for (let b = 0; b < SL_BUCKETS; b++) {
+  const a = (b + 1) / SL_BUCKETS * SL_ALPHA_CEIL;
+  IM_FILL.push(`rgba(255,120,40,${a.toFixed(3)})`);
+}
+
 const S = {
   cv: null, cx: null, w: 0, h: 0, dpr: 0, shown: false,
   // pool (struct-of-arrays; no per-line objects, so no GC churn at 650 spawns/s)
@@ -2628,10 +2646,25 @@ window.__sparks = {
 // moves at all: `V_MIN`/`V_MAX`, `FLASH_V` and `SHAPE` are untouched, so a
 // stumble at walking pace is the same stumble it was and a 12 m/s trunk is the
 // only thing that still earns a white frame. Louder, not more frequent.
+// ---- specs/0033 §1 + §2: THIRTY PER CENT QUIETER, AND ORANGE.
+//
+// Greg asked for the orange back and the lines 30 % less intense. The orange had
+// never been here — 0015 built this frame out of white and slate and 0030 made
+// it louder without adding a colour; what he remembers is the ski flame
+// (`FL_FILL`, specs/0006), which is on screen when a jump launch ends in a cased
+// landing and which 0030's 149 white lines at alpha 1.0 buried. So the fix is
+// both halves at once: the frame gets its own heat ink (§2, `HEAT_FRAC`), and
+// the lines come off 30 % (§1) so there is room to see it.
+//
+// EXACTLY the four numbers that make a line loud move: how many, how wide, how
+// opaque, and the pool that holds them. `DUR`, `FLASH_A`, `FLASH_FRAMES`,
+// `FLASH_V`, `V_MIN`/`V_MAX`, `SHAPE`, `INNER`/`OUTER`/`LEN`/`TAPER`/`STAGGER`
+// are 0030's untouched — the frame lasts exactly as long, flashes exactly as
+// hard, and fires exactly as often. Only the lines are quieter.
 const IM = {
-  DUR: 0.21,            // s — the whole burst
-  LINES_MIN: 70,        // ...at V_MIN
-  LINES_MAX: 149,       // ...and at V_MAX and above
+  DUR: 0.21,            // s — the whole burst (0030's; §1 does not move it)
+  LINES_MIN: 49,        // ...at V_MIN      (0030: 70,  −30 %)
+  LINES_MAX: 104,       // ...and at V_MAX and above (0030: 149, −30 %)
   V_MIN: 4.0, V_MAX: 12.0,
   // ...and how the count runs BETWEEN those two. Not linearly: §5.4 asks for
   // ~45 lines at 6 m/s on 0015's curve, and the straight line through its
@@ -2640,15 +2673,16 @@ const IM = {
   // A wipe at walking pace is a stumble and should look like one; the frame is
   // meant to escalate as you approach the speeds a trunk actually hurts at.
   SHAPE: 1.6,
-  CAP: 160,             // pool ceiling: LINES_MAX plus slack
+  CAP: 112,             // pool ceiling: LINES_MAX plus slack
   INNER: 0.35,          // stops 35 % of the way in from the edge
   OUTER: 1.18,          // ...having started just outside the frame
   LEN: 0.30,            // one line's own length, as a fraction of the half-frame
-  WIDTH: 15.75,         // px at the outer (trailing) end
+  WIDTH: 11.0,          // px at the outer (trailing) end (0030: 15.75, −30 %)
   TAPER: 0.14,          // ...and the fraction of that at the converging end
   WIDTH_REF: 720,
-  ALPHA: 1.0,           // capped by SL_ALPHA_CEIL at the bucket, which is the point
+  ALPHA: 0.70,          // 0030: 1.0. Still bucketed and capped by SL_ALPHA_CEIL
   INK_FRAC: 0.30,       // the same deep slate the ordinary field is 30 % made of
+  HEAT_FRAC: 0.35,      // ...and §2's orange, rgba(255,120,40) — the flame's own
   STAGGER: 0.34,        // how much of DUR the last line waits before it starts
   FLASH_V: 12.0,        // m/s — below this there is no flash, ever
   FLASH_A: 0.61,
@@ -2664,7 +2698,8 @@ const IMS = {
   ca: new Float32Array(IM.CAP), sa: new Float32Array(IM.CAP),
   d: new Float32Array(IM.CAP), ln: new Float32Array(IM.CAP),
   wd: new Float32Array(IM.CAP), a0: new Float32Array(IM.CAP),
-  ik: new Uint8Array(IM.CAP),
+  ik: new Uint8Array(IM.CAP),          // 0 white, 1 slate, 2 heat (0033 §2)
+  inkN: [0, 0, 0],                     // ...and how many of each the last burst armed
   gx: new Float32Array(IM.CAP * 8), gb: new Uint8Array(IM.CAP),
   drawn: 0, flashA: 0,
 };
@@ -2677,6 +2712,20 @@ function imFire(speedMs, why) {
   const t = Math.pow(clamp((sp - IM.V_MIN) / (IM.V_MAX - IM.V_MIN), 0, 1), IM.SHAPE);
   const n = Math.min(IM.CAP, Math.round(IM.LINES_MIN + (IM.LINES_MAX - IM.LINES_MIN) * t));
   const wide = IM.WIDTH * clamp(Math.min(S.w || 1280, S.h || 720) / IM.WIDTH_REF, 0.7, 1.4);
+  // ---- 0033 §2: WHICH INK, decided by quota rather than by a coin.
+  //
+  // 0030 rolled `Math.random() < INK_FRAC` per line. At 104 lines that is a
+  // binomial with a standard deviation of ~4.7 lines — 4.5 % — so a share the
+  // spec pins to ±5 % would be outside its own tolerance about a third of the
+  // time, and the misses would be a colour the eye can see going missing. So
+  // each line goes to whichever ink is furthest BEHIND its share so far
+  // (largest-remainder): the counts land within one line of the quota every
+  // time, and because `i` is the fan slot the three inks come out interleaved
+  // around the ring instead of clumped into arcs. `off` is a random phase per
+  // burst so the repeat is not the same three-cycle on every hit.
+  const frac = [1 - IM.INK_FRAC - IM.HEAT_FRAC, IM.INK_FRAC, IM.HEAT_FRAC];
+  const off = [Math.random(), Math.random(), Math.random()];
+  const got = [0, 0, 0];
   for (let i = 0; i < n; i++) {
     // an EVEN FAN with a jittered angle inside each slot. A uniform random ring
     // leaves gaps big enough to read as gaps at 85 lines, and the one thing this
@@ -2687,14 +2736,22 @@ function imFire(speedMs, why) {
     IMS.ln[i] = IM.LEN * rand(0.55, 1.45);
     IMS.wd[i] = wide * rand(0.50, 1.50);
     IMS.a0[i] = IM.ALPHA * rand(0.60, 1.20);
-    IMS.ik[i] = Math.random() < IM.INK_FRAC ? 1 : 0;
+    let k = 0, bestD = -Infinity;
+    for (let j = 0; j < 3; j++) {
+      const d = frac[j] * (i + 1) + off[j] - got[j];
+      if (d > bestD) { bestD = d; k = j; }
+    }
+    got[k]++;
+    IMS.ik[i] = k;
   }
   IMS.lines = n;
+  IMS.inkN = got;
   IMS.speed = +sp.toFixed(2);
   IMS.why = why || null;
   IMS.flash = sp >= IM.FLASH_V;
   IMS.t = 0; IMS.live = true; IMS.n++;
-  IMS.last = { why: IMS.why, speed: IMS.speed, lines: n, flash: IMS.flash };
+  IMS.last = { why: IMS.why, speed: IMS.speed, lines: n, flash: IMS.flash,
+               ink: { white: got[0], slate: got[1], heat: got[2] } };
   return IMS.last;
 }
 
@@ -2721,7 +2778,7 @@ function imLay(p) {
     if (a < step * 0.5) continue;
     let b = (a / step) | 0;
     if (b >= SL_BUCKETS) b = SL_BUCKETS - 1;
-    IMS.gb[i] = b + (IMS.ik[i] ? SL_BUCKETS : 0);
+    IMS.gb[i] = b + IMS.ik[i] * SL_BUCKETS;    // 0033: three inks, not two
     drawn++;
     const ca = IMS.ca[i], sa = IMS.sa[i];
     const ax = cx + ca * rh * HX, ay = cy + sa * rh * HY;   // inner: the point
@@ -2797,7 +2854,10 @@ function imDraw(g) {
     g.fillRect(0, 0, S.w, S.h);
   }
   const gx = IMS.gx, gb = IMS.gb;
-  for (let b = 0; b < SL_BUCKETS * 2; b++) {
+  // 0033 §2: three inks, and the walk is ASCENDING, so white (0–7) goes down
+  // first, slate (8–15) over it, and heat (16–23) LAST — the orange is never
+  // buried under a white line drawn after it.
+  for (let b = 0; b < SL_BUCKETS * 3; b++) {
     let opened = false;
     for (let i = 0; i < IMS.lines; i++) {
       if (gb[i] !== b) continue;
@@ -2809,7 +2869,7 @@ function imDraw(g) {
       g.lineTo(gx[o + 6], gx[o + 7]);
       g.closePath();
     }
-    if (opened) { g.fillStyle = SL_FILL[b]; g.fill(); }
+    if (opened) { g.fillStyle = IM_FILL[b]; g.fill(); }
   }
 }
 
@@ -2826,7 +2886,22 @@ window.__impact = {
   t: () => +IMS.t.toFixed(4),
   suppressed: () => slHidden(!!(R.hud && R.hud.isPaused && R.hud.isPaused())),
   tuning: IM,
-  reset: () => { IMS.live = false; IMS.t = 0; IMS.hold = null; IMS.drawn = 0; IMS.flashA = 0; IMS.lines = 0; IMS.prevWipe = 0; return true; },
+  // 0033 §2's required reading: the per-ink counts of the last burst, as counts
+  // and as the shares the spec states them in, alongside the flash so one call
+  // answers §3.2 whole.
+  state: () => {
+    const n = IMS.lines || 0;
+    const pct = (k) => (n ? +(IMS.inkN[k] / n * 100).toFixed(1) : 0);
+    return {
+      lines: n, speed: IMS.speed, why: IMS.why, live: IMS.live || IMS.hold != null,
+      ink: { white: IMS.inkN[0], slate: IMS.inkN[1], heat: IMS.inkN[2] },
+      inkPct: { white: pct(0), slate: pct(1), heat: pct(2) },
+      flash: !!IMS.flash, flashFrames: IMS.flash ? IM.FLASH_FRAMES : 0,
+      flashA: IM.FLASH_A, flashAlpha: +IMS.flashA.toFixed(3),
+      drawn: IMS.drawn, phase: +imPhase().toFixed(4), count: IMS.n,
+    };
+  },
+  reset: () => { IMS.live = false; IMS.t = 0; IMS.hold = null; IMS.drawn = 0; IMS.flashA = 0; IMS.lines = 0; IMS.inkN = [0, 0, 0]; IMS.prevWipe = 0; return true; },
   // TEST-ONLY WRITES. `fire` arms a burst at a stated speed; `hold` pins its
   // clock (seconds since the hit) and forces the overlay visible; `step` is the
   // harness door `__sparks.step` opened for exactly the same reason — main.js

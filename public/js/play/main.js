@@ -656,7 +656,29 @@ const TUM = {
   // ...over 0.8 s, not 0.34. At 0.34 the body was shuddering for half a second
   // and lying dead for the other 1.5 of a 2 s slide, which is a corpse with a
   // twitch at the start rather than something being dragged across snow.
-  ROLL_DAMP: 0.80,   // s — its envelope
+  // ...and 0034 §2 stretches it again, to 1.20, for the same reason 0030 grew it
+  // to 0.80: the slide is now 75 % longer, and at 0.80 the chatter is down to a
+  // twentieth of itself by the time the body is still doing 4 m/s across the
+  // snow. The envelope tracks the SLIDE, not the clock.
+  ROLL_DAMP: 1.20,   // s — its envelope
+  // ---- specs/0034 §2: AND IT SHOULD LOOK LIKE TUMBLING, NOT SLIDING.
+  //
+  // A longer slide on the same pose is a longer plank. Between LOG_IN and
+  // LOG_OUT the body makes ONE FULL ROLL about the axis it is travelling along —
+  // prone, onto its back, prone again — while it is still moving fast, and comes
+  // out of it on exactly the pose it went in on, because 2*pi is 0. That is what
+  // makes it free: no track has to be faded, nothing is switched, and after
+  // LOG_OUT the body is prone and chattering exactly as 0030 left it.
+  //
+  // It is a roll about the BODY'S OWN LONG AXIS and so it goes on mBody's y,
+  // not its z. The rig pivots at the feet and the pitch has already laid the
+  // spine down along the direction of travel, so `Rx(pitch)` carries the y axis
+  // onto the travel axis and a rotation about it is a log roll. (`rotation.z`,
+  // which carries PRONE_ROLL and the chatter, is the same axis only while the
+  // body is UPRIGHT; on a body pitched 1.32 rad it is very nearly vertical.)
+  LOG_ROLL: Math.PI * 2,   // rad — one full turn, and only one
+  LOG_IN: 0.35,      // s — from here...
+  LOG_OUT: 1.15,     // s — ...to here, smoothstepped
   FOLD_ROLL: 0.35,   // rad — ...and the lean the fold itself puts on
   // ...plus a roll the body HOLDS through the slide. The chatter alone is a sine
   // through zero, so whichever instant the shutter falls on is as likely to be
@@ -720,6 +742,13 @@ const TUM_KF = {
   spin:  [[0, 0], [0.12, 0.30], [0.55, 0.86], [0.95, 1.0], [1.60, 1.0], [1.84, 0.52], [2.00, 0]],
   // the roll the slide HOLDS, under the chatter
   rollHold: [[0, 0], [0.14, 1], [1.60, 1], [1.88, 0.25], [2.00, 0]],
+  // specs/0034 §2 — the full roll, in units of TUM.LOG_ROLL. Flat until 0.35 s
+  // (the hit and the fold own that), one smoothstepped turn to 1.15 s, and then
+  // HELD at 1 for the rest of the wipe, which is the same pose as 0: a track
+  // that came back to 0 would roll the body a second time, backwards, through
+  // the get-up. At 0.75 s — the midpoint, and smoothstep(0.5) is 0.5 — it is
+  // exactly half a turn: the body is on its back. That is §3.2's own row.
+  logRoll: [[0, 0], [0.35, 0], [1.15, 1], [2.00, 1]],
   // how far the prone body has swung onto the velocity vector (§2's "lies along
   // the velocity vector"). Body only — see the note at the yaw write below.
   align: [[0, 0], [0.18, 1], [1.60, 1], [2.00, 0]],
@@ -776,9 +805,9 @@ function tumAt(track, t) {
 // in camRig.update(); read by applyTo() (the eye) and updateVisuals() (the body).
 const tum = {
   on: false, t: 0, w: 0, why: null, solid: false, sign: 1, auth: 0,
-  pitch: 0, roll: 0, spin: 0, align: 0, sink: 0, arm: 0, ski: 0,
+  pitch: 0, roll: 0, logRoll: 0, spin: 0, align: 0, sink: 0, arm: 0, ski: 0,
   bx: 0, bz: 0, back: 0,               // the fold's displacement, in world x/z
-  eye: 0, eyeDrop: 0, camP: 0, camR: 0, camY: 0,
+  eye: 0, eyeDrop: 0, camP: 0, camR: 0, camY: 0, camLog: 0,
   yawVel: 0,                           // heading of the velocity at the hit
   // measured, for the gate: how close the eye came to the snow and to a trunk
   eyeGround: 0, eyeStem: -1, stemDist: -1, clampedGround: 0, clampedStem: 0,
@@ -870,10 +899,10 @@ function tumbleStep() {
   const riding = ctrl.mode !== 'boots' && !ctrl.footedNow;
   if (!(wt > 0) || !riding) {
     tum.on = false; tum.auth = 0; tum.t = 0; tum.w = 0;
-    tum.pitch = tum.roll = tum.spin = tum.align = tum.sink = tum.arm = tum.ski = 0;
+    tum.pitch = tum.roll = tum.logRoll = tum.spin = tum.align = tum.sink = tum.arm = tum.ski = 0;
     tum.bx = tum.bz = tum.back = 0;
     tum.eyeDrop = 0; tum.eye = ctrl.T.eyeHeight;
-    tum.camP = tum.camR = tum.camY = 0;
+    tum.camP = tum.camR = tum.camY = tum.camLog = 0;
     tum.stemDist = -1; tum.clampedGround = 0; tum.clampedStem = 0;
     tum.eyeGround = 0;
     return;
@@ -901,6 +930,10 @@ function tumbleStep() {
   tum.roll = tum.sign * (TUM.FOLD_ROLL * fold * fold
     + TUM.PRONE_ROLL * tumAt(TUM_KF.rollHold, t)
     + TUM.ROLL * osc * prone);
+  // ...and specs/0034 §2's full turn ON TOP of it, the same way round the body
+  // was already thrown. Same sign as the lean, so the roll continues the motion
+  // the fold started rather than fighting it.
+  tum.logRoll = tum.sign * TUM.LOG_ROLL * tumAt(TUM_KF.logRoll, t);
 
   // ---- the spin
   tum.spin = tum.sign * tumAt(K.spin, t) * (tum.solid ? TUM.SPIN : TUM.SPIN_ROT);
@@ -922,6 +955,16 @@ function tumbleStep() {
   const kick = tum.solid ? tumAt(K.kick, t) : 0;
   tum.camP = (tumAt(K.camP, t) - TUM.KICK_PITCH * kick) * a;
   tum.camR = tum.roll * a;
+  // specs/0034 §2 — "the eye follows: in first person the horizon rolls with the
+  // body through that turn". The lens is `YXZ`, so its z IS the view axis, and
+  // the view axis is the axis the body is rolling about: the same radian on the
+  // camera and on the rig, which is the whole reason both are read off `tum`.
+  //
+  // SEPARATE from camR, and this is the point of it: the chase camera takes half
+  // of camR, which is right for a lean and catastrophic for a turn — at 0.75 s
+  // third person would be looking at a hillside standing on its side. The turn
+  // belongs to the eye that is INSIDE the body. The chase watches the body do it.
+  tum.camLog = tum.logRoll * a;
   tum.camY = tum.spin * a;
 
   // ---- EYE RADIUS (§3). While the eye is this low it can be inside the snow or
@@ -1004,6 +1047,11 @@ window.__tumble = {
     // the same two writes updateVisuals makes, in the same order
     const base = -0.34 * unitScale * c;
     const y = base + (-tum.sink - base) * a;
+    // ...and specs/0034's full turn does NOT appear here, which is a statement
+    // about the rig and not an omission. updateVisuals poses mBody as 'XZY', so
+    // the turn is a rotation about the spine and the head sits ON that axis:
+    // Rx.Rz.Ry.(0, h, 0) = Rx.Rz.(0, h, 0), the log roll divides out exactly.
+    // A head that moved when the body log-rolled would be a head on a pole.
     return +(h * Math.cos(pitch) * Math.cos(roll) + y).toFixed(4);
   },
   // ...and where the eye is, on the same datum
@@ -1018,9 +1066,18 @@ window.__tumble = {
   // 0.15 m has to be able to see the fold on its own.
   back: () => +Math.hypot(tum.bx, tum.bz).toFixed(4),
   fold: () => +tum.back.toFixed(4),
+  // specs/0034 §3.2 asserts on the BODY ROLL, which is now two numbers: the lean
+  // and the chatter on `roll` (mBody's z) and the full turn on `logRoll`
+  // (mBody's y). `rollTotal` is what the body has actually turned through about
+  // the travel axis and is the column the trace prints.
+  roll: () => +tum.roll.toFixed(4),
+  logRoll: () => +tum.logRoll.toFixed(4),
+  rollTotal: () => +(tum.roll + tum.logRoll).toFixed(4),
   pose: () => ({
     t: +tum.t.toFixed(4), auth: +tum.auth.toFixed(4), pitch: +tum.pitch.toFixed(4),
-    roll: +tum.roll.toFixed(4), spin: +tum.spin.toFixed(4), sink: +tum.sink.toFixed(4),
+    roll: +tum.roll.toFixed(4), logRoll: +tum.logRoll.toFixed(4),
+    rollTotal: +(tum.roll + tum.logRoll).toFixed(4),
+    spin: +tum.spin.toFixed(4), sink: +tum.sink.toFixed(4),
     camP: +tum.camP.toFixed(4), camR: +tum.camR.toFixed(4), camY: +tum.camY.toFixed(4),
   }),
   tuning: TUM,
@@ -1058,7 +1115,10 @@ const camRig = (() => {
   let t = 0;
   const state = { spN: 0, bob: 0, walkBob: 0, tipRise: 0, crouch: 0 };
   const shake = { x: 0, y: 0, z: 0, r: 0 };
-  let dip = 0, wobP = 0, wobR = 0, wobY = 0;
+  // `wobLog` is specs/0034 §2's full turn, kept apart from `wobR` because only
+  // the first-person lens takes it (the chase takes half of wobR, and half of a
+  // turn is a hillside on its side).
+  let dip = 0, wobP = 0, wobR = 0, wobY = 0, wobLog = 0;
   let bodyYaw = 0;                             // where the body points: the track when flying, else the look
   let preDip = 0;                              // preload compression — eye sinks with the charge
   const tpPos = new THREE.Vector3();
@@ -1125,7 +1185,7 @@ const camRig = (() => {
     // wobble the third-person body knows nothing about is exactly how the two
     // views came to disagree about whether anything had happened at all.
     tumbleStep();
-    wobP = tum.camP; wobR = tum.camR; wobY = tum.camY;
+    wobP = tum.camP; wobR = tum.camR; wobY = tum.camY; wobLog = tum.camLog;
 
     // ---- shared animation state for the visuals
     state.bob += dt * (2 + 9 * spN);
@@ -1214,7 +1274,10 @@ const camRig = (() => {
       cam.rotation.set(
         ctrl.pitch - (dip / u) * 0.5 + wobP,
         ctrl.yaw + wobY,
-        (riding ? ctrl.lean * leanMul : 0) + shake.r + wobR,
+        // specs/0034 §2 — ...and the horizon goes round with the body through the
+        // turn. `EYE_FLOOR` and the stem push-out are untouched: they are done in
+        // tumbleStep() on the eye's POSITION, and this is only where it is looking.
+        (riding ? ctrl.lean * leanMul : 0) + shake.r + wobR + wobLog,
       );
     } else {
       const flying = ctrl.mode === 'glider' && !ctrl.grounded;
@@ -1434,6 +1497,8 @@ function updateVisuals() {
     if (!riding && ctrl.grounded && ctrl.speed() > 0.5 * u) bobY = Math.sin(st.walkBob) * 0.03 * u;
     mBody.position.y = -0.34 * u * c + bobY;
     mBody.rotation.x = 0.55 * c;               // tuck forward with speed / in air
+    mBody.rotation.y = 0;                      // ...and no log roll while riding
+                                               // (specs/0034 §2 writes it below)
     mArmL.rotation.x = c * 0.9;                // arms sweep back into the tuck
     mArmR.rotation.x = c * 0.9;
     mArmL.rotation.z = 0.22; mArmR.rotation.z = -0.22;
@@ -1469,6 +1534,27 @@ function updateVisuals() {
       const a = tum.auth;
       mBody.rotation.x = mBody.rotation.x + (tum.pitch - mBody.rotation.x) * a;
       mBody.rotation.z = mBody.rotation.z + (tum.roll - mBody.rotation.z) * a;
+      // specs/0034 §2 — the full turn, about the spine, which the pitch above has
+      // already laid along the direction of travel. Blended by `auth` like every
+      // other value here, and 0 at both ends of the wipe on its own account: the
+      // track is flat until 0.35 s and sits on a whole turn from 1.15 s, so the
+      // body enters and leaves this rotation on the same pose either way. The
+      // arms, the legs, the head and the pack are CHILDREN of mBody and come with
+      // it for free; the skis are not, and are carried by hand below.
+      //
+      // THE EULER ORDER IS LOad-BEARING and it is why this line is here rather
+      // than in the rig's constructor. Default 'XYZ' composes as Rx.Ry.Rz, which
+      // applies the log roll to a body the PRONE_ROLL has already leaned — so the
+      // head, 0.6 m off the spine at 0.40 rad of lean, ORBITS the roll axis, and
+      // since that axis is the pivot at the feet it spends half the turn under
+      // the snow. Measured on the first cut: headY −0.2261 m at t = 0.55 s.
+      // 'XZY' composes as Rx.Rz.Ry: the turn happens FIRST, in the body's own
+      // frame, so it is a roll about the spine — the head is on that axis and
+      // does not move at all, exactly as a log-rolling body's head does not. With
+      // rotation.y at 0 the two orders are the same matrix, which is why the
+      // riding pose, the boot pose and 0015's whole no-wipe frame are untouched.
+      mBody.rotation.order = 'XZY';
+      mBody.rotation.y = tum.logRoll * a;
       // ABSOLUTE, not `-= sink`: the riding height is `-0.34 u * crouch`, and
       // crouch keeps easing all the way through a tumble because the scrub took
       // the speed that was holding it up. A body whose hips rose 0.1 m over the
@@ -1490,6 +1576,28 @@ function updateVisuals() {
         mSkiR.rotation.y = TUM.SPLAY * k;
         mSkiL.position.y += TUM.LIFT * u * k;  // ...and off the snow, because
         mSkiR.position.y += TUM.LIFT * u * k * 0.72;   // they are on a body
+        // specs/0034 §2 — "keep them attached through the roll (they are on the
+        // body)". They are children of `model` rather than of mBody, so the turn
+        // has to be spent on them by hand, and it is a RIGID rotation about the
+        // travel axis and not just a spin of the mesh: `model`'s own z is that
+        // axis (its y aligned the body to the slide), so the pair orbit their
+        // ±0.15 m stance about it and take the same radians on their own z —
+        // which is what a ski attached to a boot does when the boot goes over,
+        // and is why the strip's half-turn frame has the skis swung down through
+        // the snow side while the poles have come over the top of the torso.
+        // `position.x` is written from the rig's OWN stance (the ±0.15 u of
+        // makeSki's placement) and not from itself, because unlike position.y and
+        // rotation.z — both re-written from scratch every frame above — nothing
+        // else in the frame resets it, and a value fed back into its own rotation
+        // is a ski that walks sideways out of the model over a few hundred frames.
+        const lr = tum.logRoll * a;
+        const cs = Math.cos(lr), sn = Math.sin(lr);
+        for (const [s, bx] of [[mSkiL, -0.15 * u], [mSkiR, 0.15 * u]]) {
+          const by = s.position.y;
+          s.position.x = bx * cs - by * sn;
+          s.position.y = bx * sn + by * cs;
+          s.rotation.z += lr;
+        }
       }
     }
     // third person sees the whole flip, which is the point of third person

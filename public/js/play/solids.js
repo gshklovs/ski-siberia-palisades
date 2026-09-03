@@ -57,10 +57,32 @@ const CANOPY_FALLBACK_Y0 = 0.35;   // where the foliage starts on a stem with no
                                    // geometry to measure (a merged forest's
                                    // clustered vertex cloud), as a fraction of height
 const CANOPY_FALLBACK_R = 0.30;    // ...and how wide it is, as a fraction of height
-const CANOPY_R_SCALE = 0.60;       // the measured skirt is the OUTERMOST needle tip;
+const CANOPY_R_SCALE = 0.64;       // the measured skirt is the OUTERMOST needle tip;
                                    // the part that actually grabs a body is well
                                    // inside it. Greg on the bench, 2026-09-01:
-                                   // "green hitbox is too big (by 40%)".
+                                   // "green hitbox is too big (by 40%)" -> 0.60;
+                                   // 2026-09-02, halfway back: "expand hitbox by
+                                   // a bit" -> 0.80 (specs/0031), which STALLED
+                                   // the rider: 12 m/s came out of the reference
+                                   // fir at 0.21 m/s after 0.98 s in the needles.
+                                   //
+                                   // specs/0032 §1 makes the drag the fixed
+                                   // number (3.45, Greg's +15 %) and the skirt
+                                   // the knob, and the knob is sharp. On the
+                                   // §E5.2 line the flight passes 1.5 m off the
+                                   // axis, so the CHORD through the cone is a
+                                   // square root away from zero and a 0.02 step
+                                   // in the skirt moves it 0.2 m:
+                                   //   0.70 -> 1.79 m cone, 1.97 m chord, STALL
+                                   //   0.66 -> 1.69 m cone, 1.56 m chord, STALL
+                                   //   0.64 -> 1.64 m cone, 1.33 m chord, 1.85 m/s
+                                   //   0.62 -> 1.59 m cone, 1.05 m chord, 3.20 m/s
+                                   // 0.64 is the first step down from the spec's
+                                   // 0.70 that does not stall, which is what
+                                   // §1 asks be taken. Cone at head height on
+                                   // the reference fir: 1.54 -> 1.64 m (the
+                                   // original, unscaled, was 2.56).
+                                   // Measured: skirt-0032-sweep.json.
 
 const CELL = 8;                    // m — spatial-hash cell
 const MAX_STEMS = 60000;           // hard cap on harvested stems

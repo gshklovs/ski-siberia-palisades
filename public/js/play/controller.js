@@ -63,10 +63,22 @@ export const TUNING = {
   // speed off you and lets you through. Both numbers are dimensionless, so
   // neither is scaled by the scene's unit.
   canopyEntry: 0.625,   // x — one cut on the frame you enter the foliage
-  canopyDrag: 3.0,      // 1/s — exponential xz drag while you are inside it
-                        // (12 m/s falls to ~1.7 m/s in three quarters of a
-                        // second). Both were 0.50 / 4.0; Greg on the bench,
-                        // 2026-09-01: "slow is too slow, can be 75% of slowness".
+  canopyDrag: 3.45,     // 1/s — exponential xz drag while you are inside it.
+                        // Both were 0.50 / 4.0; Greg on the bench, 2026-09-01:
+                        // "slow is too slow, can be 75% of slowness" ->
+                        // 0.625 / 3.0; 2026-09-02 "halfway back" -> 0.56 / 3.5
+                        // (specs/0031 §1), which together with a x0.80 skirt
+                        // stalled the rider inside the tree.
+                        //
+                        // specs/0032 §1 reads "15 % more friction" against what
+                        // is actually being played (main's 0.625 / 3.0), so the
+                        // ENTRY cut is left alone and the drag alone goes up by
+                        // 15 %: 3.0 -> 3.45. That is the number Greg asked for
+                        // and it does not move again; the skirt
+                        // (CANOPY_R_SCALE, solids.js) is the knob that pays for
+                        // it, because after the cut the body's remaining
+                        // horizontal travel is bounded at v0/drag metres and the
+                        // skirt is what sets the chord it has to cross.
   canopyCarry: 0.50,    // s — THE SEAM BETWEEN §E1 AND §E2, and the one number
                         // neither of them names. A big fir's skirt reaches 3 m
                         // out at the height §E1 exists for, so a rider aimed at
@@ -287,10 +299,27 @@ export function createController(THREE, collision, spawn, tuning = {}) {
     // stop belongs to the second half of the slide. A flat drag cannot do both —
     // strong enough to hold a body under 1.5 m/s on a 33 deg pitch at t = 1.6 s
     // is strong enough to have deleted the throw by t = 0.3 s.
-    DRAG0: 0.25,     // 1/s — while the body is still being thrown
-    DRAG_HOLD: 0.85, // s — ...for this long
+    //
+    // ---- specs/0034 §1: AND 75 % FARTHER ONCE YOU ARE ON THE SNOW.
+    //
+    // 0030 threw you 3.6-4.2x farther and then took it back off you starting at
+    // 0.85 s, so the slide was over by ~1.1 s and the last half of the wipe was a
+    // body lying still. 0034 gives the SLIDE the time instead of the THROW: the
+    // hold runs to 1.40 s and the ramp is in by 1.50, which is 0.10 s before the
+    // get-up starts, so the body is down to walking pace exactly as it begins to
+    // stand rather than a second before it. Nothing about the contact moved —
+    // SCRUB/TAN/REST are 0030's to the digit, and the peak speed off the hit is
+    // unchanged in both cases (§3.1's table).
+    //
+    // DRAG0 is 0 and that is the honest number, not a disabled feature: swept, a
+    // hold of 0.05/s costs case A 0.06x and puts it under §3.1's 1.55 floor. The
+    // wipe adds no drag of its own while the body is being thrown; the snow under
+    // the skis (ski.js's own friction, which runs underneath this) is what bleeds
+    // the throw off, and DRAG1 is what stops it.
+    DRAG0: 0.00,     // 1/s — while the body is still being thrown (0030: 0.25)
+    DRAG_HOLD: 1.40, // s — ...for this long (0030: 0.85)
     DRAG1: 18.0,     // 1/s — and this much from DRAG_IN onward
-    DRAG_IN: 1.10,   // s
+    DRAG_IN: 1.50,   // s (0030: 1.10)
   };
   let canopyHits = 0;                // ...and §E2's, one per ENTRY into foliage
   let inCanopy = -1;                 // stem index whose canopy we are inside, -1 = out
@@ -639,11 +668,13 @@ export function createController(THREE, collision, spawn, tuning = {}) {
                                          // cannot land mid-wipe and tumble forever
       // ---- specs/0030 §2: AND THE SNOW TAKES IT BACK OFF YOU.
       //
-      // The toss above is the first half-second; this is the other 1.5. Ramped
-      // from almost nothing at the hit to 5.6/s by 1.15 s, so the body is thrown,
-      // slides, and is under 1.5 m/s by the time the get-up starts at 1.6 s —
-      // rather than standing up out of a 6 m/s slide, which is a body that
-      // teleports back into its riding pose.
+      // The toss above is the first half-second; this is the rest of the wipe.
+      // specs/0034 §1: nothing at all until 1.40 s and the full 18/s by 1.50, so
+      // the body is thrown, SLIDES for the whole first three quarters of the
+      // wipe, and is under 1.5 m/s by the time the get-up starts at 1.6 s
+      // (measured: 0.41 m/s on case A, 1.13 on case B) — rather than standing up
+      // out of a 6 m/s slide, which is a body that teleports back into its
+      // riding pose.
       //
       // Applied to the horizontal only, and before the gear model runs: the
       // skis' own friction still does its job underneath this, and vel.y is
