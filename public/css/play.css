@@ -113,7 +113,7 @@ body.play > div[hidden], body.play .play-donor { display: none !important; }
   text-transform: uppercase; color: var(--panel);
   text-shadow: 0 1px 6px rgba(0, 0, 0, .6);
 }
-.phud__trick.is-wipe .phud__trick-big { color: #f4f1ea; }
+.phud__trick.is-wipe .phud__trick-big { color: var(--p-cream); }   /* specs/0055 §1.1 */
 .phud__trick.is-pop { animation: ptrick .45s cubic-bezier(.2, 1.6, .4, 1) both; }
 @keyframes ptrick {
   0% { transform: translateX(-50%) scale(.4); opacity: 0; }
@@ -176,64 +176,23 @@ body.play > div[hidden], body.play .play-donor { display: none !important; }
 }
 /* colour is the verdict on the transition you just made: white = you got more
    back than you put in, dim red = you gave it away */
-.phud__pump.is-hot { color: #f4f1ea; }
+.phud__pump.is-hot { color: var(--p-cream); }   /* specs/0055 §1.1 */
 .phud__pump.is-cold { color: #a8452e; }
 .phud__pump.is-rel { color: var(--accent); }
 .phud__pump.is-rel .phud__pump-arc { filter: drop-shadow(0 0 6px rgba(255, 77, 0, .8)); }
 
-/* live combo strip (§3.7) — bottom-centre. `bottom` clears three rows of the
-   legend (14px + 3 × 30px), because the legend is 60vw wide from the left and
-   reaches past the centre line the moment it wraps. Bare type on the world, not
-   a chip: an unbanked score is not a thing you own yet and it should not sit in
-   the same panel furniture as the instruments. */
-.phud__combo {
-  position: absolute; left: 50%; bottom: 112px; transform: translateX(-50%);
-  display: flex; align-items: baseline; gap: 7px; white-space: nowrap;
-  font-family: var(--mono); font-weight: 800;
-  text-shadow: 0 0 2px rgba(23, 22, 20, .9), 0 2px 10px rgba(0, 0, 0, .55);
-}
-.phud__combo[hidden], .phud__combo.is-hidden { display: none; }
-.phud__combo-score { font-size: 22px; letter-spacing: .06em; color: var(--panel); font-variant-numeric: tabular-nums; }
-.phud__combo-x { font-size: 13px; color: #a49d90; }
-.phud__combo-mult { font-size: 22px; letter-spacing: .04em; color: var(--accent); font-variant-numeric: tabular-nums; }
-.phud__combo-n {
-  font-size: 9px; font-weight: 700; letter-spacing: .18em;
-  text-transform: uppercase; color: #a49d90;
-}
-.phud__combo-n.is-hidden { display: none; }
+/* THE TRICK HUD IS NOT IN THIS FILE ANY MORE (specs/0048).
+   The live timer (`.phud__atime`), the combo meter (`.phud__combo`), its grace
+   bar (`.phud__grace`) and the receipt (`.phud__cend`) are all styled from the
+   `hudType` object in js/play/hud.js, which injects one <style id="phud-type">
+   built from those constants at import time. The speedometer's canvas reads the
+   SAME object, so the family, the 12° oblique, the 0.06em tracking, the
+   purple→blue gradient and the flat deep indigo exist once and are shared rather
+   than typed out twice and left to drift.
 
-/* end-of-combo banner (§3.7) — the receipt, 2.4 s, low on the screen so it
-   never fights the big rotation stamp at 30% */
-.phud__cend {
-  position: absolute; left: 50%; top: 62%; transform: translateX(-50%);
-  text-align: center; max-width: 62vw;
-  font-family: var(--mono);
-  text-shadow: 0 0 2px rgba(23, 22, 20, .9), 0 2px 12px rgba(0, 0, 0, .55);
-}
-.phud__cend[hidden], .phud__cend.is-hidden { display: none; }
-.phud__cend-cap {
-  font-size: 10px; font-weight: 700; letter-spacing: .3em;
-  text-transform: uppercase; color: #a49d90;
-}
-.phud__cend-tot { display: flex; align-items: baseline; justify-content: center; gap: 9px; margin-top: 2px; }
-.phud__cend-score { font-size: 34px; font-weight: 800; letter-spacing: .04em; color: var(--panel); font-variant-numeric: tabular-nums; }
-.phud__cend-mult { font-size: 20px; font-weight: 800; letter-spacing: .04em; color: var(--accent); font-variant-numeric: tabular-nums; }
-.phud__cend-list {
-  margin-top: 4px; font-size: 11px; font-weight: 700; letter-spacing: .14em;
-  text-transform: uppercase; color: var(--panel); line-height: 1.5;
-}
-.phud__cend-sub {
-  margin-top: 2px; font-size: 9.5px; font-weight: 700; letter-spacing: .22em;
-  text-transform: uppercase; color: #a49d90;
-}
-.phud__cend-list.is-hidden, .phud__cend-sub.is-hidden { display: none; }
-.phud__cend.is-pb .phud__cend-cap { color: var(--accent); }
-.phud__cend.is-pb .phud__cend-score { color: var(--accent); }
-.phud__cend.is-pop { animation: pcend .5s cubic-bezier(.2, 1.5, .4, 1) both; }
-@keyframes pcend {
-  0% { transform: translateX(-50%) translateY(10px); opacity: 0; }
-  100% { transform: translateX(-50%) translateY(0); opacity: 1; }
-}
+   What used to be here: a mono bottom-centre strip with the unbanked total and
+   an orange multiplier, and a four-line receipt (cap / total / trick list /
+   degrees) at 62%. Both went with the language, not just with the position. */
 
 /* leaderboard breadcrumb (§4.3) — one dim dot under the fps chip. It is the
    only thing on screen that admits the board exists, and its title is `L L`. */
@@ -264,6 +223,39 @@ body.play > div[hidden], body.play .play-donor { display: none !important; }
   color: #fff; background: var(--accent); border-radius: 2px;
   padding: 1px 5px; letter-spacing: .06em;
 }
+
+/* TOUCH (2026-09-05) — the same chip, promoted to a tap target. Every
+   location-based offer in the game is written to `.phud__prompt` (lift.js's
+   "ride RED DOG", guide.js's "race RED DOG SLALOM"), and both are keyed F,
+   which a phone does not have. hud.js adds `--tap` on a coarse pointer only, so
+   every rule above is exactly what it was on a desktop.
+
+   BOTTOM CENTRE, not under the crosshair: on a coarse pointer hud.js hides the
+   key legend, so this takes the strip the key chips vacated, and a 60 px slab
+   in the middle of the screen would sit over the snow you are aiming at. It is
+   also the seam between the two thumbs — touch.js gives the left half of the
+   glass to the stick and the right half to look/jump — so either one reaches it
+   without a re-grip. 60 px tall is the floor, not the target: the padding takes
+   a long lift name past it. */
+.phud__prompt--tap {
+  left: 50%; top: auto;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  pointer-events: auto;
+  min-height: 60px; min-width: 190px; max-width: calc(100vw - 32px);
+  justify-content: center; gap: 10px;
+  padding: 0 20px; font-size: 13px;
+  overflow: hidden;
+  background: rgba(23, 22, 20, .92);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, .45);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+.phud__prompt--tap span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.phud__prompt--tap b { font-size: 12px; padding: 5px 9px; letter-spacing: .1em; flex: none; }
+/* the press state — the finger is on it, before the key goes out */
+.phud__prompt--tap.is-press { background: var(--accent); }
+.phud__prompt--tap.is-press b { background: rgba(23, 22, 20, .85); }
 
 .phud__fps { position: absolute; right: 14px; top: 14px; }
 .phud__fps .v { color: var(--panel); font-variant-numeric: tabular-nums; }
@@ -305,6 +297,49 @@ body.play > div[hidden], body.play .play-donor { display: none !important; }
 }
 .phud__dev-btns { display: flex; gap: 5px; margin-top: 4px; pointer-events: auto; }
 
+/* ================================================================ specs/0055
+   §2 (lab dialect) + §1.9 (hazard stripe) + §5.5 (F8 dev bar B, annotate A).
+   The lab dialect is register 3's board in MONO with NO gradient at all and a
+   4 px `--accent` hazard rule on the top edge. Stripe = not shipping.
+   Three of §1.9's eight striped surfaces live in this file: `.pdev-bar`,
+   `dev-tuning-match-dialog` (`.pdev-modal__panel`) and `dev-tuning-annotate`
+   (`.pdev-paint__panel`, in dev.js's PAINT_CSS). The other five are hud.js's.
+   ------------------------------------------------------------------------ */
+.pdev-lab {
+  background: rgba(23, 22, 20, .90);
+  border-top: 4px solid var(--accent);
+  border-radius: 0 0 2px 2px;
+  font-family: var(--mono); color: #e8e4da;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, .45);
+}
+.pdev-lab__hd {
+  display: flex; align-items: center; justify-content: space-between; gap: 18px;
+  padding: 6px 10px 5px; border-bottom: 1px solid rgba(244, 241, 234, .16);
+  font-size: 9.5px; letter-spacing: .18em; text-transform: uppercase; color: #ff9153;
+}
+.pdev-lab__bd { padding: 7px 10px 8px; font-size: 10.5px; letter-spacing: .04em; }
+
+/* specs/0055 §5.5 — dev actions are prompts too, so they take register 2's
+   `key -> verb` grammar: the key on a plate, the verb reading beside it. */
+.pdev-key {
+  font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .06em;
+  background: var(--accent); color: #fff; border-radius: 2px;
+  padding: 3px 6px; min-width: 13px; text-align: center; line-height: 1.3;
+  flex: none; text-transform: uppercase;
+}
+/* specs/0055 §1.8 — the severity alphabet's red X, the system's mark for
+   "closed / nothing here". The reference viewer's honest empty state (A). */
+.pdev-x {
+  position: relative; display: block; width: 11px; height: 11px; flex: none;
+}
+.pdev-x::before, .pdev-x::after {
+  content: ""; position: absolute; left: 0; top: 4px; width: 11px; height: 3px;
+  background: #ff5c8a;
+}
+.pdev-x::before { transform: rotate(45deg); }
+.pdev-x::after { transform: rotate(-45deg); }
+.pdev-x[hidden] { display: none; }   /* `display: block` above outranks [hidden] */
+
 .pdev-btn {
   font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .12em;
   text-transform: uppercase; color: #cdc7ba; cursor: pointer;
@@ -317,6 +352,15 @@ body.play > div[hidden], body.play .play-donor { display: none !important; }
 .pdev-btn--accent:hover { background: #f04800; color: #fff; }
 .pdev-btn:disabled { opacity: .4; cursor: default; }
 .pdev-btn--sm { padding: 3px 6px; font-size: 9px; }
+/* specs/0055 §5.5 — the key-plate button: a `.pdev-key` and its verb inside one
+   hit target, so M / P / J read the way E / F / T read in the world. */
+.pdev-btn--key {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: none; border: 1px solid rgba(244, 241, 234, .22);
+  padding: 3px 8px 3px 3px; letter-spacing: .13em; border-radius: 2px;
+}
+.pdev-btn--key:hover { background: rgba(244, 241, 234, .12); color: var(--panel); }
+.pdev-btn--key:disabled .pdev-key { background: rgba(244, 241, 234, .18); color: #cdc7ba; }
 
 .pdev-lbl {
   font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .12em;
@@ -336,35 +380,64 @@ body.play > div[hidden], body.play .play-donor { display: none !important; }
   background: var(--accent);
 }
 .pdev-compare__seam[hidden], .pdev-compare__handle[hidden] { display: none; }
+/* specs/0055 §1.10 — 2 px radius on caps, and the lab dialect's square edge:
+   the wipe handle is a plate, not a pill. */
 .pdev-compare__handle {
   position: absolute; top: 50%; width: 26px; height: 54px; margin: -27px 0 0 -13px;
-  border-radius: var(--r-sm); background: var(--accent); border: 1px solid #a83300;
+  border-radius: 2px; background: var(--accent); border: 1px solid #a83300;
   box-shadow: 0 2px 8px rgba(0, 0, 0, .4);
   cursor: ew-resize; pointer-events: auto; touch-action: none;
 }
 
-/* toolbar */
+/* ---- specs/0055 §5.5 (D17) — the F8 dev bar takes lookbook STYLE B: one
+   full-bleed band across the TOP edge under a single 4 px hazard rule, holding
+   the mode, the reference state, and every control §0 pins — the four `MODES`,
+   the opacity slider, `match this view · M`, `snapshot + annotate · P`,
+   `file trace · J`. Nothing shipped ever paints the top edge, so this is the
+   most unmistakable "you are in dev mode" frame available. */
 .pdev-bar {
-  position: fixed; right: 14px; bottom: 14px; z-index: 22;
-  width: 232px; display: grid; gap: 7px; pointer-events: auto;
-  background: rgba(23, 22, 20, .88); color: var(--panel);
-  border: 1px solid var(--accent); border-radius: var(--r-sm); padding: 9px;
+  position: fixed; left: 0; right: 0; top: 0; z-index: 22;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px;
+  padding: 7px 14px; pointer-events: auto;
+  background: rgba(23, 22, 20, .90);
+  border-top: 4px solid var(--accent);
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .16em;
+  text-transform: uppercase; color: #cdc7ba;
 }
 .pdev-bar[hidden] { display: none; }
 .pdev-bar__title {
-  display: flex; align-items: center; gap: 7px;
-  font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .12em;
-  text-transform: uppercase;
+  display: flex; align-items: center; gap: 7px; flex: none;
+  font-size: 9.5px; font-weight: 700; letter-spacing: .18em; color: #ff9153;
 }
-.pdev-bar__title .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; }
+/* specs/0055 §5.5 — reference A: the honest empty state. No bundle dropped is
+   not an error, it is a refusal, so it gets §1.8's red X and no colour of its
+   own; once a photo lands the same slot carries its name, roman, untracked. */
 .pdev-bar__ref {
-  flex: 1; min-width: 0; color: #a49d90; font-size: 9px; letter-spacing: .06em;
+  display: flex; align-items: center; gap: 7px;
+  flex: 1 1 120px; min-width: 0; color: #9aa0ad; font-size: 9px; letter-spacing: .13em;
+}
+.pdev-bar__ref b {
+  min-width: 0; font-weight: 400; color: #e8e4da; letter-spacing: .04em;
   text-transform: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.pdev-bar__row { display: flex; align-items: center; gap: 5px; }
-.pdev-bar__row .pdev-btn { flex: 1; text-align: center; padding: 5px 4px; letter-spacing: .06em; }
-.pdev-slider { flex: 1; min-width: 0; accent-color: var(--accent); }
-.pdev-bar .pdev-btn--accent { padding: 8px; text-align: center; }
+.pdev-bar__row { display: flex; align-items: center; gap: 5px; flex: none; }
+.pdev-bar__row .pdev-btn { text-align: center; padding: 4px 7px; letter-spacing: .1em; }
+/* every control keeps its own width — a shrunken flex item spills its label
+   over its neighbour, which is what the band must never do (specs/0055 §10.9:
+   ALL the buttons stay, so they must all stay READABLE) */
+.pdev-bar > .pdev-btn { flex: none; }
+/* te.css:223's `input[type="range"] { width: 100% }` outranks a bare class, so
+   the band's own slider width has to be scoped to the bar to win */
+.pdev-bar .pdev-slider { width: 88px; flex: none; accent-color: var(--accent); }
+.pdev-slider { accent-color: var(--accent); }
+.pdev-bar .pdev-btn--accent { padding: 3px 8px 3px 3px; text-align: left; }
+/* The band owns the top edge, so the lab surfaces anchored at `14, 14` drop
+   below it rather than under it (specs/0055 §2 — one arrival at a time). The
+   class is set by dev.js on the body; nothing shipped is anchored up there. */
+body.play.is-devbar .phud__dev,
+body.play.is-devbar .phud__read,
+body.play.is-devbar .phud__lip,
+body.play.is-devbar .phud__fps { margin-top: 34px; }
 
 /* match dialog */
 .pdev-modal {
@@ -373,29 +446,51 @@ body.play > div[hidden], body.play .play-donor { display: none !important; }
   background: rgba(23, 22, 20, .5); backdrop-filter: blur(3px);
 }
 .pdev-modal[hidden] { display: none; }
-.pdev-modal__panel { width: min(680px, 94vw); box-shadow: 0 18px 50px rgba(0, 0, 0, .35); }
-.pdev-modal__bd { display: grid; gap: 11px; }
+/* specs/0055 §1.9 + §2 — `dev-tuning-match-dialog` is one of the eight lab
+   surfaces, so the cream board becomes register 3's board IN MONO: ink slab, no
+   gradient anywhere, 4 px hazard rule on the top edge. Every control §0 pins
+   stays exactly where it was — the two shots, the note, `confirm`, `cancel`. */
+.pdev-modal__panel {
+  width: min(680px, 94vw);
+  background: rgba(23, 22, 20, .93); border: 0; border-top: 4px solid var(--accent);
+  border-radius: 0 0 2px 2px; color: #e8e4da;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .5);
+}
+.pdev-modal__panel .panel__hd {
+  background: none; border-radius: 0; border-bottom: 1px solid rgba(244, 241, 234, .16);
+  padding: 6px 11px 5px;
+}
+.pdev-modal__panel .panel__hd::before { display: none; }
+.pdev-modal__panel .panel__hd .lbl { font-size: 9.5px; letter-spacing: .18em; color: #ff9153; }
+.pdev-modal__panel .panel__hd .lbl:not(.lbl--accent) { color: #6f7891; }
+.pdev-modal__bd { display: grid; gap: 11px; padding: 10px 11px 12px; }
 .pdev-modal__shots { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
 .pdev-shot { margin: 0; display: grid; gap: 5px; }
 .pdev-shot__img {
   display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: contain;
-  background: #0b1a2a; border: 1px solid var(--seam-hard); border-radius: var(--r-sm);
+  background: #0b1a2a; border: 1px solid rgba(244, 241, 234, .22); border-radius: 2px;
 }
 .pdev-shot__cap {
   font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--muted);
+  text-transform: uppercase; color: #6f7891;
 }
-.pdev-modal__ask { font-size: 14px; font-weight: 650; color: var(--ink); }
+.pdev-modal__ask {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .13em;
+  text-transform: uppercase; color: #e8e4da;
+}
 .pdev-modal__note { display: grid; gap: 4px; }
 .pdev-note {
   width: 100%; box-sizing: border-box; resize: vertical;
-  font-family: var(--mono); font-size: 11.5px; line-height: 1.5; color: var(--ink);
-  background: var(--panel-2); border: 1px solid var(--seam-hard); border-radius: var(--r-sm);
-  padding: 7px 8px;
+  font-family: var(--mono); font-size: 11.5px; line-height: 1.5; color: #e8e4da;
+  background: rgba(244, 241, 234, .08); border: 1px solid rgba(244, 241, 234, .22);
+  border-radius: 2px; padding: 7px 8px;
 }
 .pdev-note:focus { outline: none; border-color: var(--accent); }
 .pdev-modal__row { display: flex; gap: 8px; align-items: center; }
-.pdev-modal__stat { color: var(--muted); }
+.pdev-modal__row .btn { border-radius: 2px; }
+.pdev-modal__row .btn--ghost { background: none; border-color: rgba(244, 241, 234, .22); color: #cdc7ba; }
+.pdev-modal__row .btn--ghost:hover { background: rgba(244, 241, 234, .12); color: var(--panel); }
+.pdev-modal__stat { color: #9aa0ad; }
 
 /* --------------------------------------------------------------- gear menu
    Hold E. Same panel language as pause, sized like a context menu. */
@@ -585,68 +680,196 @@ body.play > div[hidden], body.play .play-donor { display: none !important; }
   .pinv__d-cols { grid-template-columns: 1fr; }
 }
 
-/* ------------------------------------------------------------------- pause */
+/* W1 TOOK THE HAND-OFF (specs/0055 §1.1). The colours W4 typed here are tokens
+   hud.js owns; its injected `:root` block publishes each as a custom property,
+   so the three §10.3 reserves are now read by name in this sheet and typed in
+   none of it. This sheet still declares NO token of its own — §1.1's rule —
+   only `--pf` at :166, which is a layout number, not a design token.
+   The cream/ink/seam names below that W4 left in place are the same sweep. */
+/* ------------------------------------------------------------------- pause
+   specs/0055 5.1 - PAUSE **B** (D14). The panel was already cream, which the
+   0055 audit called "the right instinct"; what it was not was a MAP BOARD. It
+   is one now: 2 px ink mounting rule under the header (1.10), 2 px radius,
+   hairline row rules, ink key plates in a fixed 66 px column so the verbs form
+   a hard left edge, and the resume button as a solid ink plate. The credit line
+   is verbatim and sets in 9 px mono the way a map carries its attribution.
+
+   TWO COLUMNS, AND NO ROW COUNT ANYWHERE IN THIS SHEET. The lab tier lists 31
+   rows and the shipped tier lists five (hud.js FIVE_ROWS / LAB_ROWS), and the
+   spec's ask is that "30 rows fit one screen for the first time" with ONE code
+   path for both. grid-auto-flow:column over a fixed 16-row template does
+   exactly that, and is honest about which is which: five rows fill rows 1-5 of
+   column one and the panel stays a single column; 31 rows fill column one and
+   spill 15 into column two, IN READING ORDER - which a plain two-column
+   grid-template-columns cannot do, because it interleaves the list.
+
+   Arrival and exit are 6's RISE / FALL at 1.11 timings, and the rows do not
+   stagger: a paused game should be paused, not performing. */
 .ppause {
   position: fixed; inset: 0; z-index: 40;
   display: grid; place-items: center;
-  background: rgba(23, 22, 20, .34);
+  background: rgba(23, 22, 20, .42);
   backdrop-filter: blur(4px) saturate(.8);
+  animation: p55-rise 220ms cubic-bezier(.16, 1, .3, 1) both;
 }
-.ppause[hidden] { display: none; }
-.ppause__panel { width: min(460px, 90vw); box-shadow: 0 18px 50px rgba(0, 0, 0, .3); }
-.ppause__bd { display: grid; gap: 12px; }
-.ppause__keys { display: grid; grid-template-columns: auto 1fr; gap: 5px 14px; align-items: center; }
+.ppause[hidden] { display: none; animation: none; }
+.ppause__panel {
+  width: max-content; max-width: min(96vw, 900px);
+  border-radius: 2px; border-color: var(--ink);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .3);
+}
+/* 1.10 - the 2 px mounting rule. .panel__hd already draws a 1 px seam; the
+   board's rule is the heavier one, and it is ink rather than accent because the
+   header word PAUSED is the accent on this panel. */
+.ppause__panel > .panel__hd { border-bottom: 2px solid var(--ink); border-radius: 2px 2px 0 0; }
+.ppause__bd { display: grid; gap: 10px; padding: 12px 14px 12px; }
+.ppause__keys {
+  display: grid;
+  /* max-content/auto rather than four fixed tracks: an EMPTY column 3-4 has to
+     collapse to nothing, or the shipped five-row tier reserves the lab tier's
+     second column and sits in a board twice as wide as its own content. The
+     widths live on the cells instead. */
+  grid-template-columns: max-content auto max-content auto;
+  grid-auto-flow: row dense;
+  gap: 0 14px;
+}
+/* TWO COLUMNS OF PAIRS, COLUMN-MAJOR, WITHOUT A WRAPPER ELEMENT AND WITHOUT A
+   ROW COUNT IN THE JS. hud.js emits a flat run of .cap/.what siblings, so the
+   only lever this sheet has is which grid column each sibling takes. The first
+   16 pairs (32 children) take columns 1-2 and the rest take 3-4; `row dense`
+   then back-fills columns 3-4 from row 1 instead of continuing down the page.
+   The 32 is the ONE number here, it is a CAPACITY and not a count, and it
+   degrades in the right direction: the shipped five-row tier (10 children) is
+   entirely inside the first 32 and renders as a single column — which is the
+   "one code path, both tiers" §5.1 asks for. */
+.ppause__keys > :nth-child(-n+32):nth-child(odd)  { grid-column: 1; }
+.ppause__keys > :nth-child(-n+32):nth-child(even) { grid-column: 2; }
+.ppause__keys > :nth-child(n+33):nth-child(odd)   { grid-column: 3; }
+.ppause__keys > :nth-child(n+33):nth-child(even)  { grid-column: 4; }
+/* The hairline row rule (§1.10) sits at the ROW's bottom, not under the text,
+   so a two-line verb still rules level with its key. Both halves stretch to the
+   row and carry the rule; the key PLATE is therefore painted INSIDE the cap
+   cell — an 18 px band at the top — rather than being the cell's own box. */
+.ppause__keys .cap,
+.ppause__keys .what {
+  align-self: stretch;
+  border-bottom: 1px solid var(--seam);
+  padding-bottom: 5px; margin-bottom: 5px;
+}
 .ppause__keys .cap {
-  font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .1em;
-  background: var(--panel-2); border: 1px solid var(--ink); border-radius: 3px;
-  padding: 3px 7px; text-align: center; box-shadow: 0 1px 0 var(--seam-hard);
+  position: relative;
+  height: auto; min-height: 17px; min-width: 62px;
+  font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .06em;
+  text-align: center; color: var(--ink); line-height: 17px;
+  background-image: linear-gradient(var(--panel-2), var(--panel-2));
+  background-repeat: no-repeat; background-size: 100% 17px;
+  white-space: nowrap; overflow: hidden;
 }
-.ppause__keys .what { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); }
+/* the plate's 1 px ink edge, 2 px radius (§1.10) — an overlay so it hugs the
+   18 px band and never the whole stretched cell */
+.ppause__keys .cap::after {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 17px;
+  box-shadow: inset 0 0 0 1px var(--ink); border-radius: 2px; pointer-events: none;
+}
+.ppause__keys .what {
+  max-width: 336px;
+  font-family: var(--mono); font-size: 9.5px; line-height: 17px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-2);
+}
+.ppause__keys .is-hidden { display: none; }
 .ppause__row { display: flex; gap: 8px; align-items: center; }
+/* the action is an ink plate, the way the lookbook's CLICK TO RESUME is */
 .ppause__big {
   flex: 1; justify-content: center; padding: 11px 12px; font-size: 11px;
+  background: var(--ink); border-color: var(--ink); color: var(--panel);
+  border-radius: 2px; letter-spacing: .16em;
 }
+.ppause__big:hover { background: #2b2925; }
 
 /* -------------------------------------------------------------- leaderboard
-   Double-tap L (§4.3). Same panel language as pause and the gear menu, one
-   row per banked combo. Not listed in the pause panel — that is the point. */
+   Double-tap L (4.3). specs/0055 5.1 - RESULTS **A** (D14): the lift-shack
+   results sheet. Cream board, 2 px mounting rule, a mono column header ruled in
+   ink, hairline row rules, everything else ink and mono the way a race result
+   pinned in a lift shack is - and the SCORE is the one gradient number allowed
+   anywhere in register 3 (1.5: the gradient belongs to the rider, and the score
+   is the rider's). Per D18 that gradient carries NO stroke, no paint-order and
+   no text-shadow. The zebra stripe is gone: a ruled sheet does not need two
+   devices for the same job. */
 .pboard {
   position: fixed; inset: 0; z-index: 42;
   display: grid; place-items: center;
-  background: rgba(23, 22, 20, .38);
+  background: rgba(23, 22, 20, .42);
   backdrop-filter: blur(4px) saturate(.8);
+  animation: p55-rise 220ms cubic-bezier(.16, 1, .3, 1) both;
 }
-.pboard[hidden] { display: none; }
-.pboard__panel { width: min(660px, 94vw); box-shadow: 0 18px 50px rgba(0, 0, 0, .3); }
-.pboard__bd { display: grid; gap: 2px; }
+.pboard[hidden] { display: none; animation: none; }
+.pboard__panel {
+  width: min(760px, 94vw);
+  border-radius: 2px; border-color: var(--ink);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .3);
+}
+.pboard__panel > .panel__hd { border-bottom: 2px solid var(--ink); border-radius: 2px 2px 0 0; }
+.pboard__bd { display: grid; gap: 0; padding: 10px 14px 14px; }
 .pboard__row {
-  display: grid; align-items: center; gap: 10px;
-  grid-template-columns: 18px 74px 34px minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) 88px;
-  padding: 5px 7px; border-radius: var(--r-sm); border: 1px solid transparent;
-  font-family: var(--mono); font-size: 10px; letter-spacing: .06em; color: var(--ink);
+  display: grid; align-items: baseline; gap: 10px;
+  grid-template-columns: 22px 96px 44px minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) 82px;
+  padding: 9px 0; border-radius: 0; border: 0;
+  border-bottom: 1px solid var(--seam);
+  font-family: var(--mono); font-size: 11px; letter-spacing: .06em; color: var(--ink);
 }
 .pboard__row > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pboard__row .rk { color: var(--muted); font-variant-numeric: tabular-nums; }
-.pboard__row .sc { font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; }
-.pboard__row .mu { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+/* THE ONE GRADIENT IN REGISTER 3. hudType.gradFrom -> hudType.gradTo at the
+   shipping 96deg, two stops, no border (D18). It is typed here rather than read
+   from a token because play.css declares no design token and gains none (1.1) -
+   hud.js stays the single source. */
+.pboard__row .sc {
+  /* `background-clip: text` paints the ELEMENT's box, so the span has to hug
+     the number or a three-digit score lands on one end of the ramp and reads
+     as a flat blue. `width: max-content` + `justify-self: end` keeps the column
+     right-aligned and runs the full purple->blue across the digits themselves —
+     the DOM answer to the same problem §1.4 solves on canvas by building the
+     ramp along the arc's start->tip line instead of the bounding box. */
+  justify-self: end; width: max-content;
+  font-family: var(--sans); font-weight: 700; font-size: 22px; letter-spacing: .02em;
+  font-variant-numeric: tabular-nums; text-align: right;
+  background: var(--p-grad);   /* specs/0055 §1.4 (D18) — two stops, no border */
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.pboard__row .mu { color: var(--muted); font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
 .pboard__row .bt { font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
-.pboard__row .sk, .pboard__row .tr, .pboard__row .wh { color: var(--ink-2); }
+.pboard__row .sk, .pboard__row .tr, .pboard__row .wh { color: var(--ink-2); text-transform: uppercase; }
 .pboard__row .wh { text-align: right; color: var(--muted); }
 .pboard__row--hd {
   font-size: 9px; font-weight: 700; letter-spacing: .16em;
   text-transform: uppercase; color: var(--muted);
-  border-bottom: 1px solid var(--seam); border-radius: 0; padding-bottom: 7px; margin-bottom: 3px;
+  border-bottom: 1px solid var(--ink); padding: 0 0 5px; margin-bottom: 0;
 }
-.pboard__row--hd .sc, .pboard__row--hd .mu, .pboard__row--hd .bt { color: var(--muted); font-weight: 700; }
-/* the header is child 1, so `even` stripes ranks 1, 3, 5 — zebra without a
-   second class on every row */
-.pboard__row:nth-child(even) { background: var(--panel-2); }
-.pboard__row.is-you { background: var(--accent); border-color: #a83300; color: #fff; }
-.pboard__row.is-you .rk, .pboard__row.is-you .sk, .pboard__row.is-you .tr, .pboard__row.is-you .wh { color: rgba(255, 255, 255, .82); }
-.pboard__row.is-you .mu { color: #fff; }
+.pboard__row--hd .sc {
+  font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .16em;
+  background: none; -webkit-background-clip: border-box; background-clip: border-box;
+  color: var(--muted);
+}
+.pboard__row--hd .mu, .pboard__row--hd .bt { color: var(--muted); font-weight: 700; }
+/* your own row is marked by the accent on the rank and the trick, not by a
+   filled bar: one mark per plate, and the sheet stays a sheet */
+.pboard__row.is-you { background: transparent; color: var(--ink); }
+.pboard__row.is-you .rk, .pboard__row.is-you .bt { color: var(--accent); }
+/* 1.8's alphabet in the empty state: a black diamond, not an icon */
 .pboard__empty {
-  font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .16em;
-  text-transform: uppercase; color: var(--muted); padding: 14px 7px; text-align: center;
+  font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--muted); padding: 34px 7px 30px; text-align: center;
+}
+.pboard__empty::before {
+  content: ""; display: block; width: 14px; height: 14px; margin: 0 auto 12px;
+  background: var(--seam); transform: rotate(45deg);
+}
+
+/* 1.11 RISE - 220 ms, opacity 0 -> 1 and +10 px. The one arrival verb every
+   register-3 surface uses; nothing else in this sheet may invent a duration. */
+@keyframes p55-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
 }
 
 /* ------------------------------------------------------------------- portal

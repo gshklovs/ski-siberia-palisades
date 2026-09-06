@@ -72,55 +72,176 @@ body.clean-frame .pmk-flash { display: none !important; }
 .intro.is-in { opacity: 1; }
 .intro.is-out { opacity: 0; transition-duration: 300ms; }
 
+/* W1 TOOK THE HAND-OFF (specs/0055 §1.1). Every colour W4 typed in this sheet
+   is a token hud.js owns, and hud.js's injected `:root` block publishes each as
+   a custom property — so the intro cards read `--p-cream`, `--p-ink`,
+   `--p-seam` and `--p-hazard` by name and this sheet types none of the three
+   hexes §10.3 reserves. */
+/* ==================================================================== 0055
+   specs/0055 5.4 - INTRO **B** for the Red Dog chair (D16), and BOOT CONTROLS
+   **A** ("the pause board with a different header").
+
+   Card 1 is the MARQUEE: label / rule / hero, the construction B is built on,
+   with RED DOG CHAIR at 56 px - "the system's largest instance, once, at boot"
+   (5.4). The lookbook's B draws its lead rule in the gradient; this one does
+   NOT, and that is deliberate rather than a shortcut: 1.5 says the gradient
+   belongs to the rider - speed, air, multiplier, score, race time - and 5.1
+   says the results score is the ONE gradient allowed outside register 1. A
+   place name is the mountain's word, not the rider's, so the rule is the 2 px
+   mounting rule in cream (1.10) and the hero is set in cream too.
+
+   Card 2 is the pause board with a different header: the same cream map board,
+   the same 66 px ink key plates, the same hairline rows, the same solid ink
+   action plate - .ppause's construction, reached by a different route. Two
+   screens, one component.
+
+   Both cards arrive RISE (220 ms, +10 px, 1.11) and leave FALL with the
+   overlay. Nothing here loops except .intro__go, which is 0027's call to
+   action and predates this spec. */
+
 .intro__card {
-  max-width: 30rem;
+  max-width: 34rem;
   text-align: center;
-  color: #f4f6f8;
-  text-shadow: 0 1px 22px rgba(0, 0, 0, 0.85), 0 1px 4px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.8);
-  animation: intro-rise 640ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  color: var(--p-cream);
+  animation: intro-rise 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 @keyframes intro-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
+/* ---- card 1, the marquee. Label, rule, hero, subtitle, credit. */
+.intro__card--title { text-shadow: 0 1px 22px rgba(0, 0, 0, 0.85), 0 1px 4px rgba(0, 0, 0, 0.95); }
 .intro__h1 {
   margin: 0;
-  font: 700 clamp(1.9rem, 7vw, 3.1rem) / 1.02 ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
-  letter-spacing: 0.14em;
-  text-indent: 0.14em;
+  font: 500 clamp(2rem, 6.2vw, 56px) / 1.02 "Avenir Next", Avenir, "Nunito Sans", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: 0.06em;
+  text-indent: 0.06em;
+  text-transform: uppercase;
+  transform: skewX(-12deg);
+}
+/* the 2 px mounting rule, drawn above the hero the way the marquee draws it.
+   NOT the gradient - see the block comment above. */
+.intro__card--title .intro__h1::before {
+  content: "";
+  display: block;
+  width: min(100%, 30rem);
+  height: 2px;
+  margin: 0 auto 18px;
+  background: var(--p-cream);
+  transform: skewX(12deg);
 }
 .intro__h2 {
   margin: 0 0 1.1rem;
-  font: 600 0.78rem / 1 ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  font: 500 11px / 1 "Avenir Next", Avenir, "Nunito Sans", "Segoe UI", system-ui, sans-serif;
   letter-spacing: 0.34em;
   text-indent: 0.34em;
-  opacity: 0.72;
+  text-transform: uppercase;
+  color: #cdc7ba;
 }
 .intro__sub {
   margin: 0.85rem 0 0;
-  font: 400 clamp(0.86rem, 2.6vw, 1rem) / 1.5 ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
-  letter-spacing: 0.05em;
-  opacity: 0.92;
+  font: 400 clamp(0.9rem, 2.6vw, 1.06rem) / 1.5 ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: 0.02em;
+  color: #cdc7ba;
 }
 
+/* ---- card 2, the pause board with a different header.
+   The board itself, in the two surfaces 1.6 allows: cream and ink. */
+.intro__card--keys {
+  background: var(--p-cream);
+  color: #171614;
+  border-radius: 2px;
+  text-align: left;
+  text-shadow: none;
+  padding: 0;
+  width: min(460px, 90vw);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.34);
+  overflow: hidden;
+}
+.intro__card--keys .intro__h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  padding: 9px 14px;
+  border-bottom: 2px solid #171614;
+  text-indent: 0;
+  letter-spacing: 0.2em;
+  font-size: 10px;
+  color: var(--p-hazard);
+}
+.intro__card--keys .intro__h2::before {
+  content: "";
+  width: 6px; height: 6px; border-radius: 1px; background: var(--p-hazard); flex: none;
+}
 .intro__keys {
   display: grid;
-  grid-template-columns: auto auto;
-  gap: 0.5rem 1.1rem;
-  justify-content: center;
-  align-items: baseline;
-  margin: 0 auto;
+  grid-template-columns: auto 1fr;
+  gap: 0;
+  align-items: center;
+  margin: 0;
+  padding: 12px 14px 4px;
 }
+.intro__cap,
+.intro__what { border-bottom: 1px solid #c8c2b3; padding-bottom: 5px; margin-bottom: 5px; }
+/* the same key plate the pause board uses: 66 px, 2 px radius, ink hairline */
 .intro__cap {
-  justify-self: end;
-  font: 600 0.82rem / 1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  letter-spacing: 0.08em;
-  color: #ffd9c4;
+  justify-self: stretch;
+  min-width: 66px;
+  font: 700 10px / 1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.1em;
+  text-align: center;
+  color: #171614;
+  background: #e6e2d8;
+  box-shadow: inset 0 0 0 1px #171614;
+  border-radius: 2px;
+  padding: 3px 7px;
 }
 .intro__what {
   justify-self: start;
-  font: 400 0.82rem / 1.5 ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
-  letter-spacing: 0.03em;
-  opacity: 0.95;
+  font: 400 10px / 1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #46433c;
+  padding-left: 12px;
+  opacity: 1;
 }
+/* the action, as the solid ink plate .ppause__big is */
+.intro__card--keys .intro__go {
+  margin: 6px 14px 0;
+  padding: 11px 0;
+  background: #171614;
+  color: var(--p-cream);
+  border-radius: 2px;
+  text-align: center;
+  font: 500 11px / 1 "Avenir Next", Avenir, "Nunito Sans", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: 0.16em;
+  text-indent: 0.16em;
+  text-transform: uppercase;
+  animation: none;
+}
+/* the guided run's skip line (intro.js inserts a SECOND .intro__go before the
+   credit). It is a line, not a second action, so it takes neither the plate nor
+   the pulse: 9 px mono under the button, the way the lookbook draws it. */
+.intro__card--keys .intro__go + .intro__go {
+  margin: 11px 14px 0;
+  padding: 0;
+  background: none;
+  color: #8b8578;
+  font: 400 9px / 1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.1em;
+  text-indent: 0;
+  animation: none;
+}
+.intro__card--keys .intro__credit {
+  margin: 11px 14px 14px;
+  color: #8b8578;
+  opacity: 1;
+  text-align: center;
+}
+
+/* the touch card keeps its own construction (5.4: "the touch card keeps its
+   cream zone plates") and therefore keeps the cinematic veil type */
+.intro__card--touch { text-shadow: 0 1px 22px rgba(0, 0, 0, 0.85), 0 1px 4px rgba(0, 0, 0, 0.95); }
+.intro__card--touch .intro__h2 { color: #cdc7ba; }
 
 .intro__go {
   margin: 1.5rem 0 0;
@@ -132,19 +253,25 @@ body.clean-frame .pmk-flash { display: none !important; }
 }
 @keyframes intro-pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
 
+/* the credit sets in mono the way a map carries its attribution (5.1, 5.4) */
 .intro__credit {
   margin: 1.6rem 0 0;
-  font: 400 0.63rem / 1.5 ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
-  letter-spacing: 0.045em;
+  font: 400 9px / 1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   opacity: 0.78;
 }
 
 /* the pause panel carries the same line (ODbL travels with the artifact) */
+/* specs/0055 5.1 - the pause board's footer, verbatim copy, in 9 px mono:
+   "a map carries its attribution" and this is that line. */
 .ppause__credit {
-  margin-top: 0.9rem;
-  font-size: 0.66rem;
-  letter-spacing: 0.04em;
-  opacity: 0.62;
+  margin-top: 0.2rem;
+  font: 400 9px / 1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8b8578;
+  text-align: center;
 }
 
 /* ---------------------------------------------------------------- the idle
@@ -176,7 +303,7 @@ body.clean-frame .pmk-flash { display: none !important; }
   border: 1px solid rgba(255, 77, 0, 0.55);
   border-radius: 4px;
   padding: 6px 11px;
-  color: #f4f1ea;
+  color: var(--p-cream);
   font: 700 10px / 1.5 ui-monospace, "Cascadia Mono", Consolas, "Segoe UI Mono", monospace;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -191,25 +318,96 @@ body.clean-frame .pmk-flash { display: none !important; }
 .pidle[hidden] { display: none; }
 .pidle.is-on { opacity: 1; }
 .pidle b {
-  color: #f4f1ea;
+  color: var(--p-cream);
   background: rgba(244, 241, 234, 0.13);
   border-radius: 2px;
   padding: 1px 5px;
   letter-spacing: 0.06em;
 }
 
-/* D16.2 — the respawn fence fades the screen out and back */
+/* D16.2 — the respawn fence fades the screen out and back.
+   specs/0055 §3.10 (D6) — VOID: A, THE CLOSURE ROPE. Greg picked A off
+   lookbook.html #k-fence-void-fade; the plain cooled fade this replaces is that
+   cell's B. Two events that mean opposite things — a teleport you asked for and
+   a boundary that caught you — were sharing one white rectangle, and the resort
+   already owns the alphabet for the difference: the red X and the closure rope.
+
+   The panel is drawn EXACTLY as the picked cell draws it: a white wash at .72,
+   an 8 px rope on the top edge and another on the bottom, and a centred stack
+   of X / AREA CLOSED / RETURNING YOU TO THE HILL.
+
+   NO NEW SLAB (§1.6, D19). There is no surface here — the wash is not a board,
+   the ropes are edges and the type sits on the wash. Every colour but one is a
+   W1 token by name (§1.1): --p-cream, --p-ink, --p-sub, --p-fam.
+
+   THE ONE COLOUR THAT IS NOT A TOKEN, and it is a judgement call for Greg
+   (§11): --fence-red is the picked cell's closure red, #c92a2a, declared once
+   here and read by name after that. §1.8's fifth mark resolves to --p-diff-red,
+   which is #ff5c8a — the HUD's `bailed` pink (§1.5). That is the right red for
+   a redlined instrument and the wrong one for closure tape: painted in it, the
+   rope and the X read as a HUD warning rather than as the two marks a resort
+   paints on a rope, which is the whole content of the pick. It is an ACCENT,
+   not a slab, so D19's sign-off does not gate it, and it is none of §10.3's
+   three census hexes. Say the word and it becomes var(--p-diff-red). */
 .fence-fade {
   position: fixed;
   inset: 0;
   z-index: 35;
-  background: #f7fbff;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 260ms linear;
+  /* FALL, 160 ms linear (§1.11) — the exit lives on the base state */
+  transition: opacity 160ms linear;
+  --fence-red: #c92a2a;
 }
-.fence-fade.is-on { opacity: 1; }
+/* RISE, 220 ms — "slower in than the teleport, because it was not your idea" */
+.fence-fade.is-on { opacity: 1; transition: opacity 220ms linear; }
+/* the wash. Warm white, not the teleport's: the difference the eye reads first
+   is the ropes, but the flash goes to .90 and this stops at .72. */
+.fence-fade__wash { position: absolute; inset: 0; background: #fff; opacity: .72; }
+/* the closure rope, both edges. WIPE (§1.11): each rope is DRAWN INWARD FROM
+   BOTH EDGES over 260 ms, which is two half-ropes scaling off their own outer
+   edge — done on ::before/::after so the panel costs no extra nodes. */
+.fence-fade__rope { position: absolute; left: 0; right: 0; height: 8px; }
+.fence-fade__rope--t { top: 0; }
+.fence-fade__rope--b { bottom: 0; }
+.fence-fade__rope::before, .fence-fade__rope::after {
+  content: ""; position: absolute; top: 0; bottom: 0; width: 50%;
+  background: repeating-linear-gradient(135deg,
+    var(--fence-red) 0 10px, var(--p-cream) 10px 20px);
+  transform: scaleX(0);
+  transition: transform 260ms cubic-bezier(.16, 1, .3, 1);
+}
+.fence-fade__rope::before { left: 0; transform-origin: left center; }
+.fence-fade__rope::after { right: 0; transform-origin: right center; }
+.fence-fade.is-on .fence-fade__rope::before,
+.fence-fade.is-on .fence-fade__rope::after { transform: scaleX(1); }
+.fence-fade__mid {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%); text-align: center;
+}
+/* §1.8's fifth mark, at the size the cell draws it */
+.fence-fade__x { position: relative; width: 30px; height: 30px; margin: 0 auto 12px; }
+.fence-fade__x::before, .fence-fade__x::after {
+  content: ""; position: absolute; left: 0; top: 13px; width: 30px; height: 4px;
+  background: var(--fence-red);
+}
+.fence-fade__x::before { transform: rotate(45deg); }
+.fence-fade__x::after { transform: rotate(-45deg); }
+/* caps oblique by transform, never a font-string token (§1.2) */
+.fence-fade__hd {
+  font-family: var(--p-fam, "Avenir Next", Avenir, "Nunito Sans", "Segoe UI", system-ui, sans-serif);
+  font-size: 20px; font-weight: 500; letter-spacing: .06em; line-height: 1;
+  text-transform: uppercase; transform: skewX(-12deg); color: var(--p-ink);
+}
+.fence-fade__sub {
+  font-family: var(--p-mono, ui-monospace, Consolas, monospace);
+  font-size: 10.5px; letter-spacing: .13em; text-transform: uppercase;
+  color: var(--p-sub); margin-top: 5px;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .intro, .intro__card, .intro__go, .fence-fade, .pidle { animation: none !important; transition-duration: 1ms !important; }
+  /* specs/0055 §3.10 — the ropes WIPE on a transition of their own, so they
+     have to be named here too or reduced motion would still animate them */
+  .intro, .intro__card, .intro__go, .fence-fade, .pidle,
+  .fence-fade__rope::before, .fence-fade__rope::after { animation: none !important; transition-duration: 1ms !important; }
 }

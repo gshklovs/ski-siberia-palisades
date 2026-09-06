@@ -1,0 +1,1 @@
+import e from"./race.js";import t from"./shell.js";import m from"./freeride.js";import c from"./retro.js";import p from"./armour.js";const a={race:e,shell:t,freeride:m,retro:c,armour:p},d=[...e,...t,...m,...c,...p].sort((o,r)=>o.code<r.code?-1:o.code>r.code?1:0),l=Object.fromEntries(d.map(o=>[o.code,o]));var I=d;export{a as FAMILIES,d as OUTFITS,l as byCode,I as default};

@@ -34,8 +34,10 @@ body.play canvas.pspeedo {
   width: 172px;
   height: 172px;
   pointer-events: none;
-  /* the canvas is transparent outside the scrim disc, so there is nothing to
-     paint here — but a stray background would show up as a square on the snow */
+  /* the canvas is transparent everywhere the ring, the arc, the four marks and
+     the number are not (specs/0048 took the scrim disc out), so there is
+     nothing to paint here — but a stray background would show up as a square
+     on the snow */
   background: none;
   /* left/top only, no transform: a transform would promote this to its own
      compositor layer for no gain and cost a texture upload on a machine that

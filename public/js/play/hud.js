@@ -1,948 +1,568 @@
-// TE-styled instrument overlay for the player: readout, legend, crosshair,
-// pause panel. Deliberately small — the world is the thing.
+import{gliderState as Ut}from"./glider.js";import{skiState as Bt}from"./ski.js";import{DEBUG_HUD as B,BRAND as jt,pick as Wt,pickBrand as zt}from"./flags.js";const De={family:'"Avenir Next", Avenir, "Nunito Sans", "Segoe UI", system-ui, sans-serif',weight:500,obliqueDeg:12,track:.06,hero:68,heroDial:64,heroSmall:28,secondary:13.5,unit:11,gradFrom:"#7b3fe4",gradTo:"#3b6cff",flat:"rgba(42,36,86,0.90)",dim:"rgba(42,36,86,0.35)",clean:"rgba(42,36,86,0.90)",sketchy:"#c77a1a",bailed:"#ff5c8a"};function ia(d,n=De.weight){return n+" "+d+"px "+De.family}const Kt={cream:"#f4f1ea",ink:"#171614",sub:"#726c60",seam:"#c8c2b3",plate:"rgba(23,22,20,0.34)",hair:"rgba(244,241,234,0.16)",hazard:"#ff4d00",rule:"2px",radius:"2px"},Gt={run:"#f4f1ea",lift:"#ff4d00",bike:"#8ec63f",landmark:"#7fd4e8",venue:"#ffab00"},qt={green:"#217a3c",blue:"#1d5fb4",black:"#141414",red:"#ff5c8a"},Vt={rise:"220ms",riseEase:"cubic-bezier(.16,1,.3,1)",wipeRule:"110ms",wipeBody:"260ms",hold:"3s",fall:"160ms",snap:"90ms"};(function(){const n=De,E=`font-family:${n.family};font-weight:${n.weight};font-style:oblique ${n.obliqueDeg}deg;text-transform:uppercase;letter-spacing:${n.track}em;`,w=`background-image:linear-gradient(96deg,${n.gradFrom},${n.gradTo});-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;`,L=Kt,u=Gt,I=qt,A=Vt,be=`
+/* ================================================== specs/0055 §1.1 — TOKENS
+   ONE NAME EACH. Every token in §1 re-published as a CSS custom property, from
+   the objects above, so no other file types a value. Declared on \`:root\`
+   rather than on \`.phud\` because the panels that read them are NOT inside the
+   HUD's own tree — the guide layer, the locker, the intro cards, the touch
+   stick and the dev bar are all siblings of it on <body>.
 
-import { gliderState } from './glider.js';
-import { skiState } from './ski.js';
-import { DEBUG_HUD, BRAND, pick, pickBrand } from './flags.js';
+   THIS SHEET IS THE ONLY DECLARATION SITE. play.css "declares no design token
+   today and gains none" (§1.1), so it consumes these names and never defines
+   one. The sheet is appended at import time, which is before any panel paints,
+   and every consumer is inside the player document that imported hud.js. */
+:root {
+  --p-fam:${n.family};
+  --p-weight:${n.weight};
+  --p-oblique:oblique ${n.obliqueDeg}deg;
+  --p-track:${n.track}em;
+  --p-mono:ui-monospace,Menlo,Consolas,"Segoe UI Mono",monospace;
 
-// THE WIPEOUT SUBTITLE, by `why`. One line per thing the world is allowed to
-// put you down with: the controller decides which, this only prints it. specs/
-// 0012 shipped landing/tree, 0020 shipped rock, specs/0018 adds the four props.
-// Anything not in here falls back to the rotation wording, which is what an
-// unfinished spin and a crossed-ski landing have always read as.
-const WIPE_SUB = {
-  landing: 'came in too hot',
-  tree: 'met a tree',
-  rock: 'that was rock',
-  building: 'that wall was load-bearing',
-  tower: 'the lift is not a slalom gate',
-  person: 'sorry. so sorry.',
-  bench: 'the bench had it coming',
-};
+  /* §1.3 sizes, px */
+  --p-hero:${n.hero}px;         --p-hero-dial:${n.heroDial}px;
+  /* §4.5 — the hero BOX: S1 and S3 are this wide, 232 px apart (208 + a 24 px
+     gutter), and it is the width §4.4's ledger justifies its three tokens to */
+  --p-hero-box:300px;
+  --p-hero-sm:${n.heroSmall}px; --p-board-name:30px;
+  --p-blade:15px;               --p-secondary:${n.secondary}px;
+  --p-unit:${n.unit}px;         --p-kind:10px;   --p-prose:13px;
 
-const el = (tag, cls, text) => {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (text != null) e.textContent = text;
-  return e;
-};
+  /* §1.4 the gradient — TWO STOPS, 96deg, NO BORDER (D18) */
+  --p-grad:linear-gradient(96deg,${n.gradFrom},${n.gradTo});
+  --p-grad-from:${n.gradFrom}; --p-grad-to:${n.gradTo};
 
-export function createHud({ poi, run, adapter, onResume, onRespawn }) {
-  const root = el('div', 'phud');
+  /* §1.5 flat colour */
+  --p-flat:${n.flat}; --p-dim:${n.dim};
+  --p-clean:${n.clean}; --p-sketchy:${n.sketchy}; --p-bailed:${n.bailed};
 
-  // ---- readout
-  //
-  // specs/0003 — `debugHud`. The top-left readout (x/y/z · speed · state · gear
-  // · cam) and the top-right fps chip are instrumentation for a WORLD BUILDER,
-  // and they are the two things a screenshot of a shareable build should not
-  // have in it (Greg: "the debug hud will still live in the master builder but
-  // not the shareable red dog"). On the shareable build the corner they used to
-  // occupy is the speedometer's instead — designed rather than instrumented.
-  //
-  // They are BUILT in every environment and only APPENDED in the lab: `read`,
-  // `rows`, `fps` and `fpsVal` all stay in scope because paintInstruments() and
-  // tick() write into them on every frame, and cutting the writes as well would
-  // be forty lines of branch for two DOM nodes that are already off the screen.
-  // A detached node costs nothing and it keeps this to two `if`s.
-  const read = el('div', 'phud__read pchip');
-  const title = el('div', 'phud__title');
-  title.append(el('span', 'dot'), el('b', null, pick((poi || 'world').toUpperCase(), BRAND)));
-  read.append(title);
-  const rows = {};
-  for (const [k, label] of [['pos', 'x / y / z'], ['spd', 'speed'], ['state', 'state'], ['gear', 'gear'], ['cam', 'cam']]) {
-    const r = el('div', 'r');
-    r.append(el('span', 'k', label), el('span', 'v', '—'));
-    rows[k] = r.lastChild;
-    read.append(r);
-  }
-  if (DEBUG_HUD) root.append(read);
+  /* §1.6 surfaces — TWO, and a third needs Greg (D19) */
+  --p-cream:${L.cream}; --p-ink:${L.ink}; --p-sub:${L.sub}; --p-seam:${L.seam};
+  --p-plate:${L.plate}; --p-hair:${L.hair};
 
-  // ---- LIP / COMPRESSION METER. Lab only, and lab only in the strongest
-  // sense: the nodes are not merely hidden outside DEBUG_HUD, they are never
-  // constructed, `lipMeter` below is a no-op without them, and every style it
-  // needs is set on the element rather than in play.css — so the shareable
-  // build carries no markup, no rule and no branch for it.
-  //
-  // It exists because "compressions aren't leading to natural launches" and
-  // "I'm jumping higher than usual on downhills" are the same sentence said
-  // twice, and neither can be answered by watching the screen. What it shows is
-  // the physics' own arithmetic, unrounded and unflattered: the surface rate the
-  // ski is reading, the reference it is being compared against, what each half
-  // of the charge is worth INCLUDING the negative half, and what a takeoff would
-  // actually be paid this instant.
-  let lipEls = null;
-  if (DEBUG_HUD) {
-    const box = el('div', 'phud__lip pchip');
-    box.style.cssText = 'position:absolute;left:12px;top:190px;min-width:236px;'
-      + 'font:11px/1.45 ui-monospace,Menlo,Consolas,monospace;padding:8px 10px;'
-      + 'pointer-events:none;white-space:pre;';
-    const t = el('div', 'phud__title');
-    t.append(el('span', 'dot'), el('b', null, 'LIP · COMPRESSION'));
-    box.append(t);
-    const line = (k) => {
-      const r = el('div');
-      r.style.cssText = 'display:flex;justify-content:space-between;gap:10px';
-      const kk = el('span', null, k); kk.style.opacity = '.55';
-      const vv = el('span', null, '—');
-      r.append(kk, vv); box.append(r);
-      return vv;
-    };
-    const rows2 = {};
-    for (const k of ['surface vy', 'reference', 'compression']) rows2[k] = line(k);
-    const sep = el('div');
-    sep.style.cssText = 'height:1px;margin:5px 0;opacity:.25;background:currentColor';
-    box.append(sep);
-    for (const k of ['ramp x K', 'comp x K', 'charge']) rows2[k] = line(k);
-    // the charge bar, against lipMax. Two-tone so the split is visible at a
-    // glance: the ramp's share and the compression's share of what is banked.
-    const bar = el('div');
-    bar.style.cssText = 'position:relative;height:6px;margin:4px 0 6px;'
-      + 'border:1px solid currentColor;opacity:.9';
-    const barR = el('i');
-    barR.style.cssText = 'position:absolute;left:0;top:0;bottom:0;width:0;background:currentColor;opacity:.95';
-    const barC = el('i');
-    barC.style.cssText = 'position:absolute;top:0;bottom:0;width:0;background:currentColor;opacity:.45';
-    const barMin = el('i');   // where lipMin sits — under it nothing launches
-    barMin.style.cssText = 'position:absolute;top:-2px;bottom:-2px;width:1px;background:currentColor';
-    bar.append(barR, barC, barMin);
-    box.append(bar);
-    const sep2 = el('div');
-    sep2.style.cssText = 'height:1px;margin:5px 0;opacity:.25;background:currentColor';
-    box.append(sep2);
-    for (const k of ['surface accel', 'snap release', 'pop window', 'pop now', 'state']) rows2[k] = line(k);
-    // the takeoff readout: latched for a beat, itemised, and it says outright
-    // when the ground swallowed the launch it just paid out
-    const shot = el('div');
-    shot.style.cssText = 'margin-top:6px;padding-top:5px;border-top:1px solid currentColor;'
-      + 'opacity:.85;white-space:pre-wrap';
-    shot.textContent = 'takeoff —';
-    box.append(shot);
-    root.append(box);
-    lipEls = { box, rows: rows2, barR, barC, barMin, shot, shotT: 0 };
-  }
+  /* §1.7 kind dialects, mirroring markers.js KINDS */
+  --p-k-run:${u.run}; --p-k-lift:${u.lift}; --p-k-bike:${u.bike};
+  --p-k-land:${u.landmark}; --p-k-venue:${u.venue};
 
-  // ---- fps
-  const fps = el('div', 'phud__fps pchip');
-  fps.append(el('span', 'k', 'fps '), el('span', 'v', '—'));
-  const fpsVal = fps.lastChild;
-  if (DEBUG_HUD) root.append(fps);
+  /* §1.8 severity alphabet */
+  --p-diff-green:${I.green}; --p-diff-blue:${I.blue};
+  --p-diff-black:${I.black}; --p-diff-red:${I.red};
 
-  // ---- dev readout (F8). Where the builder camera is, in the terms a world
-  // builder needs: pose, lens, speed, and the spawn params that reproduce this
-  // exact view. dev.js drives it; see harness/TUNING.md.
-  //
-  // specs/0003 §A2 — THIS IS THE OTHER HALF OF "DEV MODE DOES NOT SHIP". The
-  // module is stubbed in the public build, so nothing would ever have driven
-  // this panel there — but "never shown" and "never built" are not the same
-  // claim, and A2 makes the stronger one. `devRead` stays a `let` so every
-  // writer below can null-check it in one place rather than every build growing
-  // a second code path.
-  let devRead = null, devRows = {}, devParams = null;
-  let devFull = '';
-  if (DEBUG_HUD) {
-    devRead = el('div', 'phud__dev pchip');
-    devRead.hidden = true;
-    const devTitle = el('div', 'phud__title');
-    devTitle.append(el('span', 'dot'), el('b', null, 'DEV FLY'));
-    devRead.append(devTitle);
-    for (const [k, label] of [['pos', 'x / y / z'], ['ang', 'yaw / pitch'], ['fov', 'fov'], ['spd', 'speed'], ['cmp', 'compare']]) {
-      const r = el('div', 'r');
-      r.append(el('span', 'k', label), el('span', 'v', '—'));
-      devRows[k] = r.lastChild;
-      devRead.append(r);
-    }
-    devParams = el('div', 'phud__dev-url');
-    devParams.textContent = '?spawn=';
-    devRead.append(devParams);
-    const devBtns = el('div', 'phud__dev-btns');
-    const devCopyP = el('button', 'pdev-btn pdev-btn--sm', 'copy params');
-    const devCopyU = el('button', 'pdev-btn pdev-btn--sm', 'copy url');
-    devCopyP.type = devCopyU.type = 'button';
-    devBtns.append(devCopyP, devCopyU);
-    devRead.append(devBtns);
-    root.append(devRead);
-    const copy = (text, what) => {
-      const done = () => { toast.textContent = 'copied · ' + what; toast.hidden = false; toastT = 1.2; };
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, () => {});
-      else done();
-    };
-    devCopyP.addEventListener('click', (e) => { e.stopPropagation(); copy(devParams.textContent, 'spawn params'); });
-    devCopyU.addEventListener('click', (e) => { e.stopPropagation(); copy(devFull, 'play url'); });
-  }
+  /* §1.9 the hazard stripe, and §1.10's rules and radii */
+  --p-hazard:${L.hazard}; --p-stripe:4px;
+  --p-rule:${L.rule}; --p-hairline:1px; --p-spine:3px;
+  --p-r:${L.radius}; --p-gauge:2px;
 
-  // ---- legend
-  const legend = el('div', 'phud__legend');
-  const mk = (cap, what) => {
-    const k = el('span', 'pkey');
-    k.append(el('b', null, cap), document.createTextNode(what));
-    legend.append(k);
-    return k;
-  };
-  // A chip that is BUILT and never put on the strip. SAME CHILDREN as mk()'s,
-  // which is the whole point: tick() relabels the SHIFT chip live
-  // (`keyEls.sprint.lastChild.nodeValue = bike ? 'brake' : 'sprint'`), and on a
-  // childless span `lastChild` is null and that line throws ONCE PER FRAME —
-  // 1,632 page errors in a single gate run, silent on screen. So a stripped chip
-  // stays a real chip that is simply not on the strip, and every future tick()
-  // write lands on a node instead of on null.
-  const dark = (cap, what) => {
-    const k = el('span', 'pkey is-hidden');
-    k.append(el('b', null, cap), document.createTextNode(what));
-    return k;
-  };
-  // D44, and it is a PRODUCT decision rather than a strip: "secretly keep hidden
-  // features but don't clutter user knowledge of their existence." E gear, I
-  // locker and F lift are chips for features that are deliberately undocumented
-  // in both builds, and a permanent strip naming them is the loudest possible
-  // advertisement of the thing it is meant to keep quiet. They all keep WORKING
-  // — only the chips go. SHIFT goes for a different reason: it does nothing at
-  // all on skis now, so a chip offering it is a hint for a dead key.
-  //
-  // WHAT SURVIVES, and why:
-  //   WASD · SPACE · ← → · C · R · ESC   the documented six, in the order the
-  //                                      ESC panel lists them
-  //   HOLD SPACE boost   contextual and rocket-only (tick() reveals it), so it
-  //             can only ever appear to someone who has ALREADY found the rocket
-  //             — that is helping a finder, not advertising the find
-  //   F lift    the CHIP goes; the contextual boarding prompt under the
-  //             crosshair is untouched and says it at the moment it is true
-  //
-  // B refs and F8 dev are the LAB's own instruments (`debugHud`), so they are on
-  // the strip in the bench and dark in the shareable build.
-  const keyEls = {
-    move: mk('WASD', 'move'),
-    sprint: dark('SHIFT', 'sprint'),
-    jump: mk('SPACE', 'jump'),
-    gear: dark('E', 'gear'),
-    inv: dark('I', 'locker'),
-    // 2026-08-31 — the throttle moved from G to hold-SPACE. The cap says HOLD
-    // SPACE rather than SPACE because the strip already carries a SPACE chip for
-    // the jump, and two chips reading SPACE with different words after them is a
-    // worse hint than no chip. Still contextual and still rocket-only.
-    boost: mk('HOLD SPACE', 'boost'),
-    lift: dark('F', 'lift'),
-    spin: mk('← →', 'spin'),
-    cam: mk('C', 'camera'),
-    // R is one of the documented keys — it is on the intro controls card and on
-    // the ESC panel — and it was the only one of them with no chip. That is the
-    // wrong asymmetry: R is the key you want at the exact moment you are least
-    // likely to reopen a panel to look it up. It carries no state, because R is
-    // always available and a chip that is always true should not blink.
-    reset: mk('R', 'reset'),
-    refs: DEBUG_HUD ? mk('B', 'refs') : dark('B', 'refs'),
-    dev: DEBUG_HUD ? mk('F8', 'dev') : dark('F8', 'dev'),
-    pause: mk('ESC', 'pause'),
-  };
-  keyEls.lift.classList.add('is-hidden');       // shown only if the world has lifts
-  keyEls.boost.classList.add('is-hidden');      // shown only in the rocket gear
-  root.append(legend);
-  // Greg, 2026-09-01 — "on the mobile screen I don't want to see the chips."
-  // Every cap on this strip names a KEY (WASD, SPACE, ← →, C, R, ESC) and a
-  // phone has none of them, so on a coarse pointer the strip is six lies taking
-  // up the bottom of a 390 px screen. The phone learns its controls from the
-  // intro's touch diagram and drives from touch.js's stick instead.
-  //
-  // An INLINE display, not the `is-hidden` class the rest of this file uses:
-  // paintInstruments() toggles `is-hidden` on `legend` every time the pause
-  // panel opens or closes, so a class set here would be wiped by the first
-  // un-pause. Desktop is untouched — the chips, their order and their live
-  // `is-on` states are all exactly as they were.
-  if (matchMedia('(pointer: coarse)').matches) legend.style.display = 'none';
-  // (the old CSS ski rails lived here — superseded by the real 3D skis in main.js)
-
-  // ---- lift prompt: the one contextual line on the screen. Sits just under
-  // the crosshair so it reads as "the thing in front of you", not an instrument.
-  const promptEl = el('div', 'phud__prompt pchip');
-  promptEl.hidden = true;
-  const promptKey = el('b', null, 'F');
-  const promptTxt = el('span', null, '');
-  promptEl.append(promptKey, promptTxt);
-  root.append(promptEl);
-  let hasLifts = false;
-
-  // ---- rocket fuel (G, boost.js). One slim bar, and it only exists when it has
-  // something to say: you are wearing the rocket, and it is burning or refilling
-  // after a burn. A permanently full gauge is furniture, and a gauge for a tank
-  // the gear you are wearing cannot spend is a lie.
-  const fuel = el('div', 'phud__fuel');
-  fuel.hidden = true;
-  const fuelLbl = el('span', 'phud__fuel-lbl', 'boost');
-  const fuelBar = el('span', 'phud__fuel-bar');
-  const fuelFill = el('i');
-  fuelBar.append(fuelFill);
-  fuel.append(fuelLbl, fuelBar);
-  root.append(fuel);
-  let burning = false;
-  let inRocket = false;         // the rocket is the equipped gear (setFuel tells us)
-
-  // ---- gear toast (E)
-  const toast = el('div', 'phud__toast pchip');
-  toast.hidden = true;
-  root.append(toast);
-  let toastT = 0;
-
-  // ---- trick toast: the big one. "360!" + degrees, or the wipeout stamp.
-  const trick = el('div', 'phud__trick');
-  trick.hidden = true;
-  const trickBig = el('div', 'phud__trick-big');
-  const trickSub = el('div', 'phud__trick-sub');
-  trick.append(trickBig, trickSub);
-  root.append(trick);
-  let trickT = 0;
-
-  // ---- pump arc (§1.10). A thin arc sitting just under the crosshair: the
-  // carve bank filling, then emptying into the release. Same rule as setFuel —
-  // it only exists when it has something to say. A gauge that is permanently
-  // empty is furniture, and the pump is empty for most of a run (every
-  // transition zeroes the bank), so an always-on arc would read as broken.
-  const pump = el('div', 'phud__pump');
-  pump.hidden = true;
-  const pumpArc = el('i', 'phud__pump-arc');
-  pump.append(pumpArc);
-  root.append(pump);
-  // ski.js zeroes the bank AT the transition and then pays out over 0.35 s, so
-  // by the time the release is visible there is no `q` left to draw. The drain
-  // is therefore ours to animate — otherwise the arc snaps to nothing at the one
-  // instant the player is actually looking at it for feedback.
-  let pumpVal = 0, pumpLast = 0;
-
-  // ---- combo strip (§3.7). Live, bottom-centre, only during a combo: the
-  // unbanked total and the multiplier. Deliberately NOT the panel-chip
-  // language the banked readout uses — an unbanked score is a thing you can
-  // still lose, and it should not look like something you own.
-  const combo = el('div', 'phud__combo');
-  combo.hidden = true;
-  const comboScore = el('span', 'phud__combo-score', '0');
-  const comboX = el('span', 'phud__combo-x', '×');
-  const comboMult = el('span', 'phud__combo-mult', '1');
-  const comboN = el('span', 'phud__combo-n', '');
-  combo.append(comboScore, comboX, comboMult, comboN);
-  root.append(combo);
-
-  // ---- end-of-combo banner (§3.7). 2.4 s, on the same decay clock as the
-  // trick stamp and the gear toast. This is the receipt: what the line was
-  // worth, what it was multiplied by, and every trick that went into it.
-  const cend = el('div', 'phud__cend');
-  cend.hidden = true;
-  const cendCap = el('div', 'phud__cend-cap', 'combo');
-  const cendTot = el('div', 'phud__cend-tot');
-  const cendScore = el('span', 'phud__cend-score', '0');
-  const cendMult = el('span', 'phud__cend-mult', '×1');
-  cendTot.append(cendScore, cendMult);
-  const cendList = el('div', 'phud__cend-list', '');
-  const cendSub = el('div', 'phud__cend-sub', '');
-  cend.append(cendCap, cendTot, cendList, cendSub);
-  root.append(cend);
-  let cendT = 0;
-
-  // ---- leaderboard breadcrumb (§4.3). One dim dot, and only once there is
-  // something behind it. The board is not in the pause panel on purpose; this
-  // dot is the whole of its discoverability, so its title carries the shortcut.
-  const bdot = el('div', 'phud__bdot');
-  bdot.hidden = true;
-  bdot.title = 'L L';
-  root.append(bdot);
-
-  // ---- gear menu (hold E). Same panel language as pause; keyboard-first so it
-  // works pointer-locked: W/S or ↑↓ move, ENTER equips, 1/2/3 equip directly,
-  // E or ESC closes. main.js routes key input here while it is open.
-  const gmenu = el('div', 'pgearmenu');
-  gmenu.hidden = true;
-  const gpanel = el('section', 'panel pgearmenu__panel');
-  const ghd = el('div', 'panel__hd');
-  ghd.append(el('span', 'lbl lbl--accent', 'gear'), el('span', 'spacer'), el('span', 'lbl', 'e / esc close'));
-  const gbd = el('div', 'panel__bd pgearmenu__bd');
-  gpanel.append(ghd, gbd);
-  gmenu.append(gpanel);
-  root.append(gmenu);
-  let gRows = [], gSel = 0, gOnPick = null;
-
-  function gearRender() {
-    gRows.forEach((r, i) => r.el.classList.toggle('is-sel', i === gSel));
-  }
-  function gearClose() { gmenu.hidden = true; gOnPick = null; }
-  function gearPick(i) {
-    const r = gRows[i];
-    if (!r || r.disabled) return;
-    const cb = gOnPick;
-    gearClose();
-    if (cb) cb(r.gear);
-  }
-
-  const hudApiGear = {
-    // { current, def, gears: ['boots','skis','bike',...], onPick(gear) }
-    openGear({ current, def, gears, onPick }) {
-      gbd.textContent = '';
-      gRows = (gears || ['boots', 'skis']).map((gear, i) => {
-        const row = el('div', 'pgearmenu__row');
-        row.append(
-          el('span', 'cap', String(i + 1)),
-          el('span', 'name', gear),
-          el('span', 'tag', gear === current ? 'equipped' : (gear === def ? 'default' : '')),
-        );
-        row.addEventListener('click', (e) => { e.stopPropagation(); gearPick(gRows.findIndex((r) => r.el === row)); });
-        gbd.append(row);
-        return { el: row, gear, disabled: false };
-      });
-      gSel = Math.max(0, gRows.findIndex((r) => r.gear === current));
-      gOnPick = onPick;
-      gmenu.hidden = false;
-      gearRender();
-    },
-    closeGear: gearClose,
-    gearOpen() { return !gmenu.hidden; },
-    // returns true when the key was consumed by the menu
-    gearKey(code) {
-      if (gmenu.hidden) return false;
-      if (code === 'KeyW' || code === 'ArrowUp') { gSel = (gSel + gRows.length - 1) % gRows.length; gearRender(); return true; }
-      if (code === 'KeyS' || code === 'ArrowDown') { gSel = (gSel + 1) % gRows.length; gearRender(); return true; }
-      if (code === 'Enter' || code === 'Space') { gearPick(gSel); return true; }
-      if (code === 'Escape' || code === 'KeyE') { gearClose(); return true; }
-      const num = /^(?:Digit|Numpad)([1-9])$/.exec(code);
-      if (num) { gearPick(Number(num[1]) - 1); return true; }
-      return true;   // anything else is swallowed while the menu is up
-    },
-  };
-
-  // ---- reference bundle viewer (keyboard-driven so it works pointer-locked:
-  //      B toggles, [ ] cycle through aerials + photos of this poi)
-  //
-  // specs/0003 — `debugHud`, and this one is not cosmetic. It fetches
-  // `/api/poi/<poi>` from the BENCH SERVER. On a static host that route does not
-  // exist, so building it there was a 404 on every single boot and then a "no
-  // reference bundle" caption: a hidden feature that visibly fails is not
-  // hidden. The whole thing — panel, fetch and key handler — now only exists
-  // where the API it depends on does.
-  if (DEBUG_HUD) {
-    const ref = el('div', 'phud__ref pchip');
-    ref.hidden = true;
-    const refImg = el('img', 'phud__ref-img');
-    refImg.alt = '';
-    const refCap = el('div', 'phud__ref-cap');
-    ref.append(refImg, refCap);
-    root.append(ref);
-    let refItems = [], refIdx = 0;
-    fetch('/api/poi/' + encodeURIComponent(poi))
-      .then((r) => r.json())
-      .then((p) => { refItems = [...(p.aerials || []), ...(p.photos || [])]; })
-      .catch(() => {});
-    const refShow = () => {
-      if (!refItems.length) { refCap.textContent = 'no reference bundle'; return; }
-      refIdx = (refIdx + refItems.length) % refItems.length;
-      const it = refItems[refIdx];
-      refImg.src = it.url.replace('/files/', '/thumb/') + '?w=900';
-      refCap.textContent = it.name.replace(/\.(jpe?g|png|webp)$/i, '') + ' · ' + (refIdx + 1) + '/' + refItems.length + ' · [ ] cycle · B close';
-    };
-    const typing = (t) => !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
-    addEventListener('keydown', (e) => {
-      if (!gmenu.hidden) return;                    // gear menu owns the keyboard
-      if (typing(e.target)) return;                 // the dev note field
-      if (document.body.classList.contains('is-dev')) return;   // dev.js owns [ ]
-      if (e.code === 'KeyB') { ref.hidden = !ref.hidden; if (!ref.hidden) refShow(); }
-      else if (!ref.hidden && e.code === 'BracketRight') { refIdx++; refShow(); }
-      else if (!ref.hidden && e.code === 'BracketLeft') { refIdx--; refShow(); }
-    });
-  }
-
-  // ---- crosshair
-  const cross = el('div', 'phud__cross');
-  root.append(cross);
-
-  // ---- pause
-  const pause = el('div', 'ppause');
-  pause.hidden = true;
-  const panel = el('section', 'panel ppause__panel');
-  const hd = el('div', 'panel__hd');
-  // specs/0003 — `brand`. The bench names the run it is playing; the shareable
-  // build names itself, because "palisades-front-A-merge-01" is an internal
-  // identity string (D9) and nobody outside this repo can read it.
-  hd.append(el('span', 'lbl lbl--accent', 'paused'), el('span', 'spacer'), el('span', 'lbl', pickBrand({ lab: run || '', 'RED DOG': 'red dog chair', SIBERIA: 'siberia express' })));
-  const bd = el('div', 'panel__bd ppause__bd');
-  const keys = el('div', 'ppause__keys');
-  // 'lift' rows only exist for worlds that declare lifts[] — setLiftKey() below
-  let liftCap = null, liftWhat = null;
-  // THE PANEL LEADS WITH FIVE ROWS AND THEY ARE THE SAME FIVE, IN THE SAME
-  // ORDER, as the intro controls card (intro.js). Two lists that differ by one
-  // row is a worse outcome than either list on its own.
-  //
-  // ESC leads, and it is listed as SETTINGS rather than 'release cursor' or
-  // 'pause': this panel IS the settings screen — it is the only screen the game
-  // has — so the row names the destination, not the mechanism. It is also the
-  // one row that is true of the panel you are reading it on.
-  //
-  // What is deliberately NOT in the five and why:
-  //   SPACE / S / A D / W       still work, and a skier finds them in about four
-  //                             seconds without being told
-  //   SHIFT                     does nothing on skis in this build at all
-  //   F  ride the chairlift     the contextual prompt under the crosshair at the
-  //                             terminal says this at the moment it is true,
-  //                             which beats a line in a panel nobody reopens
-  //   E / I / G / B / [ ] / F8  hidden features stay undocumented (D34)
-  const FIVE_ROWS = [
-    ['ESC', 'settings'],
-    ['W A S D', 'move'],
-    ['← →', 'tricks in the air'],
-    ['C', 'camera'],
-    ['R', 'reset'],
-  ];
-  // specs/0003 — `debugHud`. The LAB keeps the full reference underneath the
-  // five, because the lab is the superset: it has the bike, the glider and the
-  // rocket pack on the gear menu, and a world builder who cannot look up the
-  // glider's flare key has to go and read glider.js. The shareable build ships
-  // the five and nothing else.
-  const LAB_ROWS = [
-    ['SHIFT', 'sprint'], ['SPACE', 'jump'], ['MOUSE', 'look'],
-    ['E', 'gear · tap toggles, hold for menu'],
-    ['I', 'inventory · the ski rack, and every other gear type'],
-    ['SPACE', 'hold to thrust · on the rocket pack — 6 s of fuel, refills itself at 1×'],
-    ['F', 'ride the chairlift · at a base terminal', 'lift'],
-    ['A D', 'carve · on skis'],
-    // S and W are one signed push along the ski axis (§2.1): whichever one
-    // opposes the way you are actually travelling is the brake, so the same key
-    // is "stop" going forward and "go" going backward.
-    //
-    // There is NO SHIFT ROW FOR SKIS, on purpose: SHIFT does nothing on skis at
-    // all now — not a brake, not a tuck — and a key listed here that does
-    // nothing when you press it is worse than no line.
-    ['S', 'stop · on skis; moving backward it drives instead'],
-    ['W', 'skate · on skis; moving backward it stops you'],
-    ['W S', 'pedal / pump · on bike'], ['SHIFT', 'brake · on bike'],
-    ['SPACE', 'hold to preload, release on a lip to pop · on bike'],
-    ['MOUSE', 'aim where to fly — the wing banks and carves round to it · on glider'],
-    ['W S', 'nose down / nose up · on glider'],
-    ['SPACE', 'hold to flare — bleed speed for a clean landing · on glider'],
-    ['MOUSE', 'aim the motor — thrust goes exactly where you look · on the rocket pack'],
-    ['SPACE', 'let go and you are a falling body; burn back down the way you came to land · on the rocket pack'],
-    // the arrows are the two trick axes now (§3.1). On the snow ↑ ↓ are still
-    // exact aliases of W and S, so the row says so rather than pretending they
-    // are air-only keys.
-    ['← →', 'spin / flip · in the air'],
-    ['↑ ↓', 'spin / flip · in the air; on the snow they are W and S'],
-    ['← →', 'barrel roll · flying'],
-    // (no second C or R row: the five above already carry them)
-    ['B', 'reference photos'], ['[ ]', 'cycle refs'],
-    ['F8', 'dev fly mode · noclip + reference compare'],
-  ];
-  for (const [cap, what, only] of (DEBUG_HUD ? [...FIVE_ROWS, ...LAB_ROWS] : FIVE_ROWS)) {
-    const c = el('div', 'cap', cap), w = el('div', 'what', what);
-    if (only === 'lift') { c.classList.add('is-hidden'); w.classList.add('is-hidden'); liftCap = c; liftWhat = w; }
-    keys.append(c, w);
-  }
-  const resume = el('button', 'btn btn--accent ppause__big', 'click to resume');
-  resume.type = 'button';
-  // The RESPAWN button and the RETURN TO BENCH link are the lab's (`debugHud`):
-  // there is no bench to return to from a standalone build, and the panel there
-  // already says "R  reset", so a button duplicating a listed key is one more
-  // thing on a screen that is supposed to have five things on it. Both objects
-  // still EXIST in every build, because `onRespawn` is part of this function's
-  // contract with main.js; they are simply not appended.
-  const back = el('a', 'btn btn--ghost', 'return to bench');
-  back.href = '/#/run/' + encodeURIComponent(poi) + '/' + encodeURIComponent(run);
-  const resp = el('button', 'btn btn--ghost', 'respawn');
-  resp.type = 'button';
-  const rowA = el('div', 'ppause__row'); rowA.append(resume);
-  const rowB = el('div', 'ppause__row');
-  if (DEBUG_HUD) rowB.append(back, resp, el('span', 'lbl', 'adapter · ' + adapter));
-  // D6 — ODbL attribution travels with the artifact, not only with the repo.
-  // One line on the intro card, one here. Unconditional: attribution is never
-  // the wrong thing to be showing, and every world this player has ever loaded
-  // is USGS 3DEP terrain with OpenStreetMap trails on it.
-  const credit = el('div', 'ppause__credit', 'terrain USGS 3DEP · trails © OpenStreetMap contributors (ODbL)');
-  bd.append(keys, rowA, rowB, credit);
-  panel.append(hd, bd);
-  pause.append(panel);
-  root.append(pause);
-
-  // ---- personal leaderboard (§4.3). Same panel language as pause and the gear
-  // menu, and deliberately absent from the pause panel's key list — double-tap
-  // L is the whole secret. main.js owns the keyboard for it; this is the panel.
-  const board = el('div', 'pboard');
-  board.hidden = true;
-  const bpanel = el('section', 'panel pboard__panel');
-  const bhd = el('div', 'panel__hd');
-  bhd.append(el('span', 'lbl lbl--accent', 'personal best'), el('span', 'spacer'), el('span', 'lbl', 'l l · esc close'));
-  const bbd = el('div', 'panel__bd pboard__bd');
-  bpanel.append(bhd, bbd);
-  board.append(bpanel);
-  root.append(board);
-
-  const num = (n) => Math.round(Number(n) || 0).toLocaleString('en-US');
-  const boardCols = ['rk', 'sc', 'mu', 'bt', 'sk', 'tr', 'wh'];
-  function boardRow(cls, cells) {
-    const r = el('div', 'pboard__row' + (cls ? ' ' + cls : ''));
-    cells.forEach((c, i) => r.append(el('span', boardCols[i], c)));
-    return r;
-  }
-  function boardRender(list) {
-    bbd.textContent = '';
-    bbd.append(boardRow('pboard__row--hd', ['#', 'score', 'mult', 'best trick', 'ski', 'trail', 'when']));
-    if (!list.length) { bbd.append(el('div', 'pboard__empty', 'no runs banked yet · land a combo')); return; }
-    for (const r of list) {
-      bbd.append(boardRow(r && r.you ? 'is-you' : '', [
-        String(r.rank != null ? r.rank : '—'),
-        num(r.score),
-        '×' + (r.mult != null ? r.mult : 1),
-        r.best || '—',
-        r.ski || '—',
-        r.trail || '—',            // a run with no trail is a run on the open hill
-        r.when || '—',
-      ]));
-    }
-  }
-  function boardClose() { board.hidden = true; }
-  board.style.pointerEvents = 'auto';
-  board.addEventListener('click', (e) => { e.stopPropagation(); boardClose(); });
-
-  pause.style.pointerEvents = 'auto';
-  resume.addEventListener('click', (e) => { e.stopPropagation(); onResume && onResume(); });
-  resp.addEventListener('click', (e) => { e.stopPropagation(); onRespawn && onRespawn(); });
-  pause.addEventListener('click', () => onResume && onResume());
-
-  document.body.appendChild(root);
-
-  let fpsAcc = 0, fpsN = 0, fpsLast = performance.now();
-  const fmt = (v) => (v >= 0 ? ' ' : '') + v.toFixed(1);
-
-  // Instruments go dark behind the pause panel — one thing to read at a time —
-  // and the player's own readout steps aside for the dev readout, which sits in
-  // the same corner. Both switches land here so neither can undo the other.
-  let devOn = false;
-  function paintInstruments() {
-    const paused = !pause.hidden;
-    for (const n of [fps, legend, toast, trick, promptEl, fuel, pump, combo, cend, bdot]) n.classList.toggle('is-hidden', paused);
-    for (const n of [cross, read]) n.classList.toggle('is-hidden', paused || devOn);
-    if (devRead) { devRead.classList.toggle('is-hidden', paused); devRead.hidden = !devOn; }
-  }
-
-  return {
-    root, pause,
-    setPaused(on) {
-      pause.hidden = !on;
-      if (on) { gearClose(); boardClose(); }     // one modal at a time
-      paintInstruments();
-    },
-    isPaused() { return !pause.hidden; },
-    // ---- dev readout, driven by dev.js
-    setDev(on) {
-      devOn = !!on;
-      keyEls.dev.classList.toggle('is-on', devOn);
-      paintInstruments();
-    },
-    devTick(f) {
-      // A build with no dev panel can still be handed a tick — nothing drives
-      // one there today, but a no-op is the right answer either way.
-      if (!devRead) return;
-      for (const k of Object.keys(devRows)) if (f[k] != null) devRows[k].textContent = f[k];
-      if (f.params != null) devParams.textContent = f.params;
-      if (f.url != null) devFull = f.url;
-    },
-    // ---- LIP / COMPRESSION METER (lab only). main.js calls this every frame
-    // while the skis are on, with the ski's live state, its tuning and the
-    // one-shot takeoff record. Outside DEBUG_HUD `lipEls` is null and this
-    // returns immediately, so the call site needs no branch of its own.
-    //
-    // Nothing here rounds in the physics' favour. `ramp x K` is printed with its
-    // sign because the sign IS the diagnosis: on a descending surface it is
-    // negative, and a charge that only exists because that negative was being
-    // clamped away is the bug this meter was built to make visible.
-    lipMeter(f) {
-      if (!lipEls) return;
-      const on = !!f && !!f.on;
-      lipEls.box.hidden = !on;
-      if (!on) return;
-      const s = f.s, T = f.T, R = lipEls.rows;
-      const n = (v, d = 2) => (v >= 0 ? '+' : '') + Number(v || 0).toFixed(d);
-      R['surface vy'].textContent = n(s.surfVy) + ' m/s ' + (s.surfVy > 0.05 ? 'UP' : (s.surfVy < -0.05 ? 'down' : 'flat'));
-      R.reference.textContent = n(s.vyFloor) + ' m/s';
-      R.compression.textContent = n(s.comp) + ' m/s';
-      R['ramp x K'].textContent = n(s.lipRamp);
-      R['comp x K'].textContent = n(s.lipComp);
-      const sum = (s.lipRamp || 0) + (s.lipComp || 0);
-      // "0.00 of 6.50, and here is why" — a charge held under lipMin and a charge
-      // the surface never earned are different failures and the reason is named.
-      R.charge.textContent = (s.lipVy > 0 ? Number(s.lipVy).toFixed(2) : '0.00')
-        + ' / ' + Number(T.lipMax).toFixed(2)
-        + (s.lipVy > 0 ? '' : (sum > 0 ? '  < lipMin' : (s.lipRamp < 0 ? '  ramp negative' : '')));
-      const w = (v) => Math.max(0, Math.min(100, 100 * v / (T.lipMax || 1)));
-      const rw = w(Math.max(0, s.lipRamp));
-      lipEls.barR.style.width = rw.toFixed(1) + '%';
-      lipEls.barC.style.left = rw.toFixed(1) + '%';
-      lipEls.barC.style.width = w(s.lipComp).toFixed(1) + '%';
-      lipEls.barMin.style.left = w(T.lipMin).toFixed(1) + '%';
-      // the pop window, as the player experiences it: how long a pop is still
-      // worth something, or how long until one would be
-      const sp = s.sincePop == null ? 1e9 : s.sincePop;
-      let pw;
-      if (!f.grounded && s.airT > 0) {
-        pw = s.popPaid ? 'spent'
-          : (s.lipVy > 0 && s.airT <= T.popCoyote
-            ? 'COYOTE ' + (T.popCoyote - s.airT).toFixed(2) + 's left'
-            : 'closed');
-      } else if (s.lipVy > 0) {
-        pw = sp <= T.popWindow ? 'ARMED (popped ' + sp.toFixed(2) + 's ago)' : 'at lip · pop now';
-      } else pw = 'no charge';
-      // the drop-away half: how hard the ground is pulling the vertical around
-      // (past free fall there is nothing left to stand on) and how much of the
-      // snap is letting go because of it
-      const dv = s.dVyS || 0, gv = s.gravity || 16;
-      R['surface accel'].textContent = n(dv, 1) + ' / -' + gv.toFixed(0)
-        + (dv < -gv ? '  PAST FREE FALL' : '');
-      R['snap release'].textContent = s.dropK > 0
-        ? (100 * s.dropK).toFixed(0) + '%  ' + Number(s.snapFull).toFixed(2)
-          + ' -> ' + Number(s.snapCut).toFixed(2) + ' m'
-        : 'glued  ' + Number(s.snapFull || 0).toFixed(2) + ' m';
-      R['pop window'].textContent = pw;
-      // WHAT A JUMP WOULD ACTUALLY PAY, this instant. Greg's ask, and the
-      // reason it comes from ski.js rather than being recomputed here: the
-      // number below is the return value of the same popPay() the real jump
-      // spends, so a prediction that disagrees with the landing is impossible.
-      const pv = f.pop;
-      R['pop now'].textContent = pv
-        ? Number(pv.total).toFixed(2) + ' m/s'
-          + (pv.add > 0.005 ? '  (+' + pv.add.toFixed(2) + ')' : '')
-          + (pv.add <= 0.005 && pv.compRaw > 0.5 ? '  ' + pv.gate.toUpperCase() : '')
-        : '—';
-      R.state.textContent = (f.grounded ? 'on snow' : 'air ' + Number(s.airT).toFixed(2) + 's')
-        + (s.lipVy > 0 ? ' · charged' : '');
-      // the takeoff readout, latched ~2 s
-      if (f.launch) {
-        const L = f.launch;
-        // WHICH RULE FIRED is the first thing on the line, because that is the
-        // whole point of the tag: DROP-AWAY and LIP feel alike in the air and are
-        // completely different bugs when one of them misbehaves.
-        lipEls.shot.textContent = 'takeoff '
-          + (L.total > 0.01 ? '+' + L.total.toFixed(2) + ' m/s' : 'flat')
-          + '  [' + L.src.toUpperCase() + ']'
-          + (L.drop
-            ? '\n  DROP-AWAY  snap ' + Number(L.snapFull).toFixed(2) + ' -> '
-              + Number(L.snapCut).toFixed(2) + ' m (' + (100 * L.dropK).toFixed(0) + '% let go)'
-              + '\n  surface ' + n(L.dVyS, 1) + ' vs -' + L.grav.toFixed(0) + ', past free fall'
-            : '')
-          + (L.total > 0.01
-            ? '\n  ramp ' + n(L.ramp) + '  comp ' + n(L.comp) + '  -> charge ' + L.charge.toFixed(2)
-              + (L.pop > 0 ? '\n  pop bonus +' + L.pop.toFixed(2) : '')
-              + (L.restored > 0 ? '  (jump restored +' + L.restored.toFixed(2) + ')' : '')
-            : (L.drop ? '' : '\n  no charge (ramp ' + n(L.ramp) + ' comp ' + n(L.comp) + ')'))
-          + (L.eaten ? '\n  SWALLOWED, still on the snow next frame' : '');
-        lipEls.shotT = 2.0;
-      } else if (lipEls.shotT > 0) {
-        lipEls.shotT -= (f.dt || 0.016);
-        if (lipEls.shotT <= 0) lipEls.shot.textContent = 'takeoff —';
-      }
-    },
-    // ---- chairlifts (lift.js). setLiftKey decides whether F is even mentioned;
-    // setPrompt({ key, text }) / setPrompt(null) is the contextual offer.
-    setLiftKey(on) {
-      hasLifts = !!on;
-      keyEls.lift.classList.toggle('is-hidden', !hasLifts);
-      // A panel with no F row has no liftCap/liftWhat — that is the five-row
-      // panel, and main.js calls setLiftKey() the moment a lift comes into
-      // range, so unguarded this is a TypeError on the first approach to a base
-      // terminal, i.e. exactly where a first-time player goes. The legend chip
-      // and the contextual prompt still do the work.
-      if (liftCap) liftCap.classList.toggle('is-hidden', !hasLifts);
-      if (liftWhat) liftWhat.classList.toggle('is-hidden', !hasLifts);
-    },
-    setPrompt(p) {
-      if (!p) { promptEl.hidden = true; keyEls.lift.classList.remove('is-on'); return; }
-      promptKey.textContent = p.key || 'F';
-      promptTxt.textContent = ' ' + (p.text || '');
-      promptEl.hidden = false;
-      keyEls.lift.classList.add('is-on');
-    },
-    promptText() { return promptEl.hidden ? null : promptTxt.textContent.trim(); },
-    // ---- rocket fuel (boost.js), called every frame. frac 0..1. `worn` is
-    // whether the rocket is the equipped gear: it is the only gear that can
-    // spend the tank, so it is the only gear that gets a gauge.
-    setFuel(frac, isBurning, isDry, worn = true) {
-      const f = Math.max(0, Math.min(1, Number(frac) || 0));
-      burning = !!isBurning && !!worn;
-      inRocket = !!worn;
-      fuel.hidden = !worn || (f > 0.999 && !burning);
-      if (fuel.hidden) { keyEls.boost.classList.remove('is-on'); return; }
-      fuelFill.style.width = (f * 100).toFixed(1) + '%';
-      fuel.classList.toggle('is-burn', burning);
-      // dry = ran the tank out; the bar stays dim until there is enough to relight
-      fuel.classList.toggle('is-dry', !!isDry);
-      keyEls.boost.classList.toggle('is-on', burning);
-    },
-    fuelShown() { return !fuel.hidden; },
-    flashGear(mode) {
-      toast.textContent = 'gear · ' + mode;
-      toast.hidden = false;
-      toastT = 1.4;
-    },
-    ...hudApiGear,
-    flash(text) {
-      toast.textContent = text;
-      toast.hidden = false;
-      toastT = 1.4;
-    },
-    // { name: '360'|'720'|'1080'|'wipeout', deg, why? } — the big centre-screen
-    // stamp. `why` is the gear's own verdict: 'landing' when the gear judged the
-    // arrival (the wing, the rocket), 'crossed' when the skis went sideways.
-    trick(t) {
-      const wipe = t.name === 'wipeout';
-      trickBig.textContent = wipe ? 'WIPEOUT' : t.name + '!';
-      // ...'tree' / 'rock' are the solids (specs/0012), and specs/0018 adds the
-      // four the world built and never made solid: a lodge wall, a lift tower or
-      // a sign post, somebody standing there, and the furniture.
-      trickSub.textContent = wipe
-        ? (WIPE_SUB[t.why] || (t.deg ? t.deg + '° · unfinished' : 'skis crossed'))
-        : t.deg + '°';
-      trick.classList.toggle('is-wipe', wipe);
-      trick.hidden = false;
-      trick.classList.remove('is-pop');
-      void trick.offsetWidth;               // restart the pop animation
-      trick.classList.add('is-pop');
-      trickT = 1.8;
-    },
-    // ---- pump arc (§1.10). { on, q, max, eta, releasing }, every frame.
-    // `eta` is last transition's efficiency, so the colour is a verdict on the
-    // turn you just finished, not a prediction of the one you are in — which is
-    // the only thing that can actually be shown, and the thing worth learning.
-    pump(p) {
-      const on = !!(p && p.on);
-      const now = performance.now();
-      const dt = pumpLast ? Math.min(0.1, (now - pumpLast) / 1000) : 0.016;
-      pumpLast = now;
-      if (!on) { pumpVal = 0; pump.hidden = true; return; }
-      const max = Math.max(1e-3, Number(p.max) || 4);
-      const raw = Math.max(0, Math.min(1, (Number(p.q) || 0) / max));
-      const rel = !!p.releasing;
-      // charge tracks the bank exactly; the release drains what was there over
-      // pumpReleaseT (0.35 s), because ski.js has already spent it by then
-      if (rel) pumpVal = Math.max(raw, pumpVal - dt / 0.35);
-      else pumpVal = raw;
-      if (pumpVal < 0.004 && !rel) { pump.hidden = true; return; }
-      pumpArc.style.setProperty('--pf', (pumpVal * 100).toFixed(1) + 'deg');
-      const eta = Number(p.eta);
-      const hot = !(eta < 1.2), cold = eta < 0.8;      // NaN before the first transition reads neutral-high
-      pump.classList.toggle('is-hot', hot && Number.isFinite(eta));
-      pump.classList.toggle('is-cold', cold);
-      pump.classList.toggle('is-rel', rel);
-      pump.hidden = false;
-    },
-    pumpShown() { return !pump.hidden; },
-    // ---- live combo strip (§3.7). { on, score, mult, count }.
-    combo(c) {
-      if (!c || !c.on) { combo.hidden = true; return; }
-      comboScore.textContent = num(c.score);
-      comboMult.textContent = String(c.mult != null ? c.mult : 1);
-      const n = Number(c.count) || 0;
-      comboN.textContent = n > 0 ? n + (n === 1 ? ' trick' : ' tricks') : '';
-      comboN.classList.toggle('is-hidden', n <= 0);
-      combo.hidden = false;
-    },
-    comboShown() { return !combo.hidden; },
-    // ---- end-of-combo banner (§3.7). { score, mult, tricks, best, deg, pb }.
-    comboEnd(c) {
-      if (!c) return;
-      const pb = !!c.pb;
-      cendCap.textContent = pb ? 'personal best' : (c.best || 'combo');
-      cendScore.textContent = num(c.score);
-      cendMult.textContent = '×' + (c.mult != null ? c.mult : 1);
-      const list = Array.isArray(c.tricks) ? c.tricks.filter(Boolean) : [];
-      cendList.textContent = list.join(' · ');
-      cendList.classList.toggle('is-hidden', !list.length);
-      const deg = Math.round(Number(c.deg) || 0);
-      cendSub.textContent = deg ? num(deg) + '°' + (pb && c.best ? ' · ' + c.best : '') : (pb && c.best ? c.best : '');
-      cendSub.classList.toggle('is-hidden', !cendSub.textContent);
-      cend.classList.toggle('is-pb', pb);
-      cend.hidden = false;
-      cend.classList.remove('is-pop');
-      void cend.offsetWidth;                 // restart the pop, same as the trick stamp
-      cend.classList.add('is-pop');
-      cendT = 2.4;
-    },
-    // ---- the secret board (§4.3). An array opens it, null closes it.
-    board(list) {
-      if (!list) { boardClose(); return; }
-      boardRender(Array.isArray(list) ? list : []);
-      board.hidden = false;
-    },
-    boardOpen() { return !board.hidden; },
-    closeBoard: boardClose,
-    // the breadcrumb: nothing on screen for a new player, a dot for a returning
-    // one. Its title is the shortcut, so hovering it is the whole tutorial.
-    setBoardDot(on) { bdot.hidden = !on; },
-    tick(ctrl, dt, camMode) {
-      const p = ctrl.position;
-      const gear = ctrl.mode;
-      const ski = gear === 'skis', bike = gear === 'bike', glide = gear === 'glider';
-      const rocket = gear === 'rocket';
-      const riding = gear !== 'boots';
-      const sp = ctrl.speed();
-      rows.pos.textContent = `${fmt(p.x)} ${fmt(p.y)} ${fmt(p.z)}`;
-      rows.spd.textContent = sp.toFixed(2) + ' m/s';
-      rows.gear.textContent = gear;
-      rows.gear.classList.toggle('is-hot', riding);
-      rows.cam.textContent = camMode === 'tp' ? 'chase' : 'first person';
-      if (burning) rows.state.textContent = 'BOOST';   // the rocket owns the frame
-      else if (glide && !ctrl.grounded) {
-        // the wing has five things worth knowing and no room for a panel: which
-        // one is currently deciding your fate is the one that gets shown
-        const g = gliderState();
-        const vy = ctrl.velocity ? ctrl.velocity.y : 0;
-        rows.state.textContent =
-          g.stall > 0.35 ? 'STALL'
-            : g.flare ? 'flare'
-              : g.updraft > 0.8 ? 'lift +' + g.updraft.toFixed(1)
-                : vy > 0.5 ? 'climb'
-                  : vy < -6 ? 'dive'
-                    : 'glide · ' + g.airspeed.toFixed(0);
-      }
-      // coasting the rocket is its own state: no wing, no steering, just the
-      // sink rate you are going to have to burn off before you arrive
-      else if (rocket && !ctrl.grounded) {
-        const vy = ctrl.velocity ? ctrl.velocity.y : 0;
-        rows.state.textContent = 'coast · ' + (vy < 0 ? '−' : '+') + Math.abs(vy).toFixed(0);
-      }
-      else if (!ctrl.grounded) {
-        const spin = Math.abs(ctrl.airSpinDeg || 0);
-        rows.state.textContent = spin > 45 ? 'air · ' + Math.round(spin) + '°' : 'air';
-      }
-      else if (ctrl.wipeT > 0) rows.state.textContent = 'wipeout';
-      else if (ski) {
-        // chatter outranks everything a ski can be doing: it is the ski telling
-        // you it has run out of ski, and it is why you would ever pick a longer one
-        // ...and everything under it is a detected state rather than a key:
-        // S only brakes when it opposes travel (§2.1), and SHIFT is not a ski
-        // key at all, so reading the keys would lie on both counts.
-        const s = skiState();
-        rows.state.textContent = s.chatter > 0.35 ? 'CHATTER'
-          : s.stop === 2 ? 'HOCKEY'
-            : s.stop === 1 ? 'plow'
-              : s.stivoting ? 'stivot'
-                : s.releasing ? 'PUMP'
-                  : (sp > 3 ? 'carve' : 'skate');
-      }
-      else if (bike) rows.state.textContent = ctrl.keys.sprint ? 'brake' : (ctrl.keys.jumpHeld ? 'preload' : (ctrl.keys.back ? 'pump' : (sp > 3 ? 'ride' : 'pedal')));
-      else rows.state.textContent = ctrl.keys.sprint && sp > 5 ? 'sprint' : 'ground';
-      keyEls.move.classList.toggle('is-on', ctrl.keys.forward || ctrl.keys.back || ctrl.keys.left || ctrl.keys.right);
-      keyEls.sprint.classList.toggle('is-on', !!ctrl.keys.sprint);
-      // SHIFT is the brake on the bike and the sprint on foot — and on SKIS it
-      // is nothing at all, so the chip leaves the legend entirely rather than
-      // sitting there claiming a job it no longer has.
-      keyEls.sprint.classList.toggle('is-hidden', ski);
-      keyEls.sprint.lastChild.nodeValue = bike ? 'brake' : 'sprint';
-      keyEls.jump.classList.toggle('is-on', !ctrl.grounded);
-      keyEls.gear.classList.toggle('is-on', riding);
-      // G is the rocket's key and nobody else's, so it is only in the legend
-      // when the rocket is on your back
-      keyEls.boost.classList.toggle('is-hidden', !(rocket || inRocket));
-      keyEls.spin.classList.toggle('is-on', !!(ctrl.keys.spinLeft || ctrl.keys.spinRight));
-      keyEls.cam.classList.toggle('is-on', camMode === 'tp');
-
-      if (toastT > 0) { toastT -= dt; if (toastT <= 0) toast.hidden = true; }
-      if (trickT > 0) { trickT -= dt; if (trickT <= 0) trick.hidden = true; }
-      if (cendT > 0) { cendT -= dt; if (cendT <= 0) cend.hidden = true; }
-      fpsAcc += dt; fpsN++;
-      const now = performance.now();
-      if (now - fpsLast > 400) {
-        fpsVal.textContent = fpsAcc > 0 ? String(Math.round(fpsN / fpsAcc)) : '—';
-        fpsAcc = 0; fpsN = 0; fpsLast = now;
-      }
-    },
-  };
+  /* §1.11 motion — no panel invents a duration */
+  --p-rise:${A.rise}; --p-rise-ease:${A.riseEase};
+  --p-wipe-rule:${A.wipeRule}; --p-wipe-body:${A.wipeBody};
+  --p-hold:${A.hold}; --p-fall:${A.fall}; --p-snap:${A.snap};
 }
+
+/* ------------------------------------------ specs/0055 §1.6 — THE HUD PLATE
+   A sign's plate, emptied out, holding an instrument: 34 % ink, the 2 px
+   mounting rule under it, 2 px radius. §2's hard rule — "no gradient numeral on
+   bare snow, every hero sits on a plate" — is this element, and it is the only
+   surface register 1 has. */
+.hudplate {
+  background:var(--p-plate);
+  border-bottom:var(--p-rule) solid var(--p-grad-to);
+  border-radius:var(--p-r);
+}
+.hudplate.is-bailed { border-bottom-color:var(--p-bailed); }
+.hudplate.is-hazard { border-top:var(--p-stripe) solid var(--p-hazard); }
+
+/* ------------------------- specs/0055 §7 — THE LABEL / RULE / HERO BLOCK
+   The construction §4.4 calls "the timer's construction": a mono kind label, a
+   hero numeral on the plate, and the mounting rule between the two. The live
+   timer, the receipt, the bail and the gear/lift board are all THIS OBJECT with
+   different words in it — which is what makes §4.5's slot swap a move rather
+   than a redesign. W2 restyles the instruments that sit on it (§4.2-4.7); this
+   is the block they sit on. */
+.hudblk {
+  display:inline-block; padding:6px 14px 8px;
+  background:var(--p-plate);
+  border-bottom:var(--p-rule) solid var(--p-grad-to);
+  border-radius:var(--p-r);
+  ${E}
+}
+.hudblk__lbl {
+  display:block; font-family:var(--p-mono); font-size:var(--p-kind);
+  font-style:normal; font-weight:700; letter-spacing:.22em;
+  color:var(--p-cream); opacity:.72; margin-bottom:2px;
+}
+.hudblk__hero {
+  display:block; font-size:var(--p-hero); line-height:1; white-space:nowrap; ${w}
+}
+.hudblk__u {
+  font-size:var(--p-unit); margin-left:8px;
+  background:none; color:var(--p-cream);
+  -webkit-text-fill-color:var(--p-cream);
+}
+/* §1.10 — ONE 2 px GAUGE serves grace, fuel, charge, skip-hold and every stat
+   bar. There is no progress-bar component and no switch. */
+.hudgauge { height:var(--p-gauge); background:var(--p-dim); }
+.hudgauge > i { display:block; height:100%; width:0; background:var(--p-grad-to); }
+
+/* §1.8 — ONE CSS CLASS PER SHAPE, and nothing else in the DOM draws a rating.
+   \`--m\` is the mark's colour; hollow is the same shape, outline only. */
+.pmark { display:inline-block; flex:none; --m:var(--p-cream); }
+.pmark--green  { width:11px; height:11px; border-radius:50%; background:var(--m); --m:var(--p-diff-green); }
+.pmark--blue   { width:10px; height:10px; background:var(--m); --m:var(--p-diff-blue); }
+.pmark--black  { width:9px; height:9px; background:var(--m); transform:rotate(45deg); --m:var(--p-diff-black); }
+.pmark--double { position:relative; width:20px; height:9px; --m:var(--p-diff-black); }
+.pmark--double::before, .pmark--double::after {
+  content:""; position:absolute; top:0; width:9px; height:9px;
+  background:var(--m); transform:rotate(45deg);
+}
+.pmark--double::before { left:0; }
+.pmark--double::after { right:0; }
+/* the red X — the system's one "closed / refused / it died" mark */
+.pmark--x { position:relative; width:11px; height:11px; --m:var(--p-diff-red); }
+.pmark--x::before, .pmark--x::after {
+  content:""; position:absolute; left:0; top:4px; width:11px; height:2px; background:var(--m);
+}
+.pmark--x::before { transform:rotate(45deg); }
+.pmark--x::after  { transform:rotate(-45deg); }
+.pmark.is-hollow { background:none; box-shadow:inset 0 0 0 2px var(--p-sketchy); --m:var(--p-sketchy); }
+
+/* specs/0048 — the trick HUD. Upper-centre, under the top HUD and clear of the
+   speedometer's top-left box by the width of the screen. Three siblings rather
+   than one wrapper, because the build gate force-measures .phud__combo on its
+   own and a hidden parent would hand it a 0x0 rectangle to pass against. */
+.phud__atime, .phud__combo, .phud__cend { ${E}pointer-events:none; }
+
+/* ================================================= specs/0055 §4.5 — THE SLOTS
+   "It should move to the side if a new timer or something is ticking there"
+   (D10). THREE SLOTS, ONE OCCUPANT EACH:
+
+     S1  left:50%  top:12.5%   the live timer (.phud__atime) > the receipt
+     S2  left:50%  top:21.5%   the combo meter (.phud__combo)
+     S3  left:calc(50% + 232px) top:12.5%, left-aligned — whichever of S1's
+                               two got displaced
+
+   S1 and S3 are the same hero box, S3's left edge at \`calc(50% + 232px)\` — the
+   spec's own coordinate. \`--p-hero-box\` is **300 px**, the width of the ledger
+   cell in the lookbook row this pick came from, and NOT the 208 px that reading
+   "232 px apart" as "the hero's width + a 24 px gutter" would give: measured,
+   the shortest possible ledger — a 28 px multiplier, ONE eight-character trick
+   name, one verdict word, two gaps and the padding — is 214 px, so at 208 the
+   middle token ellipsises its own trick name and §4.4's justification has
+   nothing to justify. At 300 the three tokens sit as the lookbook drew them and
+   S1 (490-790) still clears S3 (872) by 82 px. The receipt owns S1 UNLESS a timer is live there,
+   and then it takes S3 and arrives RISE instead of SNAP. This is also 0057's
+   seam (§4.9): air time and jib time are the SAME clock in S1, never two.
+
+   THE 208 px BOX IS WHAT MAKES THE LEDGER JUSTIFIABLE. §4.4 wants the combo's
+   three tokens justified to the hero's full width rather than a line that grows
+   sideways, and "the hero's full width" has to be a number for that to mean
+   anything. It is this one, and the receipt and the bail are the same box, so
+   the receipt really does land in the pixels the timer vacated.
+
+   AND THE BLOCKS DO NOT TOUCH — §8's P4. 12.5 % and 21.5 % of 720 are 90 px and
+   154.8 px, so S1 has 64.8 px of room and a 68 px hero on a \`line-height:1\` box
+   is 3.2 px too tall for it: with a live timer and a live combo on screen at
+   once the two rectangles have overlapped since 0048, which is the defect P4
+   exists to catch. \`line-height:.9\` gives the same glyphs a 61.2 px box — the
+   ink is untouched, the half-leading is what shrinks — and S1 clears S2 by
+   3.6 px with the plate on. Nothing here is a nudge: every number is either the
+   spec's or arithmetic on it. */
+.phud__atime, .phud__cend {
+  position:absolute; left:50%; top:12.5%; transform:translateX(-50%);
+  box-sizing:border-box; width:var(--p-hero-box); padding:0 14px;
+  background:var(--p-plate);
+  border-bottom:var(--p-rule) solid var(--p-grad-to);
+  border-radius:var(--p-r);
+}
+/* S3 — left-aligned, the gutter's width to the right of S1's own left edge */
+.phud__cend.is-s3 { left:calc(50% + 232px); transform:none; text-align:left; }
+.phud__atime {
+  font-size:${n.hero}px; line-height:.9; white-space:nowrap; text-align:center;
+}
+/* THE GRADIENT GOES ON THE NUMERAL, NOT ON THE BLOCK. \`background-clip:text\`
+   clips EVERY background the element has, so a gradient declared on the block
+   would clip the 34 % ink plate to the shape of the digits — which is exactly
+   what the first build of this row did, and the plate simply did not appear.
+   The hero is its own span (0057/R2 made it one), so the gradient lives there
+   and the plate stays a plate. */
+.phud__atime-n { ${w} }
+.phud__atime[hidden], .phud__atime.is-hidden { display:none; }
+.phud__atime.is-out { opacity:0; transition:opacity var(--p-fall) linear; }
+
+/* ------------------------------------------ specs/0055 §4.3 — LIVE AIR **B**
+   THE METER IS VERTICAL, TO THE RIGHT OF THE NUMBER (D9): 16 px off the hero
+   block's right edge, the hero's own height, and 5× the 2 px gauge = 10 px
+   wide. It is the ONE place §1.10's shared gauge is widened.
+
+   FLAMES RUN UP: the fill rises from the bottom in the gradient, and the five
+   notches in the track are \`speedo.js:106\`'s five thresholds — read as
+   DECISECONDS, so 10/20/28/30/40 are 1.0/2.0/2.8/3.0/4.0 s in the air. One
+   number governs both instruments, which is what §4.3 asks for: the dial's
+   \`T_WARM\` and the meter's first notch are the same 10.
+
+   ...AND IT THICKENS AT EACH THRESHOLD — 10 → 12 → 14 → 16 → 18 px at those
+   same five, written from JS as \`--aw\`. A gauge that gets FATTER as it fills is
+   the one gauge in the system allowed to change shape, because the thing it
+   measures is the one thing in the game that is only ever going one way. */
+.phud__atime-m {
+  position:absolute; left:100%; margin-left:16px; top:0; bottom:0;
+  width:var(--aw,10px);
+  background:linear-gradient(to top,
+    var(--p-dim) 0 24.2%, var(--p-hair) 24.2% 25.8%,
+    var(--p-dim) 25.8% 49.2%, var(--p-hair) 49.2% 50.8%,
+    var(--p-dim) 50.8% 69.2%, var(--p-hair) 69.2% 70.8%,
+    var(--p-dim) 70.8% 74.2%, var(--p-hair) 74.2% 75.8%,
+    var(--p-dim) 75.8% 100%);
+}
+.phud__atime-m > i {
+  position:absolute; left:0; right:0; bottom:0; height:var(--af,0%);
+  background:linear-gradient(0deg,var(--p-grad-from),var(--p-grad-to));
+}
+/* specs/0057 §4.4 — THE UNIT, and it is the speedometer's unit treatment moved
+   into the DOM: 11 px flat beside a gradient hero, which is the pattern the
+   dial already reads as "number, then what the number is". It says AIR or JIB,
+   and that one word is the whole of "no new chrome" — a jib borrows the timer
+   rather than being handed a second clock in a second corner.
+   The gradient above paints with -webkit-text-fill-color:transparent, which
+   descendants inherit, so the unit has to put its own fill back or it renders
+   as a hole in the hero. */
+.phud__atime-u {
+  font-size:${n.unit}px; line-height:1; margin-left:8px;
+  background:none; color:var(--p-cream);
+  -webkit-text-fill-color:var(--p-cream);
+}
+
+/* ------------------------------------- specs/0055 §4.4 — THE COMBO LEDGER **B**
+   S2, and the line stops growing sideways. The three tokens — multiplier, trick
+   names, quality word — are JUSTIFIED to the hero's own 208 px, each with a
+   fixed job by POSITION rather than by the middot between it and the next:
+   gradient left = the multiplier, flat centre = what you threw, verdict right.
+   A ten-trick line and a one-trick line are now the same width and the same
+   shape, which is the whole read at speed. The two \`.phud__combo-sep\` middots
+   are not deleted (0057/R2 owns the tail's content and §4.9 renames nothing) —
+   justification does their job, so they stop being drawn. */
+.phud__combo {
+  position:absolute; left:50%; top:21.5%; bottom:auto; transform:translateX(-50%);
+  box-sizing:border-box; width:var(--p-hero-box); padding:5px 14px 6px;
+  background:var(--p-plate);
+  border-bottom:var(--p-rule) solid var(--p-grad-to);
+  border-radius:var(--p-r);
+  display:flex; flex-direction:column; align-items:stretch; gap:5px;
+  white-space:nowrap; text-shadow:none;
+}
+.phud__combo[hidden], .phud__combo.is-hidden { display:none; }
+.phud__combo-line {
+  display:flex; align-items:baseline; justify-content:space-between; gap:8px;
+}
+.phud__combo-mult { flex:none; font-size:${n.heroSmall}px; line-height:1; ${w} }
+.phud__combo-sep { display:none; }
+.phud__combo-n, .phud__combo-q { font-size:${n.secondary}px; color:var(--p-cream); }
+.phud__combo-n {
+  flex:1 1 auto; min-width:0; text-align:center;
+  overflow:hidden; text-overflow:ellipsis;
+}
+.phud__combo-q { flex:none; }
+.phud__combo-n.is-hidden, .phud__combo-q.is-hidden { display:none; }
+.phud__combo-q.is-clean { color:var(--p-cream); }
+.phud__combo-q.is-sketchy { color:${n.sketchy}; }
+.phud__combo-q.is-bailed { color:${n.bailed}; }
+/* THE POP IS **SNAP**, 90 ms, \`scale .96 -> 1\` (§1.11) — replacing 0048's
+   160 ms 1.0 -> 1.08 -> 1.0. Six verbs, and the punch is one of them: a pop
+   that overshoots is a seventh. On the line and not on the block, so the gauge
+   under it does not breathe with every landed trick. */
+.phud__combo-line.is-pop { animation:psnap var(--p-snap) both; }
+@keyframes psnap { from{transform:scale(.96)} to{transform:scale(1)} }
+
+/* ---------------------------------- specs/0055 §4.6 — THE MARKS, UNDER THE LEDGER
+   §1.8's alphabet carrying the combo's own facts: one mark per trick, left to
+   right, capped at 8 — past which the row reads \`8 marks + xN\` (\`tricks.js:278\`
+   already slices to 8). The multiplier stays the 28 px gradient numeral and is
+   never re-encoded as marks. */
+.phud__marks {
+  display:flex; align-items:center; gap:5px; min-height:11px;
+}
+.phud__marks.is-hidden { display:none; }
+.pmark.is-hidden { display:none; }
+.phud__marks-more {
+  font-size:${n.unit}px; line-height:1; color:var(--p-cream); opacity:.8;
+}
+
+/* comboGraceT, drained full -> empty: the "you have 2 s to link" read, and it
+   is §1.10's ONE 2 px gauge at the block's own width — no second component. */
+.phud__grace { width:auto; height:var(--p-gauge); background:var(--p-dim); }
+.phud__grace i { display:block; height:100%; width:100%; background:var(--p-grad-to); }
+.phud__grace.is-hidden { display:none; }
+
+/* --------------------------------- specs/0055 §4.4 — THE RECEIPT **B** / BAIL **B**
+   THE RECEIPT IS THE TIMER'S CONSTRUCTION with one word changed: same 208 px
+   box, same plate, same rule, same hero — which is what "lands in the pixels
+   the timer vacated" means literally, and why the swap into S3 (§4.5) is a move
+   and not a redesign. Arrives SNAP in S1, RISE in S3 (§6).
+   BAILED is the same object again: the mounting rule goes flat #ff5c8a and the
+   multiplier is struck through. The only non-gradient rule in the system. */
+.phud__cend {
+  display:flex; align-items:baseline; justify-content:center; gap:14px;
+  text-align:center; text-shadow:none; white-space:nowrap;
+  /* the timer's box is a FLOOR here, not a cap: a six-figure score at 68 px is
+     wider than 300 px, and a receipt that clipped its own number to land in the
+     timer's pixels would be keeping the wrong promise. Every ordinary score
+     sits in exactly the timer's box; a huge one grows out of it. */
+  width:auto; min-width:var(--p-hero-box);
+}
+.phud__cend[hidden], .phud__cend.is-hidden { display:none; }
+.phud__cend.is-bail { border-bottom-color:var(--p-bailed); }
+.phud__cend-score, .phud__cend-mult { font-size:${n.hero}px; line-height:.9; }
+.phud__cend-score { ${w} }
+.phud__cend-pb { font-size:${n.secondary}px; color:var(--p-cream); }
+/* a bail shows the MULTIPLIER, crossed out, flat red-purple — the thing you
+   lost, not a score you never banked. No gradient: you did not earn one. */
+.phud__cend-mult {
+  color:${n.bailed};
+  text-decoration:line-through; text-decoration-thickness:4px;
+}
+.phud__cend-score.is-hidden, .phud__cend-pb.is-hidden, .phud__cend-mult.is-hidden { display:none; }
+/* §6 — SNAP in S1 (the punch, in the pixels you were already reading), RISE in
+   S3 (it arrived beside something live, so it announces itself instead). */
+.phud__cend.is-snap { animation:psnapc var(--p-snap) both; }
+@keyframes psnapc {
+  from{transform:translateX(-50%) scale(.96)} to{transform:translateX(-50%) scale(1)}
+}
+/* RISE only ever lands in S3, which is left-aligned and carries no transform of
+   its own — so this one is the plain +10 px arrival §1.11 defines. */
+.phud__cend.is-s3.is-rise { animation:prise var(--p-rise) var(--p-rise-ease) both; }
+@keyframes prise { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+
+/* ======================================= specs/0055 §4.7 — WIPEOUT **C**
+   "C title cut — we keep impact frames too for now" (Greg, decisions page
+   2026-09-05). The film move: ONE WORD, 96 px, no plate, no surface, no colour
+   of its own, arriving on the impact frame; everything that explains it comes
+   later and smaller. Cream and not red, because the frame is already red —
+   0054's \`hard-light\` flash and its vignette are UNTOUCHED and are what this
+   sits on. NO ARC anywhere (D12), and no second stamp.
+
+   The beat is the panel: word · pause · explanation, and it leaves in the
+   opposite order so the punchline is the last thing on screen. The 96 px is the
+   largest type in the game, past the 68 px hero and the intro's 56 px, and it
+   is the one panel whose job is a joke.
+
+   Arrival is **SNAP** (§4.7, §6's table) — the lookbook's C prose argued for a
+   hard CUT on the word; the spec's six verbs give the stamp SNAP either way and
+   the spec is what ships. 90 ms of \`scale .96 -> 1\` on 96 px type is a punch,
+   not a bounce.
+
+   Everything below is scoped to \`.is-wipe\`: a landed trick's stamp is 0048's
+   and this row does not touch it. */
+.phud__trick.is-wipe { top:34%; width:min(760px,86vw); }
+.phud__trick.is-wipe .phud__trick-big {
+  ${E}font-size:96px; line-height:.94; font-weight:${n.weight};
+  letter-spacing:${n.track}em; color:var(--p-cream);
+  text-shadow:0 3px 26px rgba(0,0,0,.55);
+}
+.phud__trick.is-wipe .phud__trick-rule {
+  height:var(--p-rule); background:rgba(244,241,234,.30); margin:6px 0 8px;
+}
+.phud__trick.is-wipe .phud__trick-row {
+  display:flex; justify-content:space-between; align-items:baseline; gap:20px;
+}
+/* the joke is PROSE: roman, sentence case, never oblique (§1.2) */
+.phud__trick.is-wipe .phud__trick-sub {
+  margin:0; font-family:var(--p-fam); font-style:normal; font-weight:${n.weight};
+  font-size:14px; letter-spacing:normal; text-transform:none;
+  color:#f0ece0; text-shadow:0 1px 8px rgba(0,0,0,.8);
+}
+.phud__trick.is-wipe .phud__trick-n {
+  ${E}font-size:14px; line-height:1; color:rgba(244,241,234,.72);
+  font-variant-numeric:tabular-nums;
+}
+/* a landed trick keeps 0048's centred sub and shows neither rule nor numbers */
+.phud__trick:not(.is-wipe) .phud__trick-rule,
+.phud__trick:not(.is-wipe) .phud__trick-n { display:none; }
+/* the beat: the rule and the line RISE 0.40 s after the word, and the word
+   FALLs 160 ms before them so the punchline outlives it (§4.7's stagger) */
+.phud__trick.is-wipe .phud__trick-rule,
+.phud__trick.is-wipe .phud__trick-row { opacity:0; }
+.phud__trick.is-wipe.is-late .phud__trick-rule,
+.phud__trick.is-wipe.is-late .phud__trick-row {
+  animation:prise var(--p-rise) var(--p-rise-ease) both;
+}
+.phud__trick.is-wipe.is-snap { animation:psnapc var(--p-snap) both; }
+.phud__trick.is-wipe.is-gone-word .phud__trick-big {
+  opacity:0; transition:opacity var(--p-fall) linear;
+}
+.phud__trick.is-wipe.is-gone-line .phud__trick-rule,
+.phud__trick.is-wipe.is-gone-line .phud__trick-row {
+  animation:none; opacity:0; transition:opacity var(--p-fall) linear;
+}
+
+/* ================================================ specs/0055 §1.9 + §4.8
+   THE LAB DIALECT — register 3 in mono, no gradient, a 4 px hazard rule on the
+   top edge, and the rule MEANS NOT SHIPPING. §1.9 names the eight surfaces that
+   wear it and §8's P3 asserts exactly eight; anything shipped that grows one is
+   the bug the census is for.
+
+   These rules are in THIS sheet rather than play.css on purpose: play.css is
+   linked before the injected sheet, so at equal specificity these win, and
+   §1.1 keeps play.css free of token declarations. */
+.plab {
+  background:rgba(23,22,20,.90);
+  border:0; border-top:var(--p-stripe) solid var(--p-hazard);
+  border-radius:0 0 var(--p-r) var(--p-r);
+  font-family:var(--p-mono); color:#e8e4da;
+  box-shadow:0 8px 26px rgba(0,0,0,.45);
+  padding:0;
+}
+.plab__hd {
+  display:flex; justify-content:space-between; align-items:baseline; gap:18px;
+  padding:6px 10px 5px; border-bottom:var(--p-hairline) solid var(--p-hair);
+  font-size:9.5px; letter-spacing:.18em; text-transform:uppercase; color:#ff9153;
+}
+.plab__hd .v { color:#ff9153; font-variant-numeric:tabular-nums; }
+.plab__bd { padding:7px 10px 8px; font-size:10.5px; letter-spacing:.04em; line-height:1.62; }
+
+/* §4.8 — DEBUG READOUT **A**: the slate moves to 200,14, off the dial's 172 px
+   box, which is the whole of the collision 0048 shipped with. FPS **stops being
+   a floating chip** and becomes the header's right-hand value: fps is a fact
+   about the SESSION, not about the rider, so it belongs beside the poi name the
+   way a map board carries its scale — two panels become one. */
+.phud__read {
+  left:200px; top:14px; right:auto; min-width:252px;
+  padding:0; gap:0;
+}
+.phud__read .phud__title {
+  padding:6px 10px 5px; border-bottom:var(--p-hairline) solid var(--p-hair);
+  font-size:9.5px; letter-spacing:.18em; color:#ff9153;
+}
+.phud__read .phud__title b { color:#ff9153; letter-spacing:.18em; }
+.phud__read .phud__title .dot { background:var(--p-hazard); }
+/* the fps value, moved INTO the title row */
+.phud__title .spacer { flex:1 1 auto; }
+.phud__read .phud__fps {
+  position:static; padding:0; background:none; border:0; border-radius:0;
+  font-size:9.5px; letter-spacing:.18em; color:#ff9153;
+}
+.phud__read .phud__fps .k { color:#ff9153; opacity:.7; }
+.phud__read .phud__fps .v { color:#ff9153; }
+/* dev.js's band pushes the lab surfaces down 34 px while it is up (W5's
+   \`is-devbar\`). The fps node is INSIDE the readout now, so it would take that
+   offset twice and sit 34 px below its own header row. */
+body.play.is-devbar .phud__read .phud__fps { margin-top:0; }
+.phud__read .r { padding:0 10px; }
+.phud__read .r:first-of-type { padding-top:7px; }
+.phud__read .r:last-child { padding-bottom:8px; }
+
+/* §4.8 — LEADERBOARD **B**: the breadcrumb rotates 45° into a diamond, at zero
+   pixel cost. It is the smallest instance of §1.8's alphabet in the build. */
+.phud__bdot { border-radius:0; transform:rotate(45deg); }
+
+/* §4.8 — KEY HINT: the six free-floating chips become ONE BOARD WITH HAIRLINE
+   DIVIDERS — the sign-post strip at the bottom of a lift line. Six contrast
+   problems become one, and the bottom edge gets a shape. D44 holds: the
+   E / I / F / B / F8 / SHIFT chips are still built and still dark, and the whole
+   strip is still absent on \`pointer:coarse\` (hud.js sets display:none inline).
+   Key caps are cream plates on ink; ESC keeps the orange, because it is the one
+   key that leaves the world. */
+.phud__legend {
+  gap:0; flex-wrap:nowrap; max-width:none;
+  border-radius:var(--p-r); overflow:hidden;
+  box-shadow:0 4px 16px rgba(0,0,0,.36);
+}
+.phud__legend .pkey {
+  background:rgba(23,22,20,.86);
+  border:0; border-radius:0;
+  border-left:var(--p-hairline) solid var(--p-hair);
+  padding:6px 11px; gap:7px;
+  font-family:var(--p-mono); font-size:9.5px; letter-spacing:.13em; color:#cdc7ba;
+}
+.phud__legend .pkey:first-child { border-left:0; }
+.phud__legend .pkey b {
+  background:var(--p-cream); color:var(--p-ink);
+  border-radius:var(--p-r); padding:3px 7px; letter-spacing:.06em;
+}
+/* ESC is the exit, and the only chip that keeps the signal colour */
+.phud__legend .pkey.is-out b { background:var(--p-hazard); color:#fff; }
+/* HOLD, live (§1.11) — a held key inverts its cap for exactly as long as it is
+   held. That is the existing \`is-on\` state, restyled, not a new one. */
+.phud__legend .pkey.is-on { background:rgba(23,22,20,.86); border-color:var(--p-hair); color:var(--p-cream); }
+.phud__legend .pkey.is-on b { background:var(--p-hazard); color:#fff; }
+
+/* §1.9 — THE HAZARD STRIPE, on the surfaces hud.js owns. The compression meter
+   is styled from a \`cssText\` this rule deliberately does not touch: §0 pins
+   \`hud.js:228-291\` byte-identical, and \`border-top\` is not one of the
+   properties that block declares, so the stripe lands without editing it. */
+.phud__read, .phud__lip, .phud__dev, .phud__ref {
+  border:0; border-top:var(--p-stripe) solid var(--p-hazard);
+  border-radius:0 0 var(--p-r) var(--p-r);
+  background:rgba(23,22,20,.90);
+}
+.phud__dev .phud__title, .phud__ref .phud__title {
+  border-bottom:var(--p-hairline) solid var(--p-hair);
+  padding-bottom:4px; margin-bottom:4px;
+}
+
+/* §5.5 / W5 hand-off 3 — THE F8 SLATE SAYS IT ONCE. dev.js's band head already
+   prints \`DEV FLY · F8 · fly back\` across the top edge; this slate is the
+   fly CAMERA's numbers, so it names those instead of repeating the mode. */
+.phud__dev .phud__title b { color:#ff9153; }
+
+/* §5.5 / W5 hand-off 1 — REFERENCE **A**: right-anchored, and an honest empty
+   state. "no reference bundle" is a REFUSAL, not an error, so it gets §1.8's
+   red X and no colour of its own. */
+.phud__ref { right:14px; left:auto; }
+.phud__ref-cap {
+  display:flex; align-items:center; gap:8px;
+  color:#cdc7ba; letter-spacing:.1em;
+}
+.phud__ref-cap .pmark { display:none; }
+.phud__ref.is-empty .phud__ref-cap .pmark { display:block; }
+.phud__ref.is-empty .phud__ref-img { display:none; }
+
+/* §5.5 / W5 hand-off 2 — THE MATCH DIALOG'S FLASH LINE. \`hud.flash()\` is the
+   one line dev.js has to say "I will not do that yet"; a refusal takes the red
+   X and the words stay verbatim. */
+.phud__toast.is-refusal {
+  display:flex; align-items:center; gap:9px;
+  border-color:var(--p-diff-red); color:var(--p-cream);
+}
+
+/* ============================================ specs/0055 §5.1 — W4 hand-off
+   THE PAUSE MENU'S GEAR GROUPING. W4 built the map board and could not build
+   the grouping, because the grouping is DATA and it lives in this file. Each
+   group is its own sub-grid under a header carrying §1.8's mark, and the board
+   flows the groups into two columns without a row count anywhere: \`column-count\`
+   breaks between groups, never inside one.
+
+   TWO COLUMNS ONLY WHEN THERE ARE TWO THINGS TO PUT IN THEM. \`column-count:2\`
+   on a board holding ONE group still reserves the second column, and the
+   shipped five-row tier then sits in a board with an empty right half — the
+   exact failure W4's sheet comment names ("the shipped five-row tier reserves
+   the lab tier's second column"). The builder adds \`is-cols\` when it emitted
+   more than one group, which is the same "one code path, both tiers" §5.1
+   asks for, said in one class instead of a row count. */
+.ppause__keys { display:block; column-count:1; }
+.ppause__keys.is-cols { column-count:2; column-gap:26px; column-fill:balance; }
+.ppause__grp { break-inside:avoid; -webkit-column-break-inside:avoid; }
+/* THE ROW PITCH IS THE LOOKBOOK'S 23 px (\`#k-pause-menu\`, cell A: key plates on
+   a 23 px rhythm), not W4's flat-list 27. Eight group headers cost the lab
+   board ~110 px it did not spend before, and at 27 the panel measured 880×750
+   on a 720 screen — the ODbL credit §5.1 requires verbatim was rendered BELOW
+   THE BOTTOM OF THE SCREEN, and "30 rows fit one screen" was not true. 17 px
+   plate + 3 + 3 puts the lab board back inside the frame with the footer on it. */
+.ppause__grp-rows .cap, .ppause__grp-rows .what { padding-bottom:3px; margin-bottom:3px; }
+/* NO RULE UNDER THE GROUP HEADER. The lookbook cell draws none (Greg,
+   2026-09-06: match the cell) — the mark and the gap are the header, and a
+   second ink hairline in a board that is already all hairlines reads as one
+   more row rather than as the thing above them. The 14 / 8 margins are the
+   cell's own rhythm, and they buy back the 3 px of padding the rule needed. */
+.ppause__grp-hd {
+  display:flex; align-items:center; gap:8px;
+  margin:14px 0 8px;
+  font-family:var(--p-mono); font-size:9px; font-weight:700;
+  letter-spacing:.2em; text-transform:uppercase; color:var(--p-sub);
+}
+.ppause__grp:first-child .ppause__grp-hd { margin-top:0; }
+.ppause__grp-rows { display:grid; grid-template-columns:max-content auto; gap:0 14px; }
+`,x=document.createElement("style");x.id="phud-type",x.textContent=be,document.head.appendChild(x)})();const Yt={landing:"came in too hot",tree:"met a tree",rock:"that was rock",building:"that wall was load-bearing",tower:"the lift is not a slalom gate",person:"sorry. so sorry.",bench:"the bench had it coming"},Me=[10,20,28,30,40],Xt=d=>Me.filter(n=>d*10>=n).length,Jt=[[180,1.5],[360,2],[540,3],[720,4],[900,6],[1080,8],[1260,10],[1440,13]];function Zt(d){let n=1;for(const[E,w]of Jt)if(d+1e-6>=E)n=w;else break;return d>1440?13+(d-1440)/180*3:n}function Qt(d){const n=/(\d{3,4})/.exec(d);return n?+n[1]:/triple/i.test(d)?1080:/double/i.test(d)?720:/flip/i.test(d)?360:0}function ea(d){return/cork|d-spin/i.test(d)?"cork":/underflip/i.test(d)?"underflip":/bio/i.test(d)?"bio":/misty/i.test(d)?"misty":/rodeo/i.test(d)?"rodeo":/flip/i.test(d)?"flip":/50-50|slide|switch-up|press/i.test(d)?"jib":/^\d+$/.test(d.trim())?"spin":"grab"}function ta(d,n){const E=Zt(Qt(d));return E>=4?n?"double":"black":E>=2?"blue":"green"}const q=(d,n)=>{d.textContent!==n&&(d.textContent=n)},t=(d,n,E)=>{const w=document.createElement(d);return n&&(w.className=n),E!=null&&(w.textContent=E),w};function sa({poi:d,run:n,adapter:E,onResume:w,onRespawn:L}){const u=t("div","phud"),I=t("div","phud__read pchip"),A=t("div","phud__title");A.append(t("span","dot"),t("b",null,Wt((d||"world").toUpperCase(),jt))),I.append(A);const be=t("span","spacer"),x={};for(const[e,a]of[["pos","x / y / z"],["spd","speed"],["state","state"],["gear","gear"],["cam","cam"]]){const o=t("div","r");o.append(t("span","k",a),t("span","v","—")),x[e]=o.lastChild,I.append(o)}B&&u.append(I);let T=null;if(B){const e=t("div","phud__lip pchip");e.style.cssText="position:absolute;left:12px;top:190px;min-width:236px;font:11px/1.45 ui-monospace,Menlo,Consolas,monospace;padding:8px 10px;pointer-events:none;white-space:pre;";const a=t("div","phud__title");a.append(t("span","dot"),t("b",null,"LIP · COMPRESSION")),e.append(a);const o=_=>{const m=t("div");m.style.cssText="display:flex;justify-content:space-between;gap:10px";const C=t("span",null,_);C.style.opacity=".55";const c=t("span",null,"—");return m.append(C,c),e.append(m),c},i={};for(const _ of["surface vy","reference","compression"])i[_]=o(_);const s=t("div");s.style.cssText="height:1px;margin:5px 0;opacity:.25;background:currentColor",e.append(s);for(const _ of["ramp x K","comp x K","charge"])i[_]=o(_);const r=t("div");r.style.cssText="position:relative;height:6px;margin:4px 0 6px;border:1px solid currentColor;opacity:.9";const p=t("i");p.style.cssText="position:absolute;left:0;top:0;bottom:0;width:0;background:currentColor;opacity:.95";const l=t("i");l.style.cssText="position:absolute;top:0;bottom:0;width:0;background:currentColor;opacity:.45";const b=t("i");b.style.cssText="position:absolute;top:-2px;bottom:-2px;width:1px;background:currentColor",r.append(p,l,b),e.append(r);const h=t("div");h.style.cssText="height:1px;margin:5px 0;opacity:.25;background:currentColor",e.append(h);for(const _ of["surface accel","snap release","pop window","pop now","state"])i[_]=o(_);const f=t("div");f.style.cssText="margin-top:6px;padding-top:5px;border-top:1px solid currentColor;opacity:.85;white-space:pre-wrap",f.textContent="takeoff —",e.append(f),u.append(e),T={box:e,rows:i,barR:p,barC:l,barMin:b,shot:f,shotT:0}}const ie=t("div","phud__fps");ie.append(t("span","k","fps "),t("span","v","—"));const Ct=ie.lastChild;A.append(be,ie);let O=null,_e={},J=null,Ue="";if(B){O=t("div","phud__dev pchip"),O.hidden=!0;const e=t("div","phud__title");e.append(t("span","dot"),t("b",null,"FLY CAMERA")),O.append(e);for(const[r,p]of[["pos","x / y / z"],["ang","yaw / pitch"],["fov","fov"],["spd","speed"],["cmp","compare"]]){const l=t("div","r");l.append(t("span","k",p),t("span","v","—")),_e[r]=l.lastChild,O.append(l)}J=t("div","phud__dev-url"),J.textContent="?spawn=",O.append(J);const a=t("div","phud__dev-btns"),o=t("button","pdev-btn pdev-btn--sm","copy params"),i=t("button","pdev-btn pdev-btn--sm","copy url");o.type=i.type="button",a.append(o,i),O.append(a),u.append(O);const s=(r,p)=>{const l=()=>{y.classList.remove("is-refusal"),y.textContent="copied · "+p,y.hidden=!1,Y=1.2};navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(r).then(l,()=>{}):l()};o.addEventListener("click",r=>{r.stopPropagation(),s(J.textContent,"spawn params")}),i.addEventListener("click",r=>{r.stopPropagation(),s(Ue,"play url")})}const se=t("div","phud__legend"),F=(e,a)=>{const o=t("span","pkey");return o.append(t("b",null,e),document.createTextNode(a)),se.append(o),o},V=(e,a)=>{const o=t("span","pkey is-hidden");return o.append(t("b",null,e),document.createTextNode(a)),o},k={move:F("WASD","move"),sprint:V("SHIFT","sprint"),jump:F("SPACE","jump"),gear:V("E","gear"),inv:V("I","locker"),boost:F("HOLD SPACE","boost"),lift:V("F","lift"),spin:F("← →","spin"),cam:F("C","camera"),reset:F("R","reset"),refs:B?F("B","refs"):V("B","refs"),dev:B?F("F8","dev"):V("F8","dev"),pause:F("ESC","pause")};k.lift.classList.add("is-hidden"),k.boost.classList.add("is-hidden"),k.pause.classList.add("is-out"),u.append(se),matchMedia("(pointer: coarse)").matches&&(se.style.display="none");const xe=matchMedia("(pointer: coarse)").matches,g=t("div","phud__prompt pchip");g.hidden=!0;const Be=t("b",null,"F"),ke=t("span",null,"");g.append(Be,ke),u.append(g);let re=!1,pe="F",ve=0;const je={SPACE:"Space",ENTER:"Enter",ESC:"Escape",TAB:"Tab"},We=e=>{const a=String(e??"F").trim().toUpperCase();return je[a]?je[a]:/^[A-Z]$/.test(a)?"Key"+a:/^[0-9]$/.test(a)?"Digit"+a:"Key"+(a[0]||"F")};function ze(){if(g.hidden)return null;const e=We(pe),a={code:e,key:e.startsWith("Key")?e.slice(3).toLowerCase():e,bubbles:!0,cancelable:!0};return ve++,g.dataset.fires=String(ve),dispatchEvent(new KeyboardEvent("keydown",a)),dispatchEvent(new KeyboardEvent("keyup",a)),e}if(xe){g.classList.add("phud__prompt--tap"),g.addEventListener("touchstart",o=>{o.stopPropagation(),o.preventDefault(),g.classList.add("is-press")},{passive:!1});const e=o=>{const i=g.getBoundingClientRect();return o.clientX>=i.left&&o.clientX<=i.right&&o.clientY>=i.top&&o.clientY<=i.bottom},a=o=>i=>{i.stopPropagation(),i.preventDefault();const s=g.classList.contains("is-press");g.classList.remove("is-press");const r=i.changedTouches&&i.changedTouches[0];o&&s&&(!r||e(r))&&ze()};g.addEventListener("touchend",a(!0),{passive:!1}),g.addEventListener("touchcancel",a(!1),{passive:!1}),g.addEventListener("click",o=>{o.stopPropagation(),ze()})}const P=t("div","phud__fuel");P.hidden=!0;const Lt=t("span","phud__fuel-lbl","boost"),Ke=t("span","phud__fuel-bar"),Ge=t("i");Ke.append(Ge),P.append(Lt,Ke),u.append(P);let Z=!1,qe=!1;const y=t("div","phud__toast pchip");y.hidden=!0,u.append(y);let Y=0;const S=t("div","phud__trick");S.hidden=!0;const Ve=t("div","phud__trick-big"),At=t("div","phud__trick-rule"),Ye=t("div","phud__trick-row"),Xe=t("div","phud__trick-sub"),Je=t("div","phud__trick-n");Ye.append(Xe,Je),S.append(Ve,At,Ye),u.append(S);let j=0,we=!1,Q=0;const N=t("div","phud__pump");N.hidden=!0;const Ze=t("i","phud__pump-arc");N.append(Ze),u.append(N);let X=0,ye=0;const v=t("div","phud__atime"),Qe=t("span","phud__atime-n","0.00"),et=t("span","phud__atime-u","AIR"),de=t("div","phud__atime-m"),Ot=t("i");de.append(Ot),v.append(Qe,et,de),v.hidden=!0,u.append(v);let W=0,H=0,le=!1,tt="",at="";const z=t("div","phud__combo");z.hidden=!0;const ee=t("div","phud__combo-line"),ot=t("span","phud__combo-mult","×1"),nt=t("span","phud__combo-sep","·"),Ee=t("span","phud__combo-n",""),it=t("span","phud__combo-sep","·"),te=t("span","phud__combo-q","");ee.append(ot,nt,Ee,it,te);const st=t("div","phud__grace"),rt=t("i");st.append(rt);const K=t("div","phud__marks"),pt=t("span","phud__marks-more","");z.append(ee,K,st),u.append(z);let Te="";function Nt(e,a,o){const i=e.length+"|"+(a||"")+"|"+(o?"x":"")+"|"+e.join(",");if(i===Te)return;Te=i,K.textContent="";const s=e.slice(0,8),r=new Set;s.forEach((p,l)=>{const b=ea(p),h=!r.has(b);r.add(b);const f=t("span","pmark pmark--"+ta(p,h));a==="sketchy"&&l===s.length-1&&f.classList.add("is-hollow"),K.append(f)}),o&&K.append(t("span","pmark pmark--x")),e.length>8&&(q(pt,"+ ×"+(e.length-8)),K.append(pt)),K.classList.toggle("is-hidden",!K.childElementCount)}let ae=-1;const R=t("div","phud__cend");R.hidden=!0;const Se=t("span","phud__cend-score","0"),Ce=t("span","phud__cend-mult","×1"),dt=t("span","phud__cend-pb","PB"),lt=t("span","pmark pmark--x");R.append(lt,Se,Ce,dt),u.append(R);let he=0;const oe=t("div","phud__bdot");oe.hidden=!0,oe.title="L L",u.append(oe);const D=t("div","pgearmenu");D.hidden=!0;const ht=t("section","panel pgearmenu__panel"),ct=t("div","panel__hd");ct.append(t("span","lbl lbl--accent","gear"),t("span","spacer"),t("span","lbl","e / esc close"));const Le=t("div","panel__bd pgearmenu__bd");ht.append(ct,Le),D.append(ht),u.append(D);let M=[],G=0,Ae=null;function Oe(){M.forEach((e,a)=>e.el.classList.toggle("is-sel",a===G))}function ce(){D.hidden=!0,Ae=null}function Ne(e){const a=M[e];if(!a||a.disabled)return;const o=Ae;ce(),o&&o(a.gear)}const Rt={openGear({current:e,def:a,gears:o,onPick:i}){Le.textContent="",M=(o||["boots","skis"]).map((s,r)=>{const p=t("div","pgearmenu__row");return p.append(t("span","cap",String(r+1)),t("span","name",s),t("span","tag",s===e?"equipped":s===a?"default":"")),p.addEventListener("click",l=>{l.stopPropagation(),Ne(M.findIndex(b=>b.el===p))}),Le.append(p),{el:p,gear:s,disabled:!1}}),G=Math.max(0,M.findIndex(s=>s.gear===e)),Ae=i,D.hidden=!1,Oe()},closeGear:ce,gearOpen(){return!D.hidden},gearKey(e){if(D.hidden)return!1;if(e==="KeyW"||e==="ArrowUp")return G=(G+M.length-1)%M.length,Oe(),!0;if(e==="KeyS"||e==="ArrowDown")return G=(G+1)%M.length,Oe(),!0;if(e==="Enter"||e==="Space")return Ne(G),!0;if(e==="Escape"||e==="KeyE")return ce(),!0;const a=/^(?:Digit|Numpad)([1-9])$/.exec(e);return a&&Ne(Number(a[1])-1),!0}};if(B){const e=t("div","phud__ref pchip");e.hidden=!0;const a=t("img","phud__ref-img");a.alt="";const o=t("div","phud__ref-cap"),i=t("span","pmark pmark--x");o.append(i);const s=t("span",null,"");o.append(s),e.append(a,o),u.append(e);let r=[],p=0;fetch("/api/poi/"+encodeURIComponent(d)).then(h=>h.json()).then(h=>{r=[...h.aerials||[],...h.photos||[]]}).catch(()=>{});const l=()=>{if(!r.length){e.classList.add("is-empty"),s.textContent="no reference bundle";return}e.classList.remove("is-empty"),p=(p+r.length)%r.length;const h=r[p];a.src=h.url.replace("/files/","/thumb/")+"?w=900",s.textContent=h.name.replace(/\.(jpe?g|png|webp)$/i,"")+" · "+(p+1)+"/"+r.length+" · [ ] cycle · B close"},b=h=>!!h&&(h.tagName==="INPUT"||h.tagName==="TEXTAREA"||h.isContentEditable);addEventListener("keydown",h=>{D.hidden&&(b(h.target)||document.body.classList.contains("is-dev")||(h.code==="KeyB"?(e.hidden=!e.hidden,e.hidden||l()):!e.hidden&&h.code==="BracketRight"?(p++,l()):!e.hidden&&h.code==="BracketLeft"&&(p--,l())))})}const ut=t("div","phud__cross");u.append(ut);const $=t("div","ppause");$.hidden=!0;const mt=t("section","panel ppause__panel"),ft=t("div","panel__hd");ft.append(t("span","lbl lbl--accent","paused"),t("span","spacer"),t("span","lbl",zt({lab:n||"","RED DOG":"red dog chair",SIBERIA:"siberia express"})));const gt=t("div","panel__bd ppause__bd"),ue=t("div","ppause__keys");let Re=null,Ie=null;const It=[["core","every run","green"],["foot","on foot","green"],["ski","on skis","blue"],["bike","on the bike","blue"],["air","in the air","black"],["glide","on the glider","black"],["rocket","on the rocket pack","double"],["lab","lab only","x"]],bt=[["ESC","settings","core"],["W A S D","move","core"],["← →","tricks in the air","core"],["C","camera","core"],["R","reset","core"]],Ft=[["SHIFT","sprint","foot"],["SPACE","jump","foot"],["MOUSE","look","foot"],["E","gear · tap toggles, hold for menu","foot"],["I","inventory · the ski rack, and every other gear type","foot"],["SPACE","hold to thrust · on the rocket pack — 6 s of fuel, refills itself at 1×","rocket"],["F","ride the chairlift · at a base terminal","foot","lift"],["A D","carve · on skis","ski"],["S","stop · on skis; moving backward it drives instead","ski"],["W","skate · on skis; moving backward it stops you","ski"],["W S","pedal / pump · on bike","bike"],["SHIFT","brake · on bike","bike"],["SPACE","hold to preload, release on a lip to pop · on bike","bike"],["MOUSE","aim where to fly — the wing banks and carves round to it · on glider","glide"],["W S","nose down / nose up · on glider","glide"],["SPACE","hold to flare — bleed speed for a clean landing · on glider","glide"],["MOUSE","aim the motor — thrust goes exactly where you look · on the rocket pack","rocket"],["SPACE","let go and you are a falling body; burn back down the way you came to land · on the rocket pack","rocket"],["← →","spin / flip · in the air","air"],["↑ ↓","spin / flip · in the air; on the snow they are W and S","air"],["← →","barrel roll · flying","glide"],["B","reference photos","lab"],["[ ]","cycle refs","lab"],["F8","dev fly mode · noclip + reference compare","lab"]],Pt=B?[...bt,...Ft]:bt;for(const[e,a,o]of It){const i=Pt.filter(l=>l[2]===e);if(!i.length)continue;const s=t("div","ppause__grp"),r=t("div","ppause__grp-hd");r.append(t("span","pmark pmark--"+o),t("span",null,a));const p=t("div","ppause__grp-rows");for(const[l,b,,h]of i){const f=t("div","cap",l),_=t("div","what",b);h==="lift"&&(f.classList.add("is-hidden"),_.classList.add("is-hidden"),Re=f,Ie=_),p.append(f,_)}s.append(r,p),ue.append(s)}ue.childElementCount>1&&ue.classList.add("is-cols");const Fe=t("button","btn btn--accent ppause__big","click to resume");Fe.type="button";const _t=t("a","btn btn--ghost","return to bench");_t.href="/#/run/"+encodeURIComponent(d)+"/"+encodeURIComponent(n);const Pe=t("button","btn btn--ghost","respawn");Pe.type="button";const xt=t("div","ppause__row");xt.append(Fe);const kt=t("div","ppause__row");B&&kt.append(_t,Pe,t("span","lbl","adapter · "+E));const Ht=t("div","ppause__credit","terrain USGS 3DEP · trails © OpenStreetMap contributors (ODbL)");gt.append(ue,xt,kt,Ht),mt.append(ft,gt),$.append(mt),u.append($);const U=t("div","pboard");U.hidden=!0;const vt=t("section","panel pboard__panel"),wt=t("div","panel__hd");wt.append(t("span","lbl lbl--accent","personal best"),t("span","spacer"),t("span","lbl","l l · esc close"));const ne=t("div","panel__bd pboard__bd");vt.append(wt,ne),U.append(vt),u.append(U);const yt=e=>Math.round(Number(e)||0).toLocaleString("en-US"),$t=["rk","sc","mu","bt","sk","tr","wh"];function Et(e,a){const o=t("div","pboard__row"+(e?" "+e:""));return a.forEach((i,s)=>o.append(t("span",$t[s],i))),o}function Dt(e){if(ne.textContent="",ne.append(Et("pboard__row--hd",["#","score","mult","best trick","ski","trail","when"])),!e.length){ne.append(t("div","pboard__empty","no runs banked yet · land a combo"));return}for(const a of e)ne.append(Et(a&&a.you?"is-you":"",[String(a.rank!=null?a.rank:"—"),yt(a.score),"×"+(a.mult!=null?a.mult:1),a.best||"—",a.ski||"—",a.trail||"—",a.when||"—"]))}function me(){U.hidden=!0}U.style.pointerEvents="auto",U.addEventListener("click",e=>{e.stopPropagation(),me()}),$.style.pointerEvents="auto",Fe.addEventListener("click",e=>{e.stopPropagation(),w&&w()}),Pe.addEventListener("click",e=>{e.stopPropagation(),L&&L()}),$.addEventListener("click",()=>w&&w()),document.body.appendChild(u);let fe=0,He=0,Tt=performance.now();const $e=e=>(e>=0?" ":"")+e.toFixed(1);let ge=!1;function St(){const e=!$.hidden;for(const a of[ie,se,y,S,g,P,N,v,z,R,oe])a.classList.toggle("is-hidden",e);for(const a of[ut,I])a.classList.toggle("is-hidden",e||ge);O&&(O.classList.toggle("is-hidden",e),O.hidden=!ge)}return{root:u,pause:$,setPaused(e){$.hidden=!e,e&&(ce(),me()),St()},isPaused(){return!$.hidden},setDev(e){ge=!!e,k.dev.classList.toggle("is-on",ge),St()},devTick(e){if(O){for(const a of Object.keys(_e))e[a]!=null&&(_e[a].textContent=e[a]);e.params!=null&&(J.textContent=e.params),e.url!=null&&(Ue=e.url)}},lipMeter(e){if(!T)return;const a=!!e&&!!e.on;if(T.box.hidden=!a,!a)return;const o=e.s,i=e.T,s=T.rows,r=(c,Mt=2)=>(c>=0?"+":"")+Number(c||0).toFixed(Mt);s["surface vy"].textContent=r(o.surfVy)+" m/s "+(o.surfVy>.05?"UP":o.surfVy<-.05?"down":"flat"),s.reference.textContent=r(o.vyFloor)+" m/s",s.compression.textContent=r(o.comp)+" m/s",s["ramp x K"].textContent=r(o.lipRamp),s["comp x K"].textContent=r(o.lipComp);const p=(o.lipRamp||0)+(o.lipComp||0);s.charge.textContent=(o.lipVy>0?Number(o.lipVy).toFixed(2):"0.00")+" / "+Number(i.lipMax).toFixed(2)+(o.lipVy>0?"":p>0?"  < lipMin":o.lipRamp<0?"  ramp negative":"");const l=c=>Math.max(0,Math.min(100,100*c/(i.lipMax||1))),b=l(Math.max(0,o.lipRamp));T.barR.style.width=b.toFixed(1)+"%",T.barC.style.left=b.toFixed(1)+"%",T.barC.style.width=l(o.lipComp).toFixed(1)+"%",T.barMin.style.left=l(i.lipMin).toFixed(1)+"%";const h=o.sincePop==null?1e9:o.sincePop;let f;!e.grounded&&o.airT>0?f=o.popPaid?"spent":o.lipVy>0&&o.airT<=i.popCoyote?"COYOTE "+(i.popCoyote-o.airT).toFixed(2)+"s left":"closed":o.lipVy>0?f=h<=i.popWindow?"ARMED (popped "+h.toFixed(2)+"s ago)":"at lip · pop now":f="no charge";const _=o.dVyS||0,m=o.gravity||16;s["surface accel"].textContent=r(_,1)+" / -"+m.toFixed(0)+(_<-m?"  PAST FREE FALL":""),s["snap release"].textContent=o.dropK>0?(100*o.dropK).toFixed(0)+"%  "+Number(o.snapFull).toFixed(2)+" -> "+Number(o.snapCut).toFixed(2)+" m":"glued  "+Number(o.snapFull||0).toFixed(2)+" m",s["pop window"].textContent=f;const C=e.pop;if(s["pop now"].textContent=C?Number(C.total).toFixed(2)+" m/s"+(C.add>.005?"  (+"+C.add.toFixed(2)+")":"")+(C.add<=.005&&C.compRaw>.5?"  "+C.gate.toUpperCase():""):"—",s.state.textContent=(e.grounded?"on snow":"air "+Number(o.airT).toFixed(2)+"s")+(o.lipVy>0?" · charged":""),e.launch){const c=e.launch;T.shot.textContent="takeoff "+(c.total>.01?"+"+c.total.toFixed(2)+" m/s":"flat")+"  ["+c.src.toUpperCase()+"]"+(c.drop?`
+  DROP-AWAY  snap `+Number(c.snapFull).toFixed(2)+" -> "+Number(c.snapCut).toFixed(2)+" m ("+(100*c.dropK).toFixed(0)+`% let go)
+  surface `+r(c.dVyS,1)+" vs -"+c.grav.toFixed(0)+", past free fall":"")+(c.total>.01?`
+  ramp `+r(c.ramp)+"  comp "+r(c.comp)+"  -> charge "+c.charge.toFixed(2)+(c.pop>0?`
+  pop bonus +`+c.pop.toFixed(2):"")+(c.restored>0?"  (jump restored +"+c.restored.toFixed(2)+")":""):c.drop?"":`
+  no charge (ramp `+r(c.ramp)+" comp "+r(c.comp)+")")+(c.eaten?`
+  SWALLOWED, still on the snow next frame`:""),T.shotT=2}else T.shotT>0&&(T.shotT-=e.dt||.016,T.shotT<=0&&(T.shot.textContent="takeoff —"))},setLiftKey(e){re=!!e,k.lift.classList.toggle("is-hidden",!re),Re&&Re.classList.toggle("is-hidden",!re),Ie&&Ie.classList.toggle("is-hidden",!re)},setPrompt(e){if(!e){g.hidden=!0,g.classList.remove("is-press"),k.lift.classList.remove("is-on");return}pe=e.key||"F",Be.textContent=xe?"TAP":pe,g.dataset.key=We(pe),g.dataset.tap=xe?"1":"0",g.dataset.fires=String(ve),ke.textContent=" "+(e.text||""),g.hidden=!1,k.lift.classList.add("is-on")},promptText(){return g.hidden?null:ke.textContent.trim()},setFuel(e,a,o,i=!0){const s=Math.max(0,Math.min(1,Number(e)||0));if(Z=!!a&&!!i,qe=!!i,P.hidden=!i||s>.999&&!Z,P.hidden){k.boost.classList.remove("is-on");return}Ge.style.width=(s*100).toFixed(1)+"%",P.classList.toggle("is-burn",Z),P.classList.toggle("is-dry",!!o),k.boost.classList.toggle("is-on",Z)},fuelShown(){return!P.hidden},flashGear(e){y.classList.remove("is-refusal"),y.textContent="gear · "+e,y.hidden=!1,Y=1.4},...Rt,flash(e){const a=String(e??""),o=/\b(first|failed|blank|empty)\b/i.test(a);y.textContent="",o&&y.append(t("span","pmark pmark--x")),y.append(t("span",null,a)),y.classList.toggle("is-refusal",o),y.hidden=!1,Y=1.4},trick(e){const a=e.name==="wipeout";if(Ve.textContent=a?"WIPEOUT":e.name+"!",a){const o=Math.round(Q*3.6);q(Je,o+" KM/H"+(e.deg?" · "+e.deg+"°":""))}Xe.textContent=a?Yt[e.why]||(e.deg?e.deg+"° · unfinished":"skis crossed"):e.deg+"°",S.classList.toggle("is-wipe",a),S.hidden=!1,S.classList.remove("is-pop","is-snap","is-late","is-gone-word","is-gone-line"),S.offsetWidth,S.classList.add(a?"is-snap":"is-pop"),we=a,j=a?1.96:1.8},pump(e){const a=!!(e&&e.on),o=performance.now(),i=ye?Math.min(.1,(o-ye)/1e3):.016;if(ye=o,!a){X=0,N.hidden=!0;return}const s=Math.max(.001,Number(e.max)||4),r=Math.max(0,Math.min(1,(Number(e.q)||0)/s)),p=!!e.releasing;if(p?X=Math.max(r,X-i/.35):X=r,X<.004&&!p){N.hidden=!0;return}Ze.style.setProperty("--pf",(X*100).toFixed(1)+"deg");const l=Number(e.eta),b=!(l<1.2),h=l<.8;N.classList.toggle("is-hot",b&&Number.isFinite(l)),N.classList.toggle("is-cold",h),N.classList.toggle("is-rel",p),N.hidden=!1},pumpShown(){return!N.hidden},airTimer(e){if(!!(e&&e.air)){const o=Number(e.t)||0;q(Qe,o.toFixed(2)),q(et,e&&e.unit==="JIB"?"JIB":"AIR");const i=Xt(o),r=(Math.min(1,o*10/Me[Me.length-1])*100).toFixed(1)+"%",p=10+i*2+"px";r!==tt&&(de.style.setProperty("--af",r),tt=r),p!==at&&(de.style.setProperty("--aw",p),at=p),v.classList.contains("is-out")&&v.classList.remove("is-out"),v.hidden=!1,W=.6,H=0,le=!0;return}le=!1,!v.hidden&&W<=0&&H<=0&&(H=.3,v.classList.add("is-out"))},airTimerShown(){return!v.hidden},combo(e){if(!e||!e.on){z.hidden=!0,ae=-1,Te="";return}q(ot,"×"+(e.mult!=null?e.mult:1));const a=Array.isArray(e.names)?e.names.filter(Boolean):[],o=a.slice(-2).join(" · ");q(Ee,o),Ee.classList.toggle("is-hidden",!o),nt.classList.toggle("is-hidden",!o);const i=e.quality==="sketchy"?"SKETCHY":e.quality==="clean"?"CLEAN":"";q(te,i),te.classList.toggle("is-hidden",!i),it.classList.toggle("is-hidden",!i||!o),te.classList.toggle("is-clean",e.quality==="clean"),te.classList.toggle("is-sketchy",e.quality==="sketchy"),Nt(a,e.quality,!1);const s=Number(e.graceMax)||2,r=Math.max(0,Math.min(1,1-(Number(e.grace)||0)/s));rt.style.width=(r*100).toFixed(1)+"%";const p=Number(e.count)||0;p!==ae&&(ae>=0&&p>ae&&(ee.classList.remove("is-pop"),ee.offsetWidth,ee.classList.add("is-pop")),ae=p),z.hidden=!1},comboShown(){return!z.hidden},comboEnd(e){if(!e)return;const a=!!e.bailed,o=!!e.pb&&!a;Se.textContent="+"+yt(e.score),Se.classList.toggle("is-hidden",a),Ce.textContent="×"+(e.mult!=null?e.mult:1),Ce.classList.toggle("is-hidden",!a),dt.classList.toggle("is-hidden",!o),lt.classList.toggle("is-hidden",!a),R.classList.toggle("is-bail",a);const i=le&&!v.hidden;R.classList.toggle("is-s3",i),i||(v.hidden=!0,W=0,H=0,le=!1),R.classList.remove("is-snap","is-rise"),R.offsetWidth,R.classList.add(i?"is-rise":"is-snap"),R.hidden=!1,he=a?.8:1.2},board(e){if(!e){me();return}Dt(Array.isArray(e)?e:[]),U.hidden=!1},boardOpen(){return!U.hidden},closeBoard:me,setBoardDot(e){oe.hidden=!e},tick(e,a,o){const i=e.position,s=e.mode,r=s==="skis",p=s==="bike",l=s==="glider",b=s==="rocket",h=s!=="boots",f=e.speed();if(Q=f>Q?f:Math.max(0,Q-Q*(a/.5)),x.pos.textContent=`${$e(i.x)} ${$e(i.y)} ${$e(i.z)}`,x.spd.textContent=f.toFixed(2)+" m/s",x.gear.textContent=s,x.gear.classList.toggle("is-hot",h),x.cam.textContent=o==="tp"?"chase":"first person",Z)x.state.textContent="BOOST";else if(l&&!e.grounded){const m=Ut(),C=e.velocity?e.velocity.y:0;x.state.textContent=m.stall>.35?"STALL":m.flare?"flare":m.updraft>.8?"lift +"+m.updraft.toFixed(1):C>.5?"climb":C<-6?"dive":"glide · "+m.airspeed.toFixed(0)}else if(b&&!e.grounded){const m=e.velocity?e.velocity.y:0;x.state.textContent="coast · "+(m<0?"−":"+")+Math.abs(m).toFixed(0)}else if(e.grounded)if(e.wipeT>0)x.state.textContent="wipeout";else if(r){const m=Bt();x.state.textContent=m.chatter>.35?"CHATTER":m.stop===2?"HOCKEY":m.stop===1?"plow":m.stivoting?"stivot":m.releasing?"PUMP":f>3?"carve":"skate"}else p?x.state.textContent=e.keys.sprint?"brake":e.keys.jumpHeld?"preload":e.keys.back?"pump":f>3?"ride":"pedal":x.state.textContent=e.keys.sprint&&f>5?"sprint":"ground";else{const m=Math.abs(e.airSpinDeg||0);x.state.textContent=m>45?"air · "+Math.round(m)+"°":"air"}k.move.classList.toggle("is-on",e.keys.forward||e.keys.back||e.keys.left||e.keys.right),k.sprint.classList.toggle("is-on",!!e.keys.sprint),k.sprint.classList.toggle("is-hidden",r),k.sprint.lastChild.nodeValue=p?"brake":"sprint",k.jump.classList.toggle("is-on",!e.grounded),k.gear.classList.toggle("is-on",h),k.boost.classList.toggle("is-hidden",!(b||qe)),k.spin.classList.toggle("is-on",!!(e.keys.spinLeft||e.keys.spinRight)),k.cam.classList.toggle("is-on",o==="tp"),Y>0&&(Y-=a,Y<=0&&(y.hidden=!0)),j>0&&(j-=a,we&&(j<=1.56&&S.classList.add("is-late"),j<=.36&&S.classList.add("is-gone-word"),j<=.2&&S.classList.add("is-gone-line")),j<=0&&(S.hidden=!0,we=!1)),he>0&&(he-=a,he<=0&&(R.hidden=!0)),!v.hidden&&W>0?(W-=a,W<=0&&(W=0,H=.3,v.classList.add("is-out"))):!v.hidden&&H>0&&(H-=a,H<=0&&(H=0,v.hidden=!0,v.classList.remove("is-out"))),fe+=a,He++;const _=performance.now();_-Tt>400&&(Ct.textContent=fe>0?String(Math.round(He/fe)):"—",fe=0,He=0,Tt=_)}}}export{sa as createHud,ia as hudFont,Gt as hudKind,qt as hudMark,Vt as hudMotion,Kt as hudSurf,De as hudType};

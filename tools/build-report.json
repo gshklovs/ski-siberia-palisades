@@ -2,8 +2,8 @@
   "generator": "poi-lab tools/export-red-dog/build.mjs",
   "spec": "specs/0001-ski-red-dog-face-architecture.md",
   "world": "siberia",
-  "pin": "66b950e5e9778023a6dbed419db6dcff5d841c56",
-  "builtAt": "2026-09-03T01:24:44.579Z",
+  "pin": "e2350fb36390526804b1f5fc730e956f1648ae3a",
+  "builtAt": "2026-09-06T06:36:57.697Z",
   "tier": "A",
   "crop": {
     "$doc": [
@@ -37,13 +37,55 @@
   "raster": {
     "mode": "core",
     "RES": 2,
+    "arrays": 14,
+    "pack": [
+      {
+        "bits": 8,
+        "name": "MC",
+        "max": 1
+      },
+      {
+        "bits": 8,
+        "name": "ML",
+        "max": 1
+      },
+      {
+        "bits": 8,
+        "name": "MS",
+        "max": 1
+      },
+      {
+        "bits": 8,
+        "name": "MD",
+        "max": 1
+      },
+      {
+        "bits": 16,
+        "name": "MW",
+        "max": 1
+      }
+    ],
+    "packed": [
+      "MC",
+      "ML",
+      "MS",
+      "MD",
+      "MW"
+    ],
+    "release": [],
+    "released": [],
+    "releaseCandidates": [],
+    "retained": [],
+    "releaseDecided": true,
+    "f32Arrays": 9,
     "RX0": -710,
     "RY0": -540,
     "RNX": 816,
     "RNY": 576,
-    "arrays": 14,
     "cells": 470016,
-    "bytes": 26320896
+    "bytes": 19740672,
+    "f32Bytes": 26320896,
+    "retainedWhy": {}
   },
   "fence": {
     "x0": -8640,
@@ -58,18 +100,18 @@
     "mode": "source",
     "note": "the run's own authored spawn, shipped unchanged — world.mjs derives it at runtime from the lift top terminal"
   },
-  "files": 57,
+  "files": 81,
   "sizes": {
-    "n": 56,
-    "raw": 6844316,
-    "gz": 2782030,
-    "br": 2031040,
+    "n": 80,
+    "raw": 6896838,
+    "gz": 1769272,
+    "br": 1488867,
     "byGroup": {
       "css": {
         "n": 4,
-        "raw": 67428,
-        "gz": 17493,
-        "br": 14865
+        "raw": 89102,
+        "gz": 25613,
+        "br": 21824
       },
       "html": {
         "n": 1,
@@ -78,22 +120,28 @@
         "br": 3972
       },
       "player": {
-        "n": 33,
-        "raw": 1393627,
-        "gz": 492621,
-        "br": 421118
+        "n": 50,
+        "raw": 1380707,
+        "gz": 539224,
+        "br": 477448
+      },
+      "rider:maps": {
+        "n": 2,
+        "raw": 83128,
+        "gz": 82892,
+        "br": 82648
       },
       "scene:data": {
         "n": 2,
-        "raw": 4196329,
-        "gz": 1934622,
-        "br": 1306794
+        "raw": 4196998,
+        "gz": 790280,
+        "br": 622355
       },
       "scene:code": {
-        "n": 15,
-        "raw": 475511,
-        "gz": 152652,
-        "br": 137999
+        "n": 20,
+        "raw": 435482,
+        "gz": 146621,
+        "br": 134328
       },
       "vendor": {
         "n": 1,
@@ -105,9 +153,15 @@
     "top": [
       {
         "file": "scene/dem-data.mjs",
-        "raw": 3496465,
-        "gzip": 1812931,
-        "brotli": 1196575
+        "raw": 3497134,
+        "gzip": 668589,
+        "brotli": 512136
+      },
+      {
+        "file": "js/play/rider-mesh.js",
+        "raw": 595978,
+        "gzip": 228456,
+        "brotli": 201051
       },
       {
         "file": "vendor/three.module.min.js",
@@ -128,60 +182,60 @@
         "brotli": 70696
       },
       {
+        "file": "rider/rider-nrm.webp",
+        "raw": 70080,
+        "gzip": 69821,
+        "brotli": 69602
+      },
+      {
         "file": "js/play/fx.js",
-        "raw": 147095,
-        "gzip": 52450,
-        "brotli": 43354
+        "raw": 81227,
+        "gzip": 31758,
+        "brotli": 27619
       },
       {
-        "file": "js/play/main.js",
-        "raw": 139079,
-        "gzip": 48818,
-        "brotli": 41893
-      },
-      {
-        "file": "js/play/ski.js",
-        "raw": 134772,
-        "gzip": 45575,
-        "brotli": 38614
-      },
-      {
-        "file": "js/play/guide.js",
-        "raw": 104902,
-        "gzip": 35688,
-        "brotli": 30280
-      },
-      {
-        "file": "js/play/markers.js",
-        "raw": 92310,
-        "gzip": 32603,
-        "brotli": 27651
+        "file": "js/play/rider.js",
+        "raw": 49143,
+        "gzip": 20858,
+        "brotli": 19006
       },
       {
         "file": "js/play/inventory.js",
-        "raw": 74223,
-        "gzip": 23526,
-        "brotli": 20317
+        "raw": 62869,
+        "gzip": 21308,
+        "brotli": 18764
       },
       {
-        "file": "js/play/bike.js",
-        "raw": 70343,
-        "gzip": 23400,
-        "brotli": 20083
+        "file": "js/play/hud.js",
+        "raw": 55972,
+        "gzip": 20886,
+        "brotli": 18384
       },
       {
-        "file": "js/play/controller.js",
-        "raw": 60608,
-        "gzip": 21798,
-        "brotli": 18803
+        "file": "js/play/markers.js",
+        "raw": 50442,
+        "gzip": 19841,
+        "brotli": 17310
+      },
+      {
+        "file": "js/play/main.js",
+        "raw": 44304,
+        "gzip": 17394,
+        "brotli": 15724
       }
     ],
     "perFile": [
       {
         "file": "scene/dem-data.mjs",
-        "raw": 3496465,
-        "gzip": 1812931,
-        "brotli": 1196575
+        "raw": 3497134,
+        "gzip": 668589,
+        "brotli": 512136
+      },
+      {
+        "file": "js/play/rider-mesh.js",
+        "raw": 595978,
+        "gzip": 228456,
+        "brotli": 201051
       },
       {
         "file": "vendor/three.module.min.js",
@@ -202,70 +256,64 @@
         "brotli": 70696
       },
       {
+        "file": "rider/rider-nrm.webp",
+        "raw": 70080,
+        "gzip": 69821,
+        "brotli": 69602
+      },
+      {
         "file": "js/play/fx.js",
-        "raw": 147095,
-        "gzip": 52450,
-        "brotli": 43354
+        "raw": 81227,
+        "gzip": 31758,
+        "brotli": 27619
       },
       {
-        "file": "js/play/main.js",
-        "raw": 139079,
-        "gzip": 48818,
-        "brotli": 41893
-      },
-      {
-        "file": "js/play/ski.js",
-        "raw": 134772,
-        "gzip": 45575,
-        "brotli": 38614
-      },
-      {
-        "file": "js/play/guide.js",
-        "raw": 104902,
-        "gzip": 35688,
-        "brotli": 30280
-      },
-      {
-        "file": "js/play/markers.js",
-        "raw": 92310,
-        "gzip": 32603,
-        "brotli": 27651
+        "file": "js/play/rider.js",
+        "raw": 49143,
+        "gzip": 20858,
+        "brotli": 19006
       },
       {
         "file": "js/play/inventory.js",
-        "raw": 74223,
-        "gzip": 23526,
-        "brotli": 20317
-      },
-      {
-        "file": "js/play/bike.js",
-        "raw": 70343,
-        "gzip": 23400,
-        "brotli": 20083
-      },
-      {
-        "file": "js/play/controller.js",
-        "raw": 60608,
-        "gzip": 21798,
-        "brotli": 18803
+        "raw": 62869,
+        "gzip": 21308,
+        "brotli": 18764
       },
       {
         "file": "js/play/hud.js",
-        "raw": 48357,
-        "gzip": 16916,
-        "brotli": 14583
+        "raw": 55972,
+        "gzip": 20886,
+        "brotli": 18384
       },
       {
-        "file": "js/play/surprise.js",
-        "raw": 49063,
-        "gzip": 16976,
-        "brotli": 14568
+        "file": "js/play/markers.js",
+        "raw": 50442,
+        "gzip": 19841,
+        "brotli": 17310
       },
       {
-        "file": "js/play/snowmobile.js",
-        "raw": 42774,
-        "gzip": 14457,
-        "brotli": 12647
+        "file": "js/play/main.js",
+        "raw": 44304,
+        "gzip": 17394,
+        "brotli": 15724
+      },
+      {
+        "file": "js/play/guide.js",
+        "raw": 45362,
+        "gzip": 17539,
+        "brotli": 15616
+      },
+      {
+        "file": "js/play/ski.js",
+        "raw": 43028,
+        "gzip": 16112,
+        "brotli": 14052
+      },
+      {
+        "file": "rider/rider-ach.webp",
+        "raw": 13048,
+        "gzip": 13071,
+        "brotli": 13046
       },
       {
         "file": "scene/runs-data.mjs",
@@ -274,136 +322,112 @@
         "brotli": 12434
       },
       {
-        "file": "js/play/tracks.js",
-        "raw": 36967,
-        "gzip": 13502,
-        "brotli": 11679
-      },
-      {
-        "file": "js/play/snowball.js",
-        "raw": 38574,
-        "gzip": 13167,
-        "brotli": 11455
-      },
-      {
-        "file": "js/play/sled.js",
-        "raw": 31406,
-        "gzip": 11630,
-        "brotli": 10143
-      },
-      {
-        "file": "scene/world.mjs",
-        "raw": 29797,
-        "gzip": 10547,
-        "brotli": 9172
-      },
-      {
-        "file": "js/play/touch.js",
-        "raw": 26364,
-        "gzip": 10034,
-        "brotli": 8630
-      },
-      {
-        "file": "js/play/speedo.js",
-        "raw": 26476,
-        "gzip": 9969,
-        "brotli": 8530
-      },
-      {
-        "file": "js/play/tricks.js",
-        "raw": 25771,
-        "gzip": 9641,
-        "brotli": 8418
-      },
-      {
-        "file": "js/play/collision.js",
-        "raw": 25200,
-        "gzip": 9644,
-        "brotli": 8393
-      },
-      {
-        "file": "js/play/canopy.js",
-        "raw": 28500,
-        "gzip": 9639,
-        "brotli": 8383
-      },
-      {
-        "file": "js/play/audio.js",
-        "raw": 29551,
-        "gzip": 9516,
-        "brotli": 8250
-      },
-      {
-        "file": "js/play/solids.js",
-        "raw": 25785,
-        "gzip": 9121,
-        "brotli": 7992
-      },
-      {
-        "file": "js/play/lift.js",
-        "raw": 24185,
-        "gzip": 8642,
-        "brotli": 7529
-      },
-      {
-        "file": "scene/terrain.mjs",
-        "raw": 23285,
-        "gzip": 8135,
-        "brotli": 7133
-      },
-      {
-        "file": "js/play/glider.js",
-        "raw": 20467,
-        "gzip": 8119,
-        "brotli": 7081
-      },
-      {
-        "file": "scene/ground.mjs",
-        "raw": 19146,
-        "gzip": 7578,
-        "brotli": 6609
-      },
-      {
-        "file": "js/play/boost.js",
-        "raw": 19308,
-        "gzip": 7529,
-        "brotli": 6519
-      },
-      {
-        "file": "scene/layout.mjs",
-        "raw": 20524,
-        "gzip": 7747,
-        "brotli": 6516
+        "file": "js/play/chunks.js",
+        "raw": 30607,
+        "gzip": 12404,
+        "brotli": 11362
       },
       {
         "file": "css/play.css",
-        "raw": 33166,
-        "gzip": 7423,
-        "brotli": 6402
+        "raw": 45600,
+        "gzip": 12360,
+        "brotli": 10645
       },
       {
-        "file": "scene/kit.mjs",
-        "raw": 15745,
-        "gzip": 5315,
-        "brotli": 4635
+        "file": "js/play/surprise.js",
+        "raw": 28616,
+        "gzip": 12111,
+        "brotli": 10463
       },
       {
-        "file": "js/play/spawn.js",
-        "raw": 13562,
-        "gzip": 5339,
-        "brotli": 4620
+        "file": "js/play/bike.js",
+        "raw": 30500,
+        "gzip": 11362,
+        "brotli": 9718
       },
       {
-        "file": "scene/lib/core.mjs",
-        "raw": 12194,
-        "gzip": 4811,
-        "brotli": 4204
+        "file": "js/play/rig/clips.js",
+        "raw": 20949,
+        "gzip": 8976,
+        "brotli": 8240
       },
       {
-        "file": "js/play/intro.js",
-        "raw": 11559,
-        "gzip": 4972,
-        "brotli": 4115
+        "file": "scene/stamp-tile.mjs",
+        "raw": 23909,
+        "gzip": 9248,
+        "brotli": 8084
+      },
+      {
+        "file": "js/play/snowball.js",
+        "raw": 19891,
+        "gzip": 8243,
+        "brotli": 7294
+      },
+      {
+        "file": "js/play/controller.js",
+        "raw": 16519,
+        "gzip": 7013,
+        "brotli": 6413
+      },
+      {
+        "file": "scene/world.mjs",
+        "raw": 15899,
+        "gzip": 6981,
+        "brotli": 6311
+      },
+      {
+        "file": "js/play/tricks.js",
+        "raw": 17370,
+        "gzip": 6669,
+        "brotli": 6199
+      },
+      {
+        "file": "scene/tiles.mjs",
+        "raw": 14085,
+        "gzip": 6434,
+        "brotli": 5781
+      },
+      {
+        "file": "css/intro.css",
+        "raw": 17548,
+        "gzip": 6515,
+        "brotli": 5434
+      },
+      {
+        "file": "js/play/collision-router.js",
+        "raw": 13251,
+        "gzip": 5873,
+        "brotli": 5280
+      },
+      {
+        "file": "js/play/snowmobile.js",
+        "raw": 13767,
+        "gzip": 5600,
+        "brotli": 5022
+      },
+      {
+        "file": "scene/chunk-worker.mjs",
+        "raw": 11278,
+        "gzip": 5127,
+        "brotli": 4649
+      },
+      {
+        "file": "js/play/collision.js",
+        "raw": 10804,
+        "gzip": 5170,
+        "brotli": 4633
+      },
+      {
+        "file": "js/play/sled.js",
+        "raw": 10585,
+        "gzip": 4771,
+        "brotli": 4358
+      },
+      {
+        "file": "js/play/tracks.js",
+        "raw": 11169,
+        "gzip": 4643,
+        "brotli": 4191
       },
       {
         "file": "css/te.css",
@@ -412,94 +436,202 @@
         "brotli": 4107
       },
       {
+        "file": "js/play/audio.js",
+        "raw": 13027,
+        "gzip": 4496,
+        "brotli": 4005
+      },
+      {
         "file": "index.html",
         "raw": 10991,
         "gzip": 4898,
         "brotli": 3972
       },
       {
-        "file": "js/play/rocket.js",
-        "raw": 10793,
-        "gzip": 4426,
-        "brotli": 3793
+        "file": "scene/terrain.mjs",
+        "raw": 9102,
+        "gzip": 4183,
+        "brotli": 3692
       },
       {
-        "file": "scene/lift.mjs",
-        "raw": 12118,
-        "gzip": 4111,
-        "brotli": 3622
+        "file": "js/play/lift.js",
+        "raw": 8951,
+        "gzip": 3904,
+        "brotli": 3609
       },
       {
-        "file": "scene/env.mjs",
-        "raw": 9430,
-        "gzip": 3974,
-        "brotli": 3470
+        "file": "scene/ground.mjs",
+        "raw": 7499,
+        "gzip": 3587,
+        "brotli": 3257
       },
       {
-        "file": "js/play/loader.js",
-        "raw": 10078,
-        "gzip": 3951,
-        "brotli": 3341
+        "file": "js/play/solids.js",
+        "raw": 7213,
+        "gzip": 3327,
+        "brotli": 3019
       },
       {
-        "file": "scene/cliff.mjs",
-        "raw": 8523,
-        "gzip": 3814,
-        "brotli": 3275
+        "file": "js/play/canopy.js",
+        "raw": 9687,
+        "gzip": 3309,
+        "brotli": 2978
+      },
+      {
+        "file": "scene/kit.mjs",
+        "raw": 7505,
+        "gzip": 3323,
+        "brotli": 2915
+      },
+      {
+        "file": "js/play/touch.js",
+        "raw": 7496,
+        "gzip": 3238,
+        "brotli": 2831
+      },
+      {
+        "file": "js/play/rig/bloom.js",
+        "raw": 6950,
+        "gzip": 3143,
+        "brotli": 2793
+      },
+      {
+        "file": "scene/layout.mjs",
+        "raw": 8007,
+        "gzip": 3278,
+        "brotli": 2772
+      },
+      {
+        "file": "js/play/glider.js",
+        "raw": 5999,
+        "gzip": 2938,
+        "brotli": 2682
+      },
+      {
+        "file": "js/play/rail.js",
+        "raw": 5898,
+        "gzip": 2807,
+        "brotli": 2609
+      },
+      {
+        "file": "scene/lib/core.mjs",
+        "raw": 5637,
+        "gzip": 2808,
+        "brotli": 2539
+      },
+      {
+        "file": "js/play/boost.js",
+        "raw": 5642,
+        "gzip": 2752,
+        "brotli": 2500
+      },
+      {
+        "file": "js/play/spawn.js",
+        "raw": 5371,
+        "gzip": 2495,
+        "brotli": 2283
       },
       {
         "file": "scene/forest.mjs",
-        "raw": 8844,
-        "gzip": 3505,
-        "brotli": 2961
+        "raw": 4993,
+        "gzip": 2364,
+        "brotli": 2141
       },
       {
-        "file": "css/intro.css",
-        "raw": 8400,
-        "gzip": 3376,
-        "brotli": 2758
+        "file": "scene/lift.mjs",
+        "raw": 5352,
+        "gzip": 2307,
+        "brotli": 2098
       },
       {
-        "file": "js/play/idle.js",
-        "raw": 7232,
-        "gzip": 3297,
-        "brotli": 2692
+        "file": "js/play/outfits/armour.js",
+        "raw": 8675,
+        "gzip": 2400,
+        "brotli": 2088
       },
       {
-        "file": "js/play/flags.js",
-        "raw": 7092,
-        "gzip": 3035,
-        "brotli": 2491
+        "file": "js/play/loader.js",
+        "raw": 5488,
+        "gzip": 2396,
+        "brotli": 2080
       },
       {
-        "file": "js/play/clean.js",
-        "raw": 5695,
-        "gzip": 2644,
-        "brotli": 2143
+        "file": "js/play/speedo.js",
+        "raw": 4351,
+        "gzip": 2158,
+        "brotli": 1955
       },
       {
-        "file": "scene/signs.mjs",
-        "raw": 5654,
-        "gzip": 2332,
-        "brotli": 2006
+        "file": "js/play/intro.js",
+        "raw": 4826,
+        "gzip": 2155,
+        "brotli": 1836
       },
       {
-        "file": "js/play/settings.js",
-        "raw": 4974,
-        "gzip": 2255,
-        "brotli": 1833
+        "file": "scene/env.mjs",
+        "raw": 3729,
+        "gzip": 1953,
+        "brotli": 1766
+      },
+      {
+        "file": "js/play/outfits/race.js",
+        "raw": 9097,
+        "gzip": 1914,
+        "brotli": 1673
       },
       {
         "file": "css/speedo.css",
-        "raw": 4093,
-        "gzip": 1992,
-        "brotli": 1598
+        "raw": 4185,
+        "gzip": 2036,
+        "brotli": 1638
       },
       {
-        "file": "scene/canopy.mjs",
-        "raw": 1541,
-        "gzip": 800,
-        "brotli": 705
+        "file": "scene/feature-index.mjs",
+        "raw": 3177,
+        "gzip": 1601,
+        "brotli": 1462
+      },
+      {
+        "file": "scene/signs.mjs",
+        "raw": 3294,
+        "gzip": 1466,
+        "brotli": 1315
+      },
+      {
+        "file": "js/play/rocket.js",
+        "raw": 3150,
+        "gzip": 1424,
+        "brotli": 1299
+      },
+      {
+        "file": "scene/cliff.mjs",
+        "raw": 1740,
+        "gzip": 1023,
+        "brotli": 971
+      },
+      {
+        "file": "js/play/outfits/shell.js",
+        "raw": 3956,
+        "gzip": 1042,
+        "brotli": 920
+      },
+      {
+        "file": "js/play/rig/env.js",
+        "raw": 1622,
+        "gzip": 959,
+        "brotli": 875
+      },
+      {
+        "file": "js/play/outfits/freeride.js",
+        "raw": 2227,
+        "gzip": 691,
+        "brotli": 624
+      },
+      {
+        "file": "js/play/idle.js",
+        "raw": 1312,
+        "gzip": 712,
+        "brotli": 573
       },
       {
         "file": "scene/ridge-data.mjs",
@@ -508,12 +640,97 @@
         "brotli": 561
       },
       {
+        "file": "js/play/settings.js",
+        "raw": 1208,
+        "gzip": 634,
+        "brotli": 552
+      },
+      {
+        "file": "js/play/outfits/retro.js",
+        "raw": 1259,
+        "gzip": 558,
+        "brotli": 506
+      },
+      {
+        "file": "js/play/recorder.js",
+        "raw": 976,
+        "gzip": 542,
+        "brotli": 494
+      },
+      {
+        "file": "scene/canopy.mjs",
+        "raw": 776,
+        "gzip": 483,
+        "brotli": 449
+      },
+      {
+        "file": "scene/frames.mjs",
+        "raw": 790,
+        "gzip": 472,
+        "brotli": 435
+      },
+      {
+        "file": "js/play/atlas.js",
+        "raw": 987,
+        "gzip": 449,
+        "brotli": 430
+      },
+      {
+        "file": "js/play/clean.js",
+        "raw": 882,
+        "gzip": 502,
+        "brotli": 429
+      },
+      {
+        "file": "js/play/flags.js",
+        "raw": 539,
+        "gzip": 379,
+        "brotli": 326
+      },
+      {
         "file": "js/play/dev.js",
         "raw": 562,
-        "gzip": 342,
-        "brotli": 295
+        "gzip": 340,
+        "brotli": 291
+      },
+      {
+        "file": "js/play/outfits/after.js",
+        "raw": 628,
+        "gzip": 320,
+        "brotli": 272
+      },
+      {
+        "file": "js/play/outfits/index.js",
+        "raw": 375,
+        "gzip": 253,
+        "brotli": 217
       }
     ]
+  },
+  "minify": {
+    "enabled": true,
+    "esbuild": "0.24.2",
+    "files": 62,
+    "exempt": [
+      "public/scene/stamp-tile.mjs",
+      "public/scene/runs-data.mjs",
+      "public/scene/ridge-data.mjs",
+      "public/scene/dem-data.mjs",
+      "public/scene/canopy-data.mjs",
+      "public/scene/cliff-data.mjs",
+      "public/js/play/dev.js",
+      "public/js/play/recorder.js",
+      "public/js/play/rider-mesh.js",
+      "public/js/play/rig/clips.js",
+      "public/vendor/three.module.min.js"
+    ],
+    "rawBefore": 2518747,
+    "rawAfter": 865105,
+    "brotliBefore": 774169,
+    "brotliAfter": 309925,
+    "consts": {
+      "LOOK": 0.0022
+    }
   },
   "budget": {
     "$doc": "D23/D42 — THE SAME CAPS AS WORLD #1, deliberately unrelaxed. Measured against world.report.stats out of a real headless load, never by eye.",
@@ -526,12 +743,225 @@
       "one is close to it. See worlds/red-dog.json for the full note and",
       "runs/palisades-front-A-merge-01/renders/gate-rca/RCA.md §3 for the numbers."
     ],
+    "$measured": [
+      "specs/0051 §10.13 — EVERY FIELD BELOW THAT 0051 MOVED CITES THIS RUN, and",
+      "no field was written before it (D-6: 'measure before any cap is written').",
+      "",
+      "THE RUN. 2026-09-05, wave 3c, on chunk/w0-3c off chunk/w0 @ d686f06",
+      "(waves 0, 1, 2 and 3a + 3b merged). EXPORT BUILDS, both worlds, never the",
+      "bench (§0.3, D-2):",
+      "  node tools/export-red-dog/build.mjs --world <w> --pin HEAD --out <dir>",
+      "then §7.4 check 8's traversal at its spec duration:",
+      "  --soak 300 --tripwire 60",
+      "Renderer d3d11 — ANGLE (NVIDIA GeForce RTX 5060 Laptop GPU (0x00002D59),",
+      "D3D11), quiet box, the two worlds run sequentially. Series: 602 samples",
+      "per world at 500 ms, of usedJSHeapSize, world.report.stats.gpuBytes,",
+      "the collision router's RESIDENT collidableTriangles, drawCalls and",
+      "triangles. Raw series in the run's soak-3c.json; the table is in",
+      "runs/palisades-front-A-merge-01/renders/chunking/PROGRESS-0051-3c.md.",
+      "",
+      "WHAT MADE THIS TRAVERSAL DIFFERENT FROM THE ONE WAVE 1a REPORTED. Check 8",
+      "held `{ w: true }` and controller.js:228-236 names the key `forward`, so",
+      "every earlier 'traverse' was a parked rider — 1a said so of its own",
+      "red-dog leg (19.4 m of net displacement in 300 s). It now rides each lift",
+      "the world declares and skis the fall line off every unload:",
+      "  red-dog  5,502 m of path, 3,707 m net, max 29.00 m/s, 7 lift legs of 7",
+      "  siberia  2,834 m of path,   241 m net, max 24.73 m/s, 9 legs of 1 lift",
+      "and at --soak 300 the row ASSERTS a 1,500 m path floor, so a soak that",
+      "did not move can no longer be read as one that did."
+    ],
     "drawCalls": 250,
     "triangles": 1900000,
     "collidableTriangles": 1200000,
+    "$collidableTrianglesResident": [
+      "specs/0051 D-11, §7.1, §11 Q2 — THE RESIDENT CAP, AND IT IS NOT 900,000.",
+      "",
+      "`collidableTriangles` above is the WHOLE-WORLD HARVEST cap and is",
+      "unchanged at 1,200,000 (collision.js:196 holds the same number; §7.1).",
+      "This is the other one D-11 asked 3c to add: the soup ACTUALLY RESIDENT",
+      "around the player, read from collision-router.js:547-556's residency()",
+      "every 500 ms across the 300 s traversal.",
+      "",
+      "Measured peak: red-dog 1,796,906, siberia 1,188,527. Cap = the higher",
+      "peak + 10 % = 1,976,597, the way D-11 words it.",
+      "",
+      "IT IS LARGER THAN THE WHOLE-WORLD HARVEST, AND THAT IS THE DESIGN. The",
+      "old soup harvested the whole mountain at the terrain's shipped density;",
+      "the ring builds its collision from the TILE LATTICE, 8,192 collidable",
+      "triangles per L0 tile at 1.00 m spacing (§3.5) against a whole-world",
+      "harvest that never sampled the ground that finely. 64 L0 + 48 L1 tiles of",
+      "terrain alone is 622,592 — which is exactly the series' MINIMUM (619,620,",
+      "drained at spawn). The rest is props and trees inside the guaranteed",
+      "384 m band. Median 1,325,705, p95 1,794,100: this is a sustained level,",
+      "not a teleport transient.",
+      "",
+      "§11 Q2 proposed 900,000 and the spec refused to write it (D-11: 'Q2's",
+      "900,000 is not written'). It was half the truth. Greg may tighten this",
+      "later — the lever is L1 decimation (§3.5) or prop density inside 384 m,",
+      "and either is a detail-spend decision (wave 4a), not a harness one."
+    ],
+    "collidableTrianglesResident": 1976597,
+    "$transferBrotliBytes": [
+      "D23. THE ONLY PRODUCT CAP IN THIS BLOCK, AND IT DOES NOT MOVE: 2,621,440",
+      "B on the wire, brotli, measured at build. On the 2026-09-06 export build",
+      "at --pin HEAD siberia's sizes.br reads 1,488,867 — 57 % of D23, 1,132,573",
+      "B spare.",
+      "",
+      "specs/0051 §10.11 carries a SECOND line beside it and that one is NOT a",
+      "product cap: sizes.br less sizes.byGroup['rider:maps'].br — the world +",
+      "player bytes with the two baked rider maps excluded, per",
+      "specs/0050-DECISIONS §1. It was drawn 2026-09-05 from §0.4 M7's measured",
+      "1,470,208 + 8.8 % and given siberia its own 10 k tick: 1,400,000. A",
+      "no-regression line, not a physical constraint.",
+      "",
+      "D-17, 2026-09-06 — THE LINE IS RE-BASED, by the rule that drew it, off",
+      "today's measurement (the D-16 precedent: a planning gauge is re-derived",
+      "from measurement, never relaxed by hand to make a run green).",
+      "  measured  1,488,867 - 82,648 (rider:maps) = 1,406,219 B",
+      "            (over the old 1,400,000 by 6,219 B, 0.44 %)",
+      "  + 8.8 %   1,406,219 x 1.088 = 1,529,966.27",
+      "  10 k tick 1,530,000   <- the siberia line from 2026-09-06",
+      "Red-dog moves the same way, off its own measurement, to 1,810,000 (see",
+      "worlds/red-dog.json).",
+      "",
+      "ATTRIBUTION: 0051 OWNS NONE OF SIBERIA'S REGRESSION. Siberia sat 7,201 B",
+      "inside its line at the W4FIX2 measurement; the rider/v3 tip 9fe39b2,",
+      "merged 2026-09-06, spent +13,420 B on both worlds — the same player bytes",
+      "— and that is the entire 6,219 B overage. Siberia's crop never moved and",
+      "no wave-1/2/3/4 chunking module ships bytes here that red-dog's",
+      "decomposition did not already count against red-dog.",
+      "",
+      "AND D23 STAYS THE ONLY PRODUCT CAP. At 57 % of it, nothing a player",
+      "fetches is anywhere near a limit; the line above is a growth tracker for",
+      "the next spec that ships bytes here."
+    ],
     "transferBrotliBytes": 2621440,
-    "rasterHeapBytes": 34000000,
-    "usedJSHeapBytes": 420000000,
-    "buildMs": 20000
+    "$rasterHeapBytes": [
+      "specs/0051 §7.3 / §10.9 / B.6 keep this field and tighten it once the",
+      "§3.3 reclaim lands. 34000000 was the pre-0051 ceiling and it was being",
+      "VIOLATED: the true heap was 439782 x 20 x 4 = 35182560 B (§0.4 M5, over",
+      "by 1182560), while verify.mjs printed 31664304 from a stale arrays: 18.",
+      "assertRasterHeap() now makes that particular lie impossible.",
+      "",
+      "The spec's 23000000 was computed with all 8 red-dog channels at Uint8.",
+      "Two of them, MC and MW, move 2 and 32 of 24845 trees in the forest RNG",
+      "at 8 bits (check 1 stays 0 diff; the stream order does not) and D-3",
+      "authorises exactly two C15/C16 re-records, in waves 1b and 3a. They ship",
+      "at Uint16, so the measured export-build heap is 23748228 B:",
+      "  439782 cells x (11 f32 + 2 u16 + 6 u8) = 54 B/cell, GUARDF released.",
+      "Siberia measures 470016 x (9 f32 + 1 u16 + 4 u8) = 42 B/cell = 19740672.",
+      "24000000 is the smallest round cap both worlds clear (red-dog by 251772,",
+      "1.05 %). It is a CAP, shared by both worlds like every other budget row —",
+      "not a target. If Greg takes the other branch (MC/MW back to 8 bits and a",
+      "third re-record), this goes to 23000000 and the note above it changes.",
+      "",
+      "3c re-checked it against the build (§10.9): build-report.json raster.bytes",
+      "reads 23748228 red-dog / 19740672 siberia. UNCHANGED by this wave."
+    ],
+    "rasterHeapBytes": 24000000,
+    "$usedJSHeapBytes": [
+      "specs/0051 §11 Q3, D-6 — WHAT REPLACED 420,000,000, and why it took until",
+      "wave 3c to write it.",
+      "",
+      "420,000,000 was never measured against a moving player. §6.6: the only",
+      "number the spec had was a 3-minute sample in which the rider PARKED after",
+      "leg 1 and the heap FELL 27.6 MB. Q3 asked Greg to leave the field loose",
+      "rather than tighten it on that sample, and D-6 forbade writing anything",
+      "until check 8's curve existed.",
+      "",
+      "It exists now, on a rider that actually crosses the mountain. Peak",
+      "usedJSHeapSize over the 300 s traversal:",
+      "  red-dog  359,557,994 B   (two runs: 359,557,994 and 315,747,577;",
+      "                            median 293,524,695, min 272,431,070)",
+      "  siberia  246,599,780 B",
+      "Cap = the highest peak seen on either world + 10 % = 395,513,793.",
+      "",
+      "A TIGHTENING OF 24,486,207 B, and a real one: the old cap had 60 MB of",
+      "slack over a number nobody had ever pushed. HEADS-UP, stated rather than",
+      "smoothed over: the heap is a GC sawtooth and the two red-dog runs of the",
+      "same bytes differ by 43.8 MB (14 %), so +10 % over the worst sample seen",
+      "is roughly one sawtooth of headroom. If this row starts flaking, the",
+      "answer is a second measured peak and a re-derived cap — not a nudge."
+    ],
+    "usedJSHeapBytes": 395513793,
+    "$gpuBytes": [
+      "specs/0051 §7.3, §6.2, critic A.7 — 'no VRAM number anywhere' was the",
+      "finding; this is the cap that answers it. Wave 1a #9 exposed the series",
+      "on world.report.stats.gpuBytes (summed uploaded attribute byteLength +",
+      "texture bytes) and 3c is the first wave allowed to cap it (D-6).",
+      "",
+      "Peak over the 300 s traversal: red-dog 81,247,268 B, siberia 30,447,624 B.",
+      "Cap = 81,247,268 + 10 % = 89,371,995.",
+      "",
+      "It does not move: all 602 red-dog samples read the same 81,247,268. That",
+      "is the design working — §2.2's pools and §2.3's 144/160 slots are",
+      "allocated once and rewritten in place, so the GPU side of a traverse is",
+      "flat by construction. A gpuBytes series that starts to CLIMB across a",
+      "traverse is the signal this row exists to catch.",
+      "",
+      "§6.2 estimated 52,775,536 B for T1 plus the world-independent rider",
+      "textures. The measured 81.2 MB is the whole scene, T0 geometry included,",
+      "so the two are not the same accounting; this is the measured one."
+    ],
+    "gpuBytes": 89371995,
+    "$buildMs": [
+      "specs/0051 §7.3, §9.2 #8, critic A.14 — THIS FIELD CHANGED MEANING, and",
+      "the number changed with it. Read both halves before comparing it to an",
+      "older log.",
+      "",
+      "WHAT IT USED TO MEAN: world.report.stats.buildMs, the wall time inside",
+      "buildWorld() alone — 1,966 ms on red-dog against a 20,000 cap. The player",
+      "waits for nav -> window.__playerReady, which is a different clock: 16,309",
+      "ms wall on the same build (§0.4 M8). A cap of 20,000 on the 1,966 ms clock",
+      "was measuring the wrong thing with 18 s of slack, and §7.3 records that",
+      "the design's proposed 12,000 would have failed on day one against the",
+      "clock a player actually feels.",
+      "",
+      "WHAT IT MEANS NOW: navigation start -> window.__playerReady, verbatim",
+      "§7.3. verify.mjs's boot() defines an accessor on window.__playerReady",
+      "before any page script runs and stamps performance.now() (whose origin IS",
+      "navigation start) when main.js:2810 sets it — so this is the definition",
+      "measured, not a harness poll interval rounded off. main.js is not touched.",
+      "",
+      "MEASURED, COLD (first page of the process, empty HTTP and V8 code caches —",
+      "what a first-time visitor gets):",
+      "  red-dog  19,771 ms      siberia  12,812 ms",
+      "A page opened later in the same browser reads ~3,900 ms warm; the cap is",
+      "written against the cold one, which is the honest one.",
+      "Cap = 19,771 + 25 % = 24,714 ms.",
+      "",
+      "D-18, 2026-09-06 — WHICH BOOT THIS ROW MEANS IS NOW SAID OUT LOUD, AND IT",
+      "IS THE WARM ONE. GATE-W4 measured the row four times through verify.mjs's",
+      "own serve()/newBrowser()/boot() and found it BIMODAL, not noisy:",
+      "  first boot in a fresh node process   33,969 ms   34,831 ms",
+      "  second boot in the same process       9,284 ms    9,205 ms",
+      "across a 2x swing in box load (100 % / 46 %) — the readings pair off by",
+      "position in the process, not by load. The first boot pays a ~25 s",
+      "browser/shader-cache cold start the second does not, and the 24,714 cap",
+      "sits BETWEEN the two modes, so the row as written passed or failed on",
+      "which boot of the run happened to be measured. Check 8's warm reading in",
+      "the same run was 8,467 ms — the warm mode exactly.",
+      "",
+      "That is a measurement-definition defect in the harness, not a build",
+      "regression, and it is fixed in verify.mjs's [3] section: [3] now boots",
+      "ONCE TO PRIME (discarded, printed as an informational cold-start reading)",
+      "and gates the SECOND boot. THE CAP DID NOT MOVE — warm 9,284 + 10 % is",
+      "10,213, far under 24,714, and D-6 does not let a fix agent tighten a cap",
+      "on the way past. Warm is also the mode check 8 has always read, so the",
+      "two rows now measure the same clock at last.",
+      "",
+      "SIBERIA'S OWN ROW HAD A SECOND DEFECT and it is fixed with it: at the",
+      "wave-4 gate siberia's whole [3] block was served from verify.mjs's",
+      "scene-hash cache ('cached — scene unchanged', buildMs 17,694) and was",
+      "therefore not measured at all. The cache is now scene-derived rows ONLY",
+      "(draw calls, triangles, collidable harvest, gpu bytes); buildMs and used",
+      "JS heap are wall-clock/runtime readings and are always re-measured.",
+      "",
+      "buildWorld()'s own figure is still measured and still printed on the D23",
+      "row beside this one — as a reading, not a cap. Losing it would lose the",
+      "one number that says whether a slow boot is the world build or the 9.2 s",
+      "of module fetch/eval that 1a's timeline found ahead of it."
+    ],
+    "buildMs": 24714
   }
 }
