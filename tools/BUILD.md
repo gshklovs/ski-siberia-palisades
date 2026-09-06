@@ -6,7 +6,7 @@ Everything under `public/` is written by one script in a private research repo:
 poi-lab/tools/export-red-dog/build.mjs --world siberia
 ```
 
-Built from poi-lab commit `31626d98b88eb96c2822a1a5c2d91531f45e1e3c` on `2026-09-06T18:48:24Z`.
+Built from poi-lab commit `4f9da1a4ae2104751f4cd61bc2168821a82691fd` on `2026-09-06T19:25:10Z`.
 
 A hand-edited change here is lost on the next bake, silently. If something in
 `public/` is wrong, the fix belongs in one of four places in poi-lab:
@@ -59,6 +59,54 @@ A hand-edited change here is lost on the next bake, silently. If something in
    its markers, its race courses), so it would fail on that rather than on
    anything here. Threading `worlds/*.json`'s `gate` block through those checks
    is the outstanding work.
+
+## Caching — a ship is atomic (`vercel.json`)
+
+Every URL under `public/` except `og.png` is served
+
+```
+Cache-Control: public, max-age=0, must-revalidate
+```
+
+That is not "no caching". The bytes stay in the browser's cache; what they lose
+is *freshness*, so the browser re-asks on every load and Vercel answers the
+conditional GET with a `304 Not Modified` off the ETag. A second visit is a
+handful of empty responses.
+
+**Why.** Nothing this builder emits is content-addressed. `flags.js` is
+`flags.js` in every release, `world.mjs` is `world.mjs`, and the vendored
+`three.module.min.js` never changes name either. A cache lifetime on a URL whose
+name does not change when its bytes change gives every module its own private
+expiry — and a page assembled out of two different releases is then the ordinary
+case, not the unlucky one. On 2026-09-06 that is exactly what production did:
+
+```
+COULD NOT START — The requested module './flags.js' does not provide an
+export named 'labUI'
+```
+
+...while the origin served a `flags.js` that exported it perfectly well. The
+config at the time said `max-age=604800, must-revalidate` on `/js/**` and
+`max-age=31536000, immutable` on `/scene/**`; a returning browser paired a
+week-old `flags.js` with a `hud.js` it had just fetched. `must-revalidate` is not
+the guard it reads as — it forbids serving *stale*, and six days of remaining
+freshness is not stale.
+
+**The rule.** A URL may be reused past this request only if its **name** changes
+when its bytes change. `og.png` is the single exception, and it earns it twice:
+the player never fetches it (only a link-preview crawler does, so it can never be
+half of a mixed-version page), and its `max-age=3600` is the one value on the
+site that a deployment ignoring `vercel.json` could not produce by accident —
+which is what `ship.mjs`'s live probe reads to prove the config is in force.
+
+**Enforced, not documented.** `build.mjs` step 10c compiles the emitted
+`vercel.json` with Vercel's own router and asks it, for every file it just
+wrote, what `Cache-Control` the browser will be told; anything unhashed that is
+not `max-age=0, must-revalidate` fails the build. `verify.mjs` asserts the same
+property in the gate, `ship.mjs`'s live probe (3) asserts it against the live
+origin plus a real 304, and `cachepolicy.test.mjs` proves it end to end in a
+browser — it serves two builds off one origin and shows the old headers
+reproducing that boot failure and the current ones not.
 
 ## What is different about this world
 

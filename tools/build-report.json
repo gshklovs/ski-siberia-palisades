@@ -2,8 +2,8 @@
   "generator": "poi-lab tools/export-red-dog/build.mjs",
   "spec": "specs/0001-ski-red-dog-face-architecture.md",
   "world": "siberia",
-  "pin": "31626d98b88eb96c2822a1a5c2d91531f45e1e3c",
-  "builtAt": "2026-09-06T18:48:37.705Z",
+  "pin": "4f9da1a4ae2104751f4cd61bc2168821a82691fd",
+  "builtAt": "2026-09-06T19:25:23.227Z",
   "tier": "A",
   "crop": {
     "$doc": [
