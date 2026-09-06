@@ -2,8 +2,8 @@
   "generator": "poi-lab tools/export-red-dog/build.mjs",
   "spec": "specs/0001-ski-red-dog-face-architecture.md",
   "world": "siberia",
-  "pin": "e2350fb36390526804b1f5fc730e956f1648ae3a",
-  "builtAt": "2026-09-06T06:36:57.697Z",
+  "pin": "a760c7d85e3441cdb0c06e01ef6c45dac66a1238",
+  "builtAt": "2026-09-06T08:23:29.713Z",
   "tier": "A",
   "crop": {
     "$doc": [
@@ -103,9 +103,9 @@
   "files": 81,
   "sizes": {
     "n": 80,
-    "raw": 6896838,
-    "gz": 1769272,
-    "br": 1488867,
+    "raw": 6903370,
+    "gz": 1771640,
+    "br": 1491083,
     "byGroup": {
       "css": {
         "n": 4,
@@ -121,9 +121,9 @@
       },
       "player": {
         "n": 50,
-        "raw": 1380707,
-        "gz": 539224,
-        "br": 477448
+        "raw": 1387239,
+        "gz": 541592,
+        "br": 479664
       },
       "rider:maps": {
         "n": 2,
@@ -219,9 +219,9 @@
       },
       {
         "file": "js/play/main.js",
-        "raw": 44304,
-        "gzip": 17394,
-        "brotli": 15724
+        "raw": 44438,
+        "gzip": 17453,
+        "brotli": 15786
       }
     ],
     "perFile": [
@@ -293,9 +293,9 @@
       },
       {
         "file": "js/play/main.js",
-        "raw": 44304,
-        "gzip": 17394,
-        "brotli": 15724
+        "raw": 44438,
+        "gzip": 17453,
+        "brotli": 15786
       },
       {
         "file": "js/play/guide.js",
@@ -316,16 +316,16 @@
         "brotli": 13046
       },
       {
+        "file": "js/play/chunks.js",
+        "raw": 35137,
+        "gzip": 14091,
+        "brotli": 12951
+      },
+      {
         "file": "scene/runs-data.mjs",
         "raw": 43285,
         "gzip": 15607,
         "brotli": 12434
-      },
-      {
-        "file": "js/play/chunks.js",
-        "raw": 30607,
-        "gzip": 12404,
-        "brotli": 11362
       },
       {
         "file": "css/play.css",
@@ -406,16 +406,16 @@
         "brotli": 5022
       },
       {
+        "file": "js/play/collision.js",
+        "raw": 10836,
+        "gzip": 5189,
+        "brotli": 4652
+      },
+      {
         "file": "scene/chunk-worker.mjs",
         "raw": 11278,
         "gzip": 5127,
         "brotli": 4649
-      },
-      {
-        "file": "js/play/collision.js",
-        "raw": 10804,
-        "gzip": 5170,
-        "brotli": 4633
       },
       {
         "file": "js/play/sled.js",
@@ -460,16 +460,16 @@
         "brotli": 3609
       },
       {
+        "file": "js/play/solids.js",
+        "raw": 9049,
+        "gzip": 3930,
+        "brotli": 3565
+      },
+      {
         "file": "scene/ground.mjs",
         "raw": 7499,
         "gzip": 3587,
         "brotli": 3257
-      },
-      {
-        "file": "js/play/solids.js",
-        "raw": 7213,
-        "gzip": 3327,
-        "brotli": 3019
       },
       {
         "file": "js/play/canopy.js",
@@ -724,10 +724,10 @@
       "public/js/play/rig/clips.js",
       "public/vendor/three.module.min.js"
     ],
-    "rawBefore": 2518747,
-    "rawAfter": 865105,
-    "brotliBefore": 774169,
-    "brotliAfter": 309925,
+    "rawBefore": 2554318,
+    "rawAfter": 871637,
+    "brotliBefore": 784688,
+    "brotliAfter": 312141,
     "consts": {
       "LOOK": 0.0022
     }
@@ -771,6 +771,33 @@
       "did not move can no longer be read as one that did."
     ],
     "drawCalls": 250,
+    "$teleportSettleFrames": [
+      "specs/0051-DECISIONS D-19, check 15. TIME-TO-REQUIRED-SET AFTER A FAST",
+      "TRAVEL, in FRAMES and not milliseconds, because a headless gate runs this",
+      "scene at 5-12 fps under agent load and a wall-clock budget would grade the",
+      "box rather than the streamer. Frames is also the unit the settle is",
+      "actually spent in: chunks.js raises the frame budget to PIN_BUDGET_MS (64",
+      "ms) until requiredResident() is true, so one settle frame is one 64 ms",
+      "slice of tile building however slowly the page is painting.",
+      "",
+      "MEASURED, 2026-09-06, this bench (:5400, chunk/w0-teleport, red-dog,",
+      "three hops the-nose-drop-in -> the-village -> the-nose-drop-in, taken",
+      "while three other agents were running on the box):",
+      "  hop 1  38 frames / 3,927 ms, 181 tiles evicted",
+      "  hop 2  26 frames / 2,453 ms, 208 tiles evicted",
+      "  hop 3  32 frames / 3,444 ms, 188 tiles evicted",
+      "Worst 38. The budget is that worst reading plus 50 %, rounded to a 5-frame",
+      "tick: 60. It is deliberately NOT the SETTLE_FRAMES ceiling in chunks.js",
+      "(90) — that constant is the hard stop that keeps a stuck scheduler from",
+      "holding the raised budget for ever, and a check that asserted against it",
+      "would only ever fire when the code had already given up.",
+      "",
+      "The 0.8 s teleport flash (specs/0055 W6) is 48 frames at 60 Hz, which is",
+      "what this number has to sit under on a real box: at 60 fps the settle is",
+      "the same TILES over faster frames, so 38 frames of headless is the upper",
+      "bound and not the expectation."
+    ],
+    "teleportSettleFrames": 60,
     "triangles": 1900000,
     "collidableTriangles": 1200000,
     "$collidableTrianglesResident": [
