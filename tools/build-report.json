@@ -2,8 +2,8 @@
   "generator": "poi-lab tools/export-red-dog/build.mjs",
   "spec": "specs/0001-ski-red-dog-face-architecture.md",
   "world": "siberia",
-  "pin": "4f9da1a4ae2104751f4cd61bc2168821a82691fd",
-  "builtAt": "2026-09-06T19:25:23.227Z",
+  "pin": "49e76701a06bdc7a536c06aa6585533f16f64383",
+  "builtAt": "2026-09-06T19:47:35.951Z",
   "tier": "A",
   "crop": {
     "$doc": [
@@ -103,9 +103,9 @@
   "files": 81,
   "sizes": {
     "n": 80,
-    "raw": 6951567,
-    "gz": 1789357,
-    "br": 1506649,
+    "raw": 6956013,
+    "gz": 1791213,
+    "br": 1508263,
     "byGroup": {
       "css": {
         "n": 4,
@@ -121,9 +121,9 @@
       },
       "player": {
         "n": 50,
-        "raw": 1434751,
-        "gz": 559008,
-        "br": 494974
+        "raw": 1439173,
+        "gz": 560852,
+        "br": 496567
       },
       "rider:maps": {
         "n": 2,
@@ -139,9 +139,9 @@
       },
       "scene:code": {
         "n": 20,
-        "raw": 435482,
-        "gz": 146621,
-        "br": 134328
+        "raw": 435506,
+        "gz": 146633,
+        "br": 134349
       },
       "vendor": {
         "n": 1,
@@ -317,9 +317,9 @@
       },
       {
         "file": "js/play/chunks.js",
-        "raw": 35137,
-        "gzip": 14091,
-        "brotli": 12951
+        "raw": 35193,
+        "gzip": 14121,
+        "brotli": 12908
       },
       {
         "file": "scene/runs-data.mjs",
@@ -358,16 +358,16 @@
         "brotli": 8084
       },
       {
+        "file": "js/play/controller.js",
+        "raw": 19602,
+        "gzip": 8410,
+        "brotli": 7704
+      },
+      {
         "file": "js/play/snowball.js",
         "raw": 19891,
         "gzip": 8243,
         "brotli": 7294
-      },
-      {
-        "file": "js/play/controller.js",
-        "raw": 16519,
-        "gzip": 7013,
-        "brotli": 6413
       },
       {
         "file": "scene/world.mjs",
@@ -401,9 +401,9 @@
       },
       {
         "file": "js/play/collision-router.js",
-        "raw": 13251,
-        "gzip": 5873,
-        "brotli": 5280
+        "raw": 13323,
+        "gzip": 5897,
+        "brotli": 5306
       },
       {
         "file": "js/play/snowmobile.js",
@@ -413,9 +413,9 @@
       },
       {
         "file": "js/play/collision.js",
-        "raw": 10836,
-        "gzip": 5189,
-        "brotli": 4652
+        "raw": 10996,
+        "gzip": 5223,
+        "brotli": 4683
       },
       {
         "file": "scene/chunk-worker.mjs",
@@ -448,6 +448,12 @@
         "brotli": 3972
       },
       {
+        "file": "js/play/solids.js",
+        "raw": 10100,
+        "gzip": 4289,
+        "brotli": 3853
+      },
+      {
         "file": "scene/terrain.mjs",
         "raw": 9102,
         "gzip": 4183,
@@ -458,12 +464,6 @@
         "raw": 8951,
         "gzip": 3904,
         "brotli": 3609
-      },
-      {
-        "file": "js/play/solids.js",
-        "raw": 9049,
-        "gzip": 3930,
-        "brotli": 3565
       },
       {
         "file": "scene/ground.mjs",
@@ -497,9 +497,9 @@
       },
       {
         "file": "scene/layout.mjs",
-        "raw": 8007,
-        "gzip": 3278,
-        "brotli": 2772
+        "raw": 8031,
+        "gzip": 3290,
+        "brotli": 2793
       },
       {
         "file": "js/play/glider.js",
@@ -724,10 +724,10 @@
       "public/js/play/rig/clips.js",
       "public/vendor/three.module.min.js"
     ],
-    "rawBefore": 2712012,
-    "rawAfter": 919149,
-    "brotliBefore": 831563,
-    "brotliAfter": 327451,
+    "rawBefore": 2736723,
+    "rawAfter": 923595,
+    "brotliBefore": 838740,
+    "brotliAfter": 329065,
     "consts": {
       "LOOK": 0.0022
     }
