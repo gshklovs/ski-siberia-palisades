@@ -25,7 +25,7 @@
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Siberia Express — Palisades Tahoe">
 <meta name="twitter:image" content="https://ski-siberia-palisades.vercel.app/og.png">
-<!-- specs/0051 D-22 — EVERY RELEASE GETS ITS OWN URL PREFIX. `r/2f265295/` is
+<!-- specs/0051 D-22 — EVERY RELEASE GETS ITS OWN URL PREFIX. `r/59c777cf/` is
      `r/<first 8 hex of the pinned commit>/`, and build.mjs writes EVERYTHING the
      page loads underneath it: css/, js/, scene/, vendor/, rider/. Only this
      document and og.png live at the deploy root. Two releases therefore share
@@ -33,10 +33,10 @@
      had with one it just fetched — which is what put
      "does not provide an export named 'labUI'" on production on 2026-09-06.
      Everything under r/ is immutable for a year; this file is max-age=0. -->
-<link rel="stylesheet" href="r/2f265295/css/te.css">
-<link rel="stylesheet" href="r/2f265295/css/play.css">
-<link rel="stylesheet" href="r/2f265295/css/intro.css">
-<link rel="stylesheet" href="r/2f265295/css/speedo.css">
+<link rel="stylesheet" href="r/59c777cf/css/te.css">
+<link rel="stylesheet" href="r/59c777cf/css/play.css">
+<link rel="stylesheet" href="r/59c777cf/css/intro.css">
+<link rel="stylesheet" href="r/59c777cf/css/speedo.css">
 <!-- The tab icon is the 🎿 emoji, drawn by the OS font inside an inline SVG
      data URI: no file to request, no bytes on the wire, nothing to 404. The
      <text> is centred with dominant-baseline + text-anchor and sized to fill
@@ -98,7 +98,7 @@
   // be mixed into this one. Nothing below had to change shape to get there:
   // `<base>`, the importmap and the entry import were already built off a
   // single root string, and this is that string with one segment added.
-  var ASSETS = ROOT + 'r/2f265295/';
+  var ASSETS = ROOT + 'r/59c777cf/';
 
   function fail(reason, detail) {
     if (detail === reason) detail = null;
@@ -192,7 +192,7 @@
     // about the site rather than about the release (og.png, a shared link).
     root: ASSETS,
     pageRoot: ROOT,
-    release: 'r/2f265295/',
+    release: 'r/59c777cf/',
   };
 
   say('loading player…');
