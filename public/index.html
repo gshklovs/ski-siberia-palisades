@@ -25,10 +25,18 @@
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Siberia Express — Palisades Tahoe">
 <meta name="twitter:image" content="https://ski-siberia-palisades.vercel.app/og.png">
-<link rel="stylesheet" href="css/te.css">
-<link rel="stylesheet" href="css/play.css">
-<link rel="stylesheet" href="css/intro.css">
-<link rel="stylesheet" href="css/speedo.css">
+<!-- specs/0051 D-22 — EVERY RELEASE GETS ITS OWN URL PREFIX. `r/2f265295/` is
+     `r/<first 8 hex of the pinned commit>/`, and build.mjs writes EVERYTHING the
+     page loads underneath it: css/, js/, scene/, vendor/, rider/. Only this
+     document and og.png live at the deploy root. Two releases therefore share
+     no asset URL at all, so a returning browser cannot pair a module it already
+     had with one it just fetched — which is what put
+     "does not provide an export named 'labUI'" on production on 2026-09-06.
+     Everything under r/ is immutable for a year; this file is max-age=0. -->
+<link rel="stylesheet" href="r/2f265295/css/te.css">
+<link rel="stylesheet" href="r/2f265295/css/play.css">
+<link rel="stylesheet" href="r/2f265295/css/intro.css">
+<link rel="stylesheet" href="r/2f265295/css/speedo.css">
 <!-- The tab icon is the 🎿 emoji, drawn by the OS font inside an inline SVG
      data URI: no file to request, no bytes on the wire, nothing to 404. The
      <text> is centred with dominant-baseline + text-anchor and sized to fill
@@ -82,6 +90,16 @@
   // world declares — one boot-time seam, shared with the lab's ?spawn=<id>.
   var ROOT = new URL('.', location.href).href;
 
+  // specs/0051 D-22 — THE RELEASE ROOT. ROOT is where this document was served
+  // from and is what `og:image` and a shared link are relative to; ASSETS is
+  // ROOT + 'r/<pin8>/', which is where every byte the player loads lives. The
+  // prefix moves on every ship, so a returning browser's cached copy of the
+  // previous release is addressed by URLs this page never mentions and cannot
+  // be mixed into this one. Nothing below had to change shape to get there:
+  // `<base>`, the importmap and the entry import were already built off a
+  // single root string, and this is that string with one segment added.
+  var ASSETS = ROOT + 'r/2f265295/';
+
   function fail(reason, detail) {
     if (detail === reason) detail = null;
     window.__playError = reason + (detail ? ' — ' + detail : '');
@@ -108,11 +126,11 @@
     return el;
   }
 
-  var sceneBase = ROOT + 'scene/';
+  var sceneBase = ASSETS + 'scene/';
   // <base> first: the scene's modules resolve their siblings document-relative.
   inject('base', { href: sceneBase });
 
-  var imports = { 'three': ROOT + 'vendor/three.module.min.js' };
+  var imports = { 'three': ASSETS + 'vendor/three.module.min.js' };
   inject('script', { type: 'importmap' }, JSON.stringify({ imports: imports }));
 
   // What the bench used to fetch from /api/run/<poi>/<run>, inlined.
@@ -168,7 +186,13 @@
     // never trips it at any coordinate; it fires on the absence of recoverable
     // ground. x0..y1 are a hard backstop at CORE ± 8 km, unreachable in play.
     fence: {"x0":-8640,"x1":8850,"y0":-8470,"y1":8540,"graceMs":2000,"voidMarginM":60,"rule":"surface-aware"},
-    root: ROOT,
+    // D-22 — the RELEASE root, not the page root. Everything that resolves a
+    // module or a texture off this value must land inside this release's
+    // prefix; `pageRoot` is kept beside it for the one thing that is genuinely
+    // about the site rather than about the release (og.png, a shared link).
+    root: ASSETS,
+    pageRoot: ROOT,
+    release: 'r/2f265295/',
   };
 
   say('loading player…');
@@ -177,7 +201,7 @@
   // each individually caught, all of them awaited before `__playerReady`. The
   // chain that used to live here was a second wiring the bench had no copy of,
   // and two wirings is exactly the drift 0003 exists to stop.
-  import(ROOT + 'js/play/main.js')
+  import(ASSETS + 'js/play/main.js')
     .catch(function (e) {
       console.error(e);
       // never leave the chrome suppressed by a module that failed to load

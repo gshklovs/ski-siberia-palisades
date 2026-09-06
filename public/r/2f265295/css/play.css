@@ -124,62 +124,64 @@ body.play > div[hidden], body.play .play-donor { display: none !important; }
    refilling. Bottom RIGHT: the legend owns the bottom-left and wraps to two or
    three rows as keys are added, so anything centred there eventually collides
    with it. */
+/* AS PICKED — A, "ticked gauge at ⅓ and ⅔, BOOST label"
+   (specs/0055 §4/§5 (W7, Greg 2026-09-06)). Measured off `#k-rocket-fuel-bar`'s
+   A cell at 1:1: row `flex`, `align-items:center`, gap 9; label BOOST mono 9 px
+   / 400 / .18em (1.62 px) uppercase; trough 148 × 5, `rgba(23,22,20,.72)`, NO
+   border and NO radius; two 1 × 11 px ticks at 33 % and 66 %, `top:-3px` so they
+   stand 3 px proud top and bottom, in `rgba(244,241,234,.5)`; fill blue idle
+   (`--p-grad-to`) and orange burning (`--p-hazard`), with the label taking the
+   same colour as the fill. Footprint unchanged — 148 × 5 is what shipped.
+   The ticks are the DIAL'S tick marks: §1.10 wants one idea of "a fraction" in
+   the HUD, and this is the gauge that shows one. */
 .phud__fuel {
   position: absolute; right: 14px; bottom: 14px;
-  display: flex; align-items: center; gap: 8px;
-  font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .18em;
-  text-transform: uppercase; color: #cdc7ba;
-  text-shadow: 0 1px 5px rgba(0, 0, 0, .7);
+  display: flex; align-items: center; gap: 9px;
+  font-family: var(--mono); font-size: 9px; font-weight: 400; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--p-cream);
+  text-shadow: 0 1px 5px rgba(0, 0, 0, .8);
 }
 .phud__fuel[hidden], .phud__fuel.is-hidden { display: none; }
 .phud__fuel-bar {
+  position: relative;
   display: block; width: 148px; height: 5px;
-  background: rgba(23, 22, 20, .82);
-  border: 1px solid rgba(244, 241, 234, .28); border-radius: 2px;
-  overflow: hidden;
+  background: rgba(23, 22, 20, .72);
+  /* no border, no radius, `overflow:visible` — the ticks are 11 px tall and
+     stand OUT of the 5 px trough, which is the whole read: they are marks on a
+     ruler, not segments of the fill. */
 }
-.phud__fuel-bar i {
+.phud__fuel-fill {
   display: block; height: 100%; width: 100%;
-  background: #cdc7ba;
+  background: var(--p-grad-to);
   transition: width .06s linear;
 }
+/* the two marks. `top:-3px; height:11px` centres an 11 px tick on a 5 px bar. */
+.phud__fuel-tick {
+  position: absolute; top: -3px; width: 1px; height: 11px;
+  background: rgba(244, 241, 234, .5);
+}
+.phud__fuel-tick.is-t1 { left: 33%; }
+.phud__fuel-tick.is-t2 { left: 66%; }
+/* burning is the ONE place the orange signal survives in register 1: the rocket
+   pack is equipment, not a number the rider earned, so it keeps the signal
+   colour rather than taking the gradient (the cell's own note). */
 .phud__fuel.is-burn { color: var(--accent); }
-.phud__fuel.is-burn .phud__fuel-bar { border-color: var(--accent); }
-.phud__fuel.is-burn .phud__fuel-bar i { background: var(--accent); box-shadow: 0 0 7px rgba(255, 77, 0, .85); }
+.phud__fuel.is-burn .phud__fuel-fill { background: var(--accent); }
 /* ran dry — dim until there is enough charge to relight */
 .phud__fuel.is-dry { color: #7d766c; }
-.phud__fuel.is-dry .phud__fuel-bar i { background: #7d766c; }
+.phud__fuel.is-dry .phud__fuel-fill { background: #7d766c; }
 
-/* pump arc (§1.10) — a thin arc under the crosshair, drawn as the bottom 100°
-   of a conic-gradient ring: the fill sweep is a custom property the HUD writes
-   each frame, the ring is a radial mask, and the rest of the circle is simply
-   transparent. No SVG, no library, one element.
-   `scaleX(-1)` mirrors the sweep so it fills left → right; a conic gradient can
-   only run clockwise, which on the bottom of a circle is right → left. */
-.phud__pump {
-  position: absolute; left: 50%; top: 50%;
-  width: 58px; height: 58px; margin: -29px 0 0 -29px;
-  color: #a49d90;                      /* the arc's own colour — see is-hot/is-cold */
-}
-.phud__pump[hidden], .phud__pump.is-hidden { display: none; }
-.phud__pump-arc {
-  --pf: 0deg;
-  display: block; position: absolute; inset: 0; border-radius: 50%;
-  transform: scaleX(-1);
-  background: conic-gradient(from 130deg,
-    currentColor 0 var(--pf),
-    rgba(244, 241, 234, .16) var(--pf) 100deg,
-    transparent 100deg 360deg);
-  -webkit-mask: radial-gradient(circle at 50% 50%, transparent 0 24px, #000 24.5px);
-  mask: radial-gradient(circle at 50% 50%, transparent 0 24px, #000 24.5px);
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, .6));
-}
-/* colour is the verdict on the transition you just made: white = you got more
-   back than you put in, dim red = you gave it away */
-.phud__pump.is-hot { color: var(--p-cream); }   /* specs/0055 §1.1 */
-.phud__pump.is-cold { color: #a8452e; }
-.phud__pump.is-rel { color: var(--accent); }
-.phud__pump.is-rel .phud__pump-arc { filter: drop-shadow(0 0 6px rgba(255, 77, 0, .8)); }
+/* THE PUMP ARC IS GONE — specs/0055 §4/§5 (W7, Greg 2026-09-06: "remove pump
+   arc"). What used to be here: `.phud__pump` / `.phud__pump-arc` / `.is-hot` /
+   `.is-cold` / `.is-rel` — a 58 px conic-gradient ring under the crosshair,
+   masked to a band, that filled with the carve bank and flashed on release.
+   REMOVED OUTRIGHT, and nothing takes its place: not the arc, not §1.10's 2 px
+   gauge, not a rule. The lookbook's own alternate for this row (B, "a rule, not
+   an arc") was not picked either — the row was cut, not restyled.
+   The DATA is untouched: ski.js still banks `pumpQ`, scores `pumpEta` and pays
+   out on `releasing`, `skiState()` still reports all three, and tricks.js's
+   `pumpLink()` still carries a combo across a clean transition. The crosshair
+   simply stops narrating it. */
 
 /* THE TRICK HUD IS NOT IN THIS FILE ANY MORE (specs/0048).
    The live timer (`.phud__atime`), the combo meter (`.phud__combo`), its grace
@@ -778,7 +780,10 @@ body.play.is-devbar .phud__fps { margin-top: 34px; }
 }
 .ppause__keys .is-hidden { display: none; }
 .ppause__row { display: flex; gap: 8px; align-items: center; }
-/* the action is an ink plate, the way the lookbook's CLICK TO RESUME is */
+/* the action is an ink plate, the way the lookbook's resume plate is. specs/0055
+   §5.1 (any key, Greg 2026-09-06) — the WORDS on it are now ANY KEY TO RESUME /
+   TOUCH TO RESUME (hud.js picks by `pointer: coarse`); the plate is unchanged,
+   and `flex: 1` means it is the board's width either way, not the sentence's. */
 .ppause__big {
   flex: 1; justify-content: center; padding: 11px 12px; font-size: 11px;
   background: var(--ink); border-color: var(--ink); color: var(--panel);

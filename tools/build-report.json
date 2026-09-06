@@ -2,8 +2,8 @@
   "generator": "poi-lab tools/export-red-dog/build.mjs",
   "spec": "specs/0001-ski-red-dog-face-architecture.md",
   "world": "siberia",
-  "pin": "49e76701a06bdc7a536c06aa6585533f16f64383",
-  "builtAt": "2026-09-06T19:47:35.951Z",
+  "pin": "2f265295903e4d98d4a8781ffff20ba0d88089dc",
+  "builtAt": "2026-09-06T21:15:38.334Z",
   "tier": "A",
   "crop": {
     "$doc": [
@@ -103,27 +103,27 @@
   "files": 81,
   "sizes": {
     "n": 80,
-    "raw": 6956013,
-    "gz": 1791213,
-    "br": 1508263,
+    "raw": 6967318,
+    "gz": 1796198,
+    "br": 1512610,
     "byGroup": {
-      "css": {
-        "n": 4,
-        "raw": 89787,
-        "gz": 25914,
-        "br": 22080
-      },
       "html": {
         "n": 1,
-        "raw": 10991,
-        "gz": 4898,
-        "br": 3972
+        "raw": 12695,
+        "gz": 5587,
+        "br": 4555
+      },
+      "css": {
+        "n": 4,
+        "raw": 90569,
+        "gz": 26518,
+        "br": 22591
       },
       "player": {
         "n": 50,
-        "raw": 1439173,
-        "gz": 560852,
-        "br": 496567
+        "raw": 1447992,
+        "gz": 564544,
+        "br": 499820
       },
       "rider:maps": {
         "n": 2,
@@ -152,555 +152,555 @@
     },
     "top": [
       {
-        "file": "scene/dem-data.mjs",
+        "file": "r/2f265295/scene/dem-data.mjs",
         "raw": 3497134,
         "gzip": 668589,
         "brotli": 512136
       },
       {
-        "file": "js/play/rider-mesh.js",
+        "file": "r/2f265295/js/play/rider-mesh.js",
         "raw": 595978,
         "gzip": 228456,
         "brotli": 201051
       },
       {
-        "file": "vendor/three.module.min.js",
+        "file": "r/2f265295/vendor/three.module.min.js",
         "raw": 700430,
         "gzip": 179744,
         "brotli": 146292
       },
       {
-        "file": "scene/canopy-data.mjs",
+        "file": "r/2f265295/scene/canopy-data.mjs",
         "raw": 699864,
         "gzip": 121691,
         "brotli": 110219
       },
       {
-        "file": "scene/cliff-data.mjs",
+        "file": "r/2f265295/scene/cliff-data.mjs",
         "raw": 264017,
         "gzip": 73595,
         "brotli": 70696
       },
       {
-        "file": "rider/rider-nrm.webp",
+        "file": "r/2f265295/rider/rider-nrm.webp",
         "raw": 70080,
         "gzip": 69821,
         "brotli": 69602
       },
       {
-        "file": "js/play/fx.js",
+        "file": "r/2f265295/js/play/fx.js",
         "raw": 82919,
         "gzip": 32491,
         "brotli": 28216
       },
       {
-        "file": "js/play/inventory.js",
-        "raw": 81894,
-        "gzip": 28367,
-        "brotli": 24977
+        "file": "r/2f265295/js/play/inventory.js",
+        "raw": 82143,
+        "gzip": 28496,
+        "brotli": 25066
       },
       {
-        "file": "js/play/hud.js",
-        "raw": 64544,
-        "gzip": 23777,
-        "brotli": 20951
+        "file": "r/2f265295/js/play/hud.js",
+        "raw": 67443,
+        "gzip": 24847,
+        "brotli": 21893
       },
       {
-        "file": "js/play/rider.js",
-        "raw": 49143,
-        "gzip": 20858,
-        "brotli": 19006
+        "file": "r/2f265295/js/play/rider.js",
+        "raw": 49187,
+        "gzip": 20872,
+        "brotli": 19023
       },
       {
-        "file": "js/play/markers.js",
-        "raw": 52214,
-        "gzip": 20606,
-        "brotli": 17966
+        "file": "r/2f265295/js/play/markers.js",
+        "raw": 52384,
+        "gzip": 20722,
+        "brotli": 18033
       },
       {
-        "file": "js/play/main.js",
-        "raw": 47552,
-        "gzip": 18646,
-        "brotli": 16856
+        "file": "r/2f265295/js/play/main.js",
+        "raw": 48285,
+        "gzip": 18950,
+        "brotli": 17142
       }
     ],
     "perFile": [
       {
-        "file": "scene/dem-data.mjs",
+        "file": "r/2f265295/scene/dem-data.mjs",
         "raw": 3497134,
         "gzip": 668589,
         "brotli": 512136
       },
       {
-        "file": "js/play/rider-mesh.js",
+        "file": "r/2f265295/js/play/rider-mesh.js",
         "raw": 595978,
         "gzip": 228456,
         "brotli": 201051
       },
       {
-        "file": "vendor/three.module.min.js",
+        "file": "r/2f265295/vendor/three.module.min.js",
         "raw": 700430,
         "gzip": 179744,
         "brotli": 146292
       },
       {
-        "file": "scene/canopy-data.mjs",
+        "file": "r/2f265295/scene/canopy-data.mjs",
         "raw": 699864,
         "gzip": 121691,
         "brotli": 110219
       },
       {
-        "file": "scene/cliff-data.mjs",
+        "file": "r/2f265295/scene/cliff-data.mjs",
         "raw": 264017,
         "gzip": 73595,
         "brotli": 70696
       },
       {
-        "file": "rider/rider-nrm.webp",
+        "file": "r/2f265295/rider/rider-nrm.webp",
         "raw": 70080,
         "gzip": 69821,
         "brotli": 69602
       },
       {
-        "file": "js/play/fx.js",
+        "file": "r/2f265295/js/play/fx.js",
         "raw": 82919,
         "gzip": 32491,
         "brotli": 28216
       },
       {
-        "file": "js/play/inventory.js",
-        "raw": 81894,
-        "gzip": 28367,
-        "brotli": 24977
+        "file": "r/2f265295/js/play/inventory.js",
+        "raw": 82143,
+        "gzip": 28496,
+        "brotli": 25066
       },
       {
-        "file": "js/play/hud.js",
-        "raw": 64544,
-        "gzip": 23777,
-        "brotli": 20951
+        "file": "r/2f265295/js/play/hud.js",
+        "raw": 67443,
+        "gzip": 24847,
+        "brotli": 21893
       },
       {
-        "file": "js/play/rider.js",
-        "raw": 49143,
-        "gzip": 20858,
-        "brotli": 19006
+        "file": "r/2f265295/js/play/rider.js",
+        "raw": 49187,
+        "gzip": 20872,
+        "brotli": 19023
       },
       {
-        "file": "js/play/markers.js",
-        "raw": 52214,
-        "gzip": 20606,
-        "brotli": 17966
+        "file": "r/2f265295/js/play/markers.js",
+        "raw": 52384,
+        "gzip": 20722,
+        "brotli": 18033
       },
       {
-        "file": "js/play/main.js",
-        "raw": 47552,
-        "gzip": 18646,
-        "brotli": 16856
+        "file": "r/2f265295/js/play/main.js",
+        "raw": 48285,
+        "gzip": 18950,
+        "brotli": 17142
       },
       {
-        "file": "js/play/guide.js",
-        "raw": 46505,
-        "gzip": 17951,
-        "brotli": 15961
+        "file": "r/2f265295/js/play/guide.js",
+        "raw": 46974,
+        "gzip": 18136,
+        "brotli": 16105
       },
       {
-        "file": "js/play/ski.js",
+        "file": "r/2f265295/js/play/ski.js",
         "raw": 42977,
         "gzip": 16092,
         "brotli": 14039
       },
       {
-        "file": "rider/rider-ach.webp",
+        "file": "r/2f265295/rider/rider-ach.webp",
         "raw": 13048,
         "gzip": 13071,
         "brotli": 13046
       },
       {
-        "file": "js/play/chunks.js",
+        "file": "r/2f265295/js/play/chunks.js",
         "raw": 35193,
         "gzip": 14121,
         "brotli": 12908
       },
       {
-        "file": "scene/runs-data.mjs",
+        "file": "r/2f265295/scene/runs-data.mjs",
         "raw": 43285,
         "gzip": 15607,
         "brotli": 12434
       },
       {
-        "file": "js/play/surprise.js",
+        "file": "r/2f265295/js/play/surprise.js",
         "raw": 31432,
         "gzip": 13281,
         "brotli": 11461
       },
       {
-        "file": "css/play.css",
-        "raw": 45600,
-        "gzip": 12360,
-        "brotli": 10645
+        "file": "r/2f265295/css/play.css",
+        "raw": 46382,
+        "gzip": 12964,
+        "brotli": 11156
       },
       {
-        "file": "js/play/bike.js",
+        "file": "r/2f265295/js/play/bike.js",
         "raw": 30500,
         "gzip": 11362,
         "brotli": 9718
       },
       {
-        "file": "js/play/rig/clips.js",
+        "file": "r/2f265295/js/play/rig/clips.js",
         "raw": 20949,
         "gzip": 8976,
         "brotli": 8240
       },
       {
-        "file": "scene/stamp-tile.mjs",
+        "file": "r/2f265295/scene/stamp-tile.mjs",
         "raw": 23909,
         "gzip": 9248,
         "brotli": 8084
       },
       {
-        "file": "js/play/controller.js",
-        "raw": 19602,
-        "gzip": 8410,
-        "brotli": 7704
+        "file": "r/2f265295/js/play/controller.js",
+        "raw": 19610,
+        "gzip": 8413,
+        "brotli": 7739
       },
       {
-        "file": "js/play/snowball.js",
+        "file": "r/2f265295/js/play/snowball.js",
         "raw": 19891,
         "gzip": 8243,
         "brotli": 7294
       },
       {
-        "file": "scene/world.mjs",
+        "file": "r/2f265295/js/play/tricks.js",
+        "raw": 18774,
+        "gzip": 7278,
+        "brotli": 6758
+      },
+      {
+        "file": "r/2f265295/scene/world.mjs",
         "raw": 15899,
         "gzip": 6981,
         "brotli": 6311
       },
       {
-        "file": "js/play/tricks.js",
-        "raw": 17473,
-        "gzip": 6714,
-        "brotli": 6240
-      },
-      {
-        "file": "js/play/audio.js",
+        "file": "r/2f265295/js/play/audio.js",
         "raw": 20488,
         "gzip": 6804,
         "brotli": 6081
       },
       {
-        "file": "scene/tiles.mjs",
+        "file": "r/2f265295/scene/tiles.mjs",
         "raw": 14085,
         "gzip": 6434,
         "brotli": 5781
       },
       {
-        "file": "css/intro.css",
+        "file": "r/2f265295/css/intro.css",
         "raw": 17548,
         "gzip": 6515,
         "brotli": 5434
       },
       {
-        "file": "js/play/collision-router.js",
+        "file": "r/2f265295/js/play/collision-router.js",
         "raw": 13323,
         "gzip": 5897,
         "brotli": 5306
       },
       {
-        "file": "js/play/snowmobile.js",
+        "file": "r/2f265295/js/play/snowmobile.js",
         "raw": 13767,
         "gzip": 5600,
         "brotli": 5022
       },
       {
-        "file": "js/play/collision.js",
+        "file": "r/2f265295/js/play/collision.js",
         "raw": 10996,
         "gzip": 5223,
         "brotli": 4683
       },
       {
-        "file": "scene/chunk-worker.mjs",
+        "file": "r/2f265295/scene/chunk-worker.mjs",
         "raw": 11278,
         "gzip": 5127,
         "brotli": 4649
       },
       {
-        "file": "js/play/sled.js",
+        "file": "index.html",
+        "raw": 12695,
+        "gzip": 5587,
+        "brotli": 4555
+      },
+      {
+        "file": "r/2f265295/js/play/sled.js",
         "raw": 10585,
         "gzip": 4771,
         "brotli": 4358
       },
       {
-        "file": "js/play/tracks.js",
+        "file": "r/2f265295/js/play/tracks.js",
         "raw": 11169,
         "gzip": 4643,
         "brotli": 4191
       },
       {
-        "file": "css/te.css",
+        "file": "r/2f265295/css/te.css",
         "raw": 21769,
         "gzip": 4702,
         "brotli": 4107
       },
       {
-        "file": "index.html",
-        "raw": 10991,
-        "gzip": 4898,
-        "brotli": 3972
+        "file": "r/2f265295/js/play/touch.js",
+        "raw": 10567,
+        "gzip": 4548,
+        "brotli": 3975
       },
       {
-        "file": "js/play/solids.js",
+        "file": "r/2f265295/js/play/solids.js",
         "raw": 10100,
         "gzip": 4289,
         "brotli": 3853
       },
       {
-        "file": "scene/terrain.mjs",
+        "file": "r/2f265295/scene/terrain.mjs",
         "raw": 9102,
         "gzip": 4183,
         "brotli": 3692
       },
       {
-        "file": "js/play/lift.js",
+        "file": "r/2f265295/js/play/lift.js",
         "raw": 8951,
         "gzip": 3904,
         "brotli": 3609
       },
       {
-        "file": "scene/ground.mjs",
+        "file": "r/2f265295/scene/ground.mjs",
         "raw": 7499,
         "gzip": 3587,
         "brotli": 3257
       },
       {
-        "file": "js/play/canopy.js",
+        "file": "r/2f265295/js/play/canopy.js",
         "raw": 9687,
         "gzip": 3309,
         "brotli": 2978
       },
       {
-        "file": "js/play/touch.js",
-        "raw": 7744,
-        "gzip": 3336,
-        "brotli": 2915
-      },
-      {
-        "file": "scene/kit.mjs",
+        "file": "r/2f265295/scene/kit.mjs",
         "raw": 7505,
         "gzip": 3323,
         "brotli": 2915
       },
       {
-        "file": "js/play/rig/bloom.js",
+        "file": "r/2f265295/js/play/rig/bloom.js",
         "raw": 6950,
         "gzip": 3143,
         "brotli": 2793
       },
       {
-        "file": "scene/layout.mjs",
+        "file": "r/2f265295/scene/layout.mjs",
         "raw": 8031,
         "gzip": 3290,
         "brotli": 2793
       },
       {
-        "file": "js/play/glider.js",
+        "file": "r/2f265295/js/play/glider.js",
         "raw": 5999,
         "gzip": 2938,
         "brotli": 2682
       },
       {
-        "file": "js/play/rail.js",
+        "file": "r/2f265295/js/play/rail.js",
         "raw": 5950,
         "gzip": 2821,
         "brotli": 2621
       },
       {
-        "file": "scene/lib/core.mjs",
+        "file": "r/2f265295/scene/lib/core.mjs",
         "raw": 5637,
         "gzip": 2808,
         "brotli": 2539
       },
       {
-        "file": "js/play/boost.js",
+        "file": "r/2f265295/js/play/boost.js",
         "raw": 5642,
         "gzip": 2752,
         "brotli": 2500
       },
       {
-        "file": "js/play/spawn.js",
+        "file": "r/2f265295/js/play/spawn.js",
         "raw": 5371,
         "gzip": 2495,
         "brotli": 2283
       },
       {
-        "file": "js/play/speedo.js",
+        "file": "r/2f265295/js/play/speedo.js",
         "raw": 5000,
         "gzip": 2424,
         "brotli": 2209
       },
       {
-        "file": "scene/forest.mjs",
+        "file": "r/2f265295/scene/forest.mjs",
         "raw": 4993,
         "gzip": 2364,
         "brotli": 2141
       },
       {
-        "file": "scene/lift.mjs",
+        "file": "r/2f265295/scene/lift.mjs",
         "raw": 5352,
         "gzip": 2307,
         "brotli": 2098
       },
       {
-        "file": "js/play/outfits/armour.js",
+        "file": "r/2f265295/js/play/outfits/armour.js",
         "raw": 8675,
         "gzip": 2400,
         "brotli": 2088
       },
       {
-        "file": "js/play/loader.js",
+        "file": "r/2f265295/js/play/loader.js",
         "raw": 5488,
         "gzip": 2396,
         "brotli": 2080
       },
       {
-        "file": "css/speedo.css",
+        "file": "r/2f265295/css/speedo.css",
         "raw": 4870,
         "gzip": 2337,
         "brotli": 1894
       },
       {
-        "file": "js/play/intro.js",
-        "raw": 4863,
-        "gzip": 2180,
-        "brotli": 1852
+        "file": "r/2f265295/js/play/intro.js",
+        "raw": 4876,
+        "gzip": 2186,
+        "brotli": 1873
       },
       {
-        "file": "scene/env.mjs",
+        "file": "r/2f265295/scene/env.mjs",
         "raw": 3729,
         "gzip": 1953,
         "brotli": 1766
       },
       {
-        "file": "js/play/outfits/race.js",
+        "file": "r/2f265295/js/play/outfits/race.js",
         "raw": 9097,
         "gzip": 1914,
         "brotli": 1673
       },
       {
-        "file": "scene/feature-index.mjs",
+        "file": "r/2f265295/scene/feature-index.mjs",
         "raw": 3177,
         "gzip": 1601,
         "brotli": 1462
       },
       {
-        "file": "scene/signs.mjs",
+        "file": "r/2f265295/scene/signs.mjs",
         "raw": 3294,
         "gzip": 1466,
         "brotli": 1315
       },
       {
-        "file": "js/play/rocket.js",
+        "file": "r/2f265295/js/play/rocket.js",
         "raw": 3150,
         "gzip": 1424,
         "brotli": 1299
       },
       {
-        "file": "scene/cliff.mjs",
+        "file": "r/2f265295/scene/cliff.mjs",
         "raw": 1740,
         "gzip": 1023,
         "brotli": 971
       },
       {
-        "file": "js/play/outfits/shell.js",
+        "file": "r/2f265295/js/play/outfits/shell.js",
         "raw": 3956,
         "gzip": 1042,
         "brotli": 920
       },
       {
-        "file": "js/play/rig/env.js",
+        "file": "r/2f265295/js/play/rig/env.js",
         "raw": 1622,
         "gzip": 959,
         "brotli": 875
       },
       {
-        "file": "js/play/settings.js",
-        "raw": 1714,
-        "gzip": 898,
-        "brotli": 773
+        "file": "r/2f265295/js/play/settings.js",
+        "raw": 1824,
+        "gzip": 987,
+        "brotli": 847
       },
       {
-        "file": "js/play/outfits/freeride.js",
+        "file": "r/2f265295/js/play/outfits/freeride.js",
         "raw": 2227,
         "gzip": 691,
         "brotli": 624
       },
       {
-        "file": "js/play/idle.js",
+        "file": "r/2f265295/js/play/idle.js",
         "raw": 1312,
         "gzip": 712,
         "brotli": 573
       },
       {
-        "file": "scene/ridge-data.mjs",
+        "file": "r/2f265295/scene/ridge-data.mjs",
         "raw": 1408,
         "gzip": 781,
         "brotli": 561
       },
       {
-        "file": "js/play/outfits/retro.js",
+        "file": "r/2f265295/js/play/outfits/retro.js",
         "raw": 1259,
         "gzip": 558,
         "brotli": 506
       },
       {
-        "file": "js/play/flags.js",
+        "file": "r/2f265295/js/play/flags.js",
         "raw": 912,
         "gzip": 570,
         "brotli": 499
       },
       {
-        "file": "js/play/recorder.js",
+        "file": "r/2f265295/js/play/recorder.js",
         "raw": 976,
         "gzip": 542,
         "brotli": 494
       },
       {
-        "file": "scene/canopy.mjs",
+        "file": "r/2f265295/scene/canopy.mjs",
         "raw": 776,
         "gzip": 483,
         "brotli": 449
       },
       {
-        "file": "scene/frames.mjs",
+        "file": "r/2f265295/scene/frames.mjs",
         "raw": 790,
         "gzip": 472,
         "brotli": 435
       },
       {
-        "file": "js/play/atlas.js",
+        "file": "r/2f265295/js/play/atlas.js",
         "raw": 987,
         "gzip": 449,
         "brotli": 430
       },
       {
-        "file": "js/play/clean.js",
+        "file": "r/2f265295/js/play/clean.js",
         "raw": 882,
         "gzip": 502,
         "brotli": 429
       },
       {
-        "file": "js/play/dev.js",
+        "file": "r/2f265295/js/play/dev.js",
         "raw": 562,
         "gzip": 342,
         "brotli": 291
       },
       {
-        "file": "js/play/outfits/after.js",
+        "file": "r/2f265295/js/play/outfits/after.js",
         "raw": 628,
         "gzip": 320,
         "brotli": 272
       },
       {
-        "file": "js/play/outfits/index.js",
+        "file": "r/2f265295/js/play/outfits/index.js",
         "raw": 375,
         "gzip": 253,
         "brotli": 217
@@ -724,10 +724,10 @@
       "public/js/play/rig/clips.js",
       "public/vendor/three.module.min.js"
     ],
-    "rawBefore": 2736723,
-    "rawAfter": 923595,
-    "brotliBefore": 838740,
-    "brotliAfter": 329065,
+    "rawBefore": 2784922,
+    "rawAfter": 932370,
+    "brotliBefore": 853924,
+    "brotliAfter": 332301,
     "consts": {
       "LOOK": 0.0022
     }
