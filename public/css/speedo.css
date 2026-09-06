@@ -31,13 +31,21 @@ body.play canvas.pspeedo {
   left: 14px;
   top: 14px;
   z-index: 22;
-  width: 172px;
-  height: 172px;
+  /* specs/0055 §4.2 (Greg 2026-09-06) — 172 -> 208, and the DIAL DID NOT MOVE.
+     "the unit could be to the right of the speedo": MPH stands outside the arc
+     now, and there were only 13 px between the arc's right edge and the old
+     box, so the canvas grew a 36 px bay on the right for it. speedo.js keeps
+     drawing the dial against its own 172 px square centred on (86, 86), so the
+     ring is in exactly the pixels it was in before; the extra strip is
+     transparent. It stays SQUARE because verify's [5] asserts the measured
+     width and height are both `__speedo.box().box`. */
+  width: 208px;
+  height: 208px;
   pointer-events: none;
-  /* the canvas is transparent everywhere the ring, the arc, the four marks and
-     the number are not (specs/0048 took the scrim disc out), so there is
-     nothing to paint here — but a stray background would show up as a square
-     on the snow */
+  /* the canvas is transparent everywhere the ring, the arc, the number and the
+     unit are not (specs/0048 took the scrim disc out; specs/0055 §4.2 as picked
+     2026-09-06 took the marks out too), so there is nothing to paint here — but
+     a stray background would show up as a square on the snow */
   background: none;
   /* left/top only, no transform: a transform would promote this to its own
      compositor layer for no gain and cost a texture upload on a machine that
@@ -69,10 +77,10 @@ body.intro-up .pspeedo { display: none !important; }
   .pspeedo { transition: none; }
 }
 
-/* A phone gets a smaller dial in a tighter corner: 172 px is a fifth of a
-   390 px viewport's width and the touch look-zone starts at the halfway line,
-   so the gauge stays well clear of it either way. Scaled from the top-left
-   corner so the 10 px inset is preserved. */
+/* A phone gets a smaller dial in a tighter corner: 208 px scaled to 0.78 is
+   162 px, well under half a 390 px viewport's width, and the touch look-zone
+   starts at the halfway line — so the gauge stays clear of it either way.
+   Scaled from the top-left corner so the 10 px inset is preserved. */
 @media (max-width: 560px) {
   body.play canvas.pspeedo {
     left: 10px;

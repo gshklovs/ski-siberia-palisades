@@ -1,4 +1,4 @@
-import{gliderState as Ut}from"./glider.js";import{skiState as Bt}from"./ski.js";import{DEBUG_HUD as B,BRAND as jt,pick as Wt,pickBrand as zt}from"./flags.js";const De={family:'"Avenir Next", Avenir, "Nunito Sans", "Segoe UI", system-ui, sans-serif',weight:500,obliqueDeg:12,track:.06,hero:68,heroDial:64,heroSmall:28,secondary:13.5,unit:11,gradFrom:"#7b3fe4",gradTo:"#3b6cff",flat:"rgba(42,36,86,0.90)",dim:"rgba(42,36,86,0.35)",clean:"rgba(42,36,86,0.90)",sketchy:"#c77a1a",bailed:"#ff5c8a"};function ia(d,n=De.weight){return n+" "+d+"px "+De.family}const Kt={cream:"#f4f1ea",ink:"#171614",sub:"#726c60",seam:"#c8c2b3",plate:"rgba(23,22,20,0.34)",hair:"rgba(244,241,234,0.16)",hazard:"#ff4d00",rule:"2px",radius:"2px"},Gt={run:"#f4f1ea",lift:"#ff4d00",bike:"#8ec63f",landmark:"#7fd4e8",venue:"#ffab00"},qt={green:"#217a3c",blue:"#1d5fb4",black:"#141414",red:"#ff5c8a"},Vt={rise:"220ms",riseEase:"cubic-bezier(.16,1,.3,1)",wipeRule:"110ms",wipeBody:"260ms",hold:"3s",fall:"160ms",snap:"90ms"};(function(){const n=De,E=`font-family:${n.family};font-weight:${n.weight};font-style:oblique ${n.obliqueDeg}deg;text-transform:uppercase;letter-spacing:${n.track}em;`,w=`background-image:linear-gradient(96deg,${n.gradFrom},${n.gradTo});-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;`,L=Kt,u=Gt,I=qt,A=Vt,be=`
+import{gliderState as ea}from"./glider.js";import{skiState as ta}from"./ski.js";import{DEBUG_HUD as W,labUI as ze,BRAND as aa,pick as ia,pickBrand as na}from"./flags.js";const Ke={family:'"Avenir Next", Avenir, "Nunito Sans", "Segoe UI", system-ui, sans-serif',weight:500,obliqueDeg:12,track:.06,hero:68,heroDial:64,heroSmall:28,secondary:13.5,unit:11,gradFrom:"#7b3fe4",gradTo:"#3b6cff",flat:"rgba(42,36,86,0.90)",dim:"rgba(42,36,86,0.35)",clean:"rgba(42,36,86,0.90)",sketchy:"#c77a1a",bailed:"#ff5c8a"};function ka(p,n=Ke.weight){return n+" "+p+"px "+Ke.family}const oa={cream:"#f4f1ea",ink:"#171614",sub:"#726c60",seam:"#c8c2b3",plate:"rgba(23,22,20,0.34)",hair:"rgba(244,241,234,0.16)",hazard:"#ff4d00",rule:"2px",radius:"2px"},sa={run:"#f4f1ea",lift:"#ff4d00",bike:"#8ec63f",landmark:"#7fd4e8",venue:"#ffab00"},ra={green:"#217a3c",blue:"#1d5fb4",black:"#141414",red:"#ff5c8a"},da={rise:"220ms",riseEase:"cubic-bezier(.16,1,.3,1)",wipeRule:"110ms",wipeBody:"260ms",hold:"3s",fall:"160ms",snap:"90ms"};(function(){const n=Ke,k=`font-family:${n.family};font-weight:${n.weight};font-style:oblique ${n.obliqueDeg}deg;text-transform:uppercase;letter-spacing:${n.track}em;`,w=`background-image:linear-gradient(96deg,${n.gradFrom},${n.gradTo});-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;`,v=oa,u=sa,D=ra,O=da,Z=`
 /* ================================================== specs/0055 §1.1 — TOKENS
    ONE NAME EACH. Every token in §1 re-published as a CSS custom property, from
    the objects above, so no other file types a value. Declared on \`:root\`
@@ -20,7 +20,9 @@ import{gliderState as Ut}from"./glider.js";import{skiState as Bt}from"./ski.js";
   /* §1.3 sizes, px */
   --p-hero:${n.hero}px;         --p-hero-dial:${n.heroDial}px;
   /* §4.5 — the hero BOX: S1 and S3 are this wide, 232 px apart (208 + a 24 px
-     gutter), and it is the width §4.4's ledger justifies its three tokens to */
+     gutter). specs/0055 §4.4 (fidelity 2026-09-06): it is no longer a width the
+     ledger justifies to — the picked combo is the CONTENT-SIZED gate post — it
+     is the timer's box, the receipt's floor, and the gate's cap. */
   --p-hero-box:300px;
   --p-hero-sm:${n.heroSmall}px; --p-board-name:30px;
   --p-blade:15px;               --p-secondary:${n.secondary}px;
@@ -35,26 +37,26 @@ import{gliderState as Ut}from"./glider.js";import{skiState as Bt}from"./ski.js";
   --p-clean:${n.clean}; --p-sketchy:${n.sketchy}; --p-bailed:${n.bailed};
 
   /* §1.6 surfaces — TWO, and a third needs Greg (D19) */
-  --p-cream:${L.cream}; --p-ink:${L.ink}; --p-sub:${L.sub}; --p-seam:${L.seam};
-  --p-plate:${L.plate}; --p-hair:${L.hair};
+  --p-cream:${v.cream}; --p-ink:${v.ink}; --p-sub:${v.sub}; --p-seam:${v.seam};
+  --p-plate:${v.plate}; --p-hair:${v.hair};
 
   /* §1.7 kind dialects, mirroring markers.js KINDS */
   --p-k-run:${u.run}; --p-k-lift:${u.lift}; --p-k-bike:${u.bike};
   --p-k-land:${u.landmark}; --p-k-venue:${u.venue};
 
   /* §1.8 severity alphabet */
-  --p-diff-green:${I.green}; --p-diff-blue:${I.blue};
-  --p-diff-black:${I.black}; --p-diff-red:${I.red};
+  --p-diff-green:${D.green}; --p-diff-blue:${D.blue};
+  --p-diff-black:${D.black}; --p-diff-red:${D.red};
 
   /* §1.9 the hazard stripe, and §1.10's rules and radii */
-  --p-hazard:${L.hazard}; --p-stripe:4px;
-  --p-rule:${L.rule}; --p-hairline:1px; --p-spine:3px;
-  --p-r:${L.radius}; --p-gauge:2px;
+  --p-hazard:${v.hazard}; --p-stripe:4px;
+  --p-rule:${v.rule}; --p-hairline:1px; --p-spine:3px;
+  --p-r:${v.radius}; --p-gauge:2px;
 
   /* §1.11 motion — no panel invents a duration */
-  --p-rise:${A.rise}; --p-rise-ease:${A.riseEase};
-  --p-wipe-rule:${A.wipeRule}; --p-wipe-body:${A.wipeBody};
-  --p-hold:${A.hold}; --p-fall:${A.fall}; --p-snap:${A.snap};
+  --p-rise:${O.rise}; --p-rise-ease:${O.riseEase};
+  --p-wipe-rule:${O.wipeRule}; --p-wipe-body:${O.wipeBody};
+  --p-hold:${O.hold}; --p-fall:${O.fall}; --p-snap:${O.snap};
 }
 
 /* ------------------------------------------ specs/0055 §1.6 — THE HUD PLATE
@@ -82,7 +84,7 @@ import{gliderState as Ut}from"./glider.js";import{skiState as Bt}from"./ski.js";
   background:var(--p-plate);
   border-bottom:var(--p-rule) solid var(--p-grad-to);
   border-radius:var(--p-r);
-  ${E}
+  ${k}
 }
 .hudblk__lbl {
   display:block; font-family:var(--p-mono); font-size:var(--p-kind);
@@ -128,7 +130,7 @@ import{gliderState as Ut}from"./glider.js";import{skiState as Bt}from"./ski.js";
    speedometer's top-left box by the width of the screen. Three siblings rather
    than one wrapper, because the build gate force-measures .phud__combo on its
    own and a hidden parent would hand it a 0x0 rectangle to pass against. */
-.phud__atime, .phud__combo, .phud__cend { ${E}pointer-events:none; }
+.phud__atime, .phud__combo, .phud__cend { ${k}pointer-events:none; }
 
 /* ================================================= specs/0055 §4.5 — THE SLOTS
    "It should move to the side if a new timer or something is ticking there"
@@ -140,42 +142,67 @@ import{gliderState as Ut}from"./glider.js";import{skiState as Bt}from"./ski.js";
                                two got displaced
 
    S1 and S3 are the same hero box, S3's left edge at \`calc(50% + 232px)\` — the
-   spec's own coordinate. \`--p-hero-box\` is **300 px**, the width of the ledger
-   cell in the lookbook row this pick came from, and NOT the 208 px that reading
-   "232 px apart" as "the hero's width + a 24 px gutter" would give: measured,
-   the shortest possible ledger — a 28 px multiplier, ONE eight-character trick
-   name, one verdict word, two gaps and the padding — is 214 px, so at 208 the
-   middle token ellipsises its own trick name and §4.4's justification has
-   nothing to justify. At 300 the three tokens sit as the lookbook drew them and
-   S1 (490-790) still clears S3 (872) by 82 px. The receipt owns S1 UNLESS a timer is live there,
-   and then it takes S3 and arrives RISE instead of SNAP. This is also 0057's
-   seam (§4.9): air time and jib time are the SAME clock in S1, never two.
+   spec's own coordinate. \`--p-hero-box\` is **300 px**, and NOT the 208 px that
+   reading "232 px apart" as "the hero's width + a 24 px gutter" would give: a
+   68 px six-figure score does not fit 208, and at 300 S1 (490-790) still clears
+   S3 (872) by 82 px. The receipt owns S1 UNLESS a timer is live there, and then
+   it takes S3 and arrives RISE instead of SNAP. This is also 0057's seam
+   (§4.9): air time and jib time are the SAME clock in S1, never two.
 
-   THE 208 px BOX IS WHAT MAKES THE LEDGER JUSTIFIABLE. §4.4 wants the combo's
-   three tokens justified to the hero's full width rather than a line that grows
-   sideways, and "the hero's full width" has to be a number for that to mean
-   anything. It is this one, and the receipt and the bail are the same box, so
-   the receipt really does land in the pixels the timer vacated.
+   specs/0055 §4.4 (fidelity 2026-09-06) — S2 IS NO LONGER 300 px. The picked
+   combo cell is the gate post, which is content-sized (the cell's own gate is
+   220.6 px), so S2 grows with the names and caps at the hero box. S1 and S3
+   keep the box: the receipt still lands in exactly the pixels the timer
+   vacated, which is the half of "the same object" that pick B does not touch.
 
    AND THE BLOCKS DO NOT TOUCH — §8's P4. 12.5 % and 21.5 % of 720 are 90 px and
    154.8 px, so S1 has 64.8 px of room and a 68 px hero on a \`line-height:1\` box
    is 3.2 px too tall for it: with a live timer and a live combo on screen at
    once the two rectangles have overlapped since 0048, which is the defect P4
    exists to catch. \`line-height:.9\` gives the same glyphs a 61.2 px box — the
-   ink is untouched, the half-leading is what shrinks — and S1 clears S2 by
-   3.6 px with the plate on. Nothing here is a nudge: every number is either the
-   spec's or arithmetic on it. */
+   ink is untouched, the half-leading is what shrinks. The bare timer spends the
+   3.6 px that leaves on the picked hairline seam: 2 px of gap and 1 px of rule,
+   S1 = 64.2, and it clears S2 by 0.6 px. Nothing here is a nudge: every number
+   is either the spec's, the cell's, or arithmetic on them. */
 .phud__atime, .phud__cend {
   position:absolute; left:50%; top:12.5%; transform:translateX(-50%);
-  box-sizing:border-box; width:var(--p-hero-box); padding:0 14px;
+  box-sizing:border-box; width:var(--p-hero-box);
+}
+/* THE RECEIPT KEEPS THE PLATE — specs/0055 §4.4 (fidelity 2026-09-06). The
+   fidelity sheet measured the receipt cell's block at 336×146.9 with 18 px of
+   padding = 300 px of content and the same 2 px rule, so this half of the pair
+   was already the pick and only its provenance line was missing. The TIMER is
+   the half that changed: cell B has no surface at all. */
+.phud__cend {
+  padding:0 14px;
   background:var(--p-plate);
   border-bottom:var(--p-rule) solid var(--p-grad-to);
   border-radius:var(--p-r);
 }
 /* S3 — left-aligned, the gutter's width to the right of S1's own left edge */
 .phud__cend.is-s3 { left:calc(50% + 232px); transform:none; text-align:left; }
+/* ------- specs/0055 §4.3 (fidelity 2026-09-06) — THE TIMER IS **BARE**
+   The picked cell (lookbook \`#k-trick-live-timer\`, B) draws NO PLATE: a bare
+   68 px gradient hero and one 132×1 px \`rgba(42,36,86,.35)\` hairline under it
+   — "the mounting seam shrunk to a hairline", in the cell's own words. W2 built
+   cell A's 300 px 34 %-ink plate instead, which is deviation #3 on the sheet.
+   The 300 px BOX stays: it is what holds §4.5's slot geometry still and what
+   keeps the meter's left edge from moving as the digits change width.
+
+   THE SEAM'S GAP IS 2 px AND NOT THE CELL'S 9 — the one number here that is
+   arithmetic rather than the cell's. §4.5 gives S1 exactly 64.8 px (12.5 % and
+   21.5 % of 720 are 90 and 154.8) and a 68 px hero on \`line-height:.9\` is
+   61.2 of them; 9 + 1 does not fit in the 3.6 that are left, and at the cell's
+   9 the hairline would land at 161.2 — straight across the combo's own 2 px
+   post, which starts at 158.8. 2 + 1 fits with 0.6 px to spare and P4 stays
+   green. Everything else — the 132 px width, the 1 px height, the colour, the
+   centring — is the cell's. */
 .phud__atime {
+  padding:0; background:none; border:0; border-radius:0;
   font-size:${n.hero}px; line-height:.9; white-space:nowrap; text-align:center;
+}
+.phud__atime-seam {
+  width:132px; height:var(--p-hairline); background:var(--p-dim); margin:2px auto 0;
 }
 /* THE GRADIENT GOES ON THE NUMERAL, NOT ON THE BLOCK. \`background-clip:text\`
    clips EVERY background the element has, so a gradient declared on the block
@@ -203,7 +230,12 @@ import{gliderState as Ut}from"./glider.js";import{skiState as Bt}from"./ski.js";
    the one gauge in the system allowed to change shape, because the thing it
    measures is the one thing in the game that is only ever going one way. */
 .phud__atime-m {
-  position:absolute; left:100%; margin-left:16px; top:0; bottom:0;
+  position:absolute; left:100%; margin-left:16px; top:0;
+  /* THE HERO'S OWN HEIGHT, and the hero's line box is now 61.2 of the block's
+     64.2 px — the seam and its gap are the other 3. §4.3 asks for the meter to
+     be the hero's height, so it is measured off the hero and not off the block
+     it hangs on: specs/0055 §4.3 (fidelity 2026-09-06). */
+  height:calc(var(--p-hero) * .9); bottom:auto;
   width:var(--aw,10px);
   background:linear-gradient(to top,
     var(--p-dim) 0 24.2%, var(--p-hair) 24.2% 25.8%,
@@ -230,33 +262,66 @@ import{gliderState as Ut}from"./glider.js";import{skiState as Bt}from"./ski.js";
   -webkit-text-fill-color:var(--p-cream);
 }
 
-/* ------------------------------------- specs/0055 §4.4 — THE COMBO LEDGER **B**
-   S2, and the line stops growing sideways. The three tokens — multiplier, trick
-   names, quality word — are JUSTIFIED to the hero's own 208 px, each with a
-   fixed job by POSITION rather than by the middot between it and the next:
-   gradient left = the multiplier, flat centre = what you threw, verdict right.
-   A ten-trick line and a one-trick line are now the same width and the same
-   shape, which is the whole read at speed. The two \`.phud__combo-sep\` middots
-   are not deleted (0057/R2 owns the tail's content and §4.9 renames nothing) —
-   justification does their job, so they stop being drawn. */
+/* ------ specs/0055 §4.4 (fidelity 2026-09-06) — THE COMBO IS THE **GATE POST**
+   The picked cell (lookbook \`#k-trick-combo-meter\`, B) is TWO SURFACES JOINED
+   BY A POST, not one plate with three justified tokens — that is cell A, and it
+   is what W2 built (deviation #4 on the sheet). Measured off the cell at 1:1:
+
+     post      2 × 16 px, \`rgba(42,36,86,.35)\`, 4 px above it   (= --p-dim)
+     tile      56.4 × 38, \`#f4f1ea\` cream, padding 5/10, the 28 px multiplier
+     board    164.2 × 38, \`rgba(23,22,20,.78)\` ink, padding 8/13/7, gap 10,
+               the 13.5 px trick names + the verdict word, baseline-aligned
+     joint     220.6 × 38, radius 2, \`overflow:hidden\` so the two surfaces
+               meet with no seam between them
+     rule      the joint's full width, 2 px, \`rgba(42,36,86,.35)\` track under
+               a \`#3b6cff\` fill — the grace countdown, now the board's own
+               MOUNTING RULE, which is the whole of the signage read
+
+   NO NEW SLAB (D19): cream and ink are §1.6's own two surfaces, and the 78 %
+   ink is the cell's — the pick, not an invention. The multiplier becomes the
+   PLATE and the trick line becomes the BOARD, which is the literal signage
+   grammar §2 already gives the mountain.
+
+   THE 300 px BOX IS A CAP HERE, NOT A WIDTH. The cell's gate is content-sized —
+   a two-token board is 164 px and a longer pair is longer — so the box grows
+   with the names and stops at \`--p-hero-box\`, the timer's own width, past
+   which the name ellipsises rather than the gate running off a 390 px phone.
+   The two \`.phud__combo-sep\` middots stay in the DOM (0057/R2 owns the tail's
+   content and §4.9 renames nothing) and stay undrawn: the two surfaces do
+   their job. */
 .phud__combo {
   position:absolute; left:50%; top:21.5%; bottom:auto; transform:translateX(-50%);
-  box-sizing:border-box; width:var(--p-hero-box); padding:5px 14px 6px;
-  background:var(--p-plate);
-  border-bottom:var(--p-rule) solid var(--p-grad-to);
-  border-radius:var(--p-r);
-  display:flex; flex-direction:column; align-items:stretch; gap:5px;
+  box-sizing:border-box; width:auto; max-width:var(--p-hero-box); padding:0;
+  background:none; border:0; border-radius:0;
+  display:flex; flex-direction:column; align-items:center; gap:0;
   white-space:nowrap; text-shadow:none;
 }
 .phud__combo[hidden], .phud__combo.is-hidden { display:none; }
+/* the post — 2 × 16, 4 px clear of whatever is above it, and it is the whole of
+   "a post hangs the thing off the timer". It is the first child, so §4.5's
+   \`top:21.5%\` lands on the post and the gate sits 20 px under it. */
+.phud__combo-post {
+  flex:none; width:var(--p-gauge); height:16px; background:var(--p-dim); margin-top:4px;
+}
+/* the JOINT: the cream tile and the ink board, welded. \`overflow:hidden\` on a
+   2 px radius is what makes them one object rather than two chips. */
 .phud__combo-line {
-  display:flex; align-items:baseline; justify-content:space-between; gap:8px;
+  display:flex; align-items:stretch; max-width:100%; min-width:0;
+  border-radius:var(--p-r); overflow:hidden;
+}
+.phud__combo-tile {
+  flex:none; display:grid; place-items:center;
+  padding:5px 10px; background:var(--p-cream);
+}
+.phud__combo-board {
+  display:flex; align-items:baseline; gap:10px; min-width:0;
+  padding:8px 13px 7px; background:rgba(23,22,20,.78);
 }
 .phud__combo-mult { flex:none; font-size:${n.heroSmall}px; line-height:1; ${w} }
 .phud__combo-sep { display:none; }
 .phud__combo-n, .phud__combo-q { font-size:${n.secondary}px; color:var(--p-cream); }
 .phud__combo-n {
-  flex:1 1 auto; min-width:0; text-align:center;
+  flex:0 1 auto; min-width:0;
   overflow:hidden; text-overflow:ellipsis;
 }
 .phud__combo-q { flex:none; }
@@ -277,7 +342,13 @@ import{gliderState as Ut}from"./glider.js";import{skiState as Bt}from"./ski.js";
    already slices to 8). The multiplier stays the 28 px gradient numeral and is
    never re-encoded as marks. */
 .phud__marks {
-  display:flex; align-items:center; gap:5px; min-height:11px;
+  display:flex; align-items:center; justify-content:flex-start; gap:5px; min-height:11px;
+  /* specs/0055 §4.6 (fidelity 2026-09-06) — "under the board", and left to
+     right FROM THE BOARD'S OWN LEFT EDGE. \`align-self:stretch\` is what makes
+     that true inside a centred column: the row spans the gate and its marks
+     start where the cream tile starts. The 5 px is the gap the ledger's own
+     column used to supply. */
+  align-self:stretch; margin-top:5px;
 }
 .phud__marks.is-hidden { display:none; }
 .pmark.is-hidden { display:none; }
@@ -286,8 +357,12 @@ import{gliderState as Ut}from"./glider.js";import{skiState as Bt}from"./ski.js";
 }
 
 /* comboGraceT, drained full -> empty: the "you have 2 s to link" read, and it
-   is §1.10's ONE 2 px gauge at the block's own width — no second component. */
-.phud__grace { width:auto; height:var(--p-gauge); background:var(--p-dim); }
+   is §1.10's ONE 2 px gauge — now sitting directly under the board as the
+   gate's MOUNTING RULE, at the joint's own width (specs/0055 §4.4, fidelity
+   2026-09-06: the cell draws it 220.6 × 2, flush under the two surfaces). */
+.phud__grace {
+  align-self:stretch; height:var(--p-gauge); background:var(--p-dim);
+}
 .phud__grace i { display:block; height:100%; width:100%; background:var(--p-grad-to); }
 .phud__grace.is-hidden { display:none; }
 
@@ -299,7 +374,7 @@ import{gliderState as Ut}from"./glider.js";import{skiState as Bt}from"./ski.js";
    BAILED is the same object again: the mounting rule goes flat #ff5c8a and the
    multiplier is struck through. The only non-gradient rule in the system. */
 .phud__cend {
-  display:flex; align-items:baseline; justify-content:center; gap:14px;
+  display:flex; flex-direction:column; align-items:stretch;
   text-align:center; text-shadow:none; white-space:nowrap;
   /* the timer's box is a FLOOR here, not a cap: a six-figure score at 68 px is
      wider than 300 px, and a receipt that clipped its own number to land in the
@@ -307,6 +382,7 @@ import{gliderState as Ut}from"./glider.js";import{skiState as Bt}from"./ski.js";
      sits in exactly the timer's box; a huge one grows out of it. */
   width:auto; min-width:var(--p-hero-box);
 }
+.phud__cend-row { display:flex; align-items:baseline; justify-content:center; gap:14px; }
 .phud__cend[hidden], .phud__cend.is-hidden { display:none; }
 .phud__cend.is-bail { border-bottom-color:var(--p-bailed); }
 .phud__cend-score, .phud__cend-mult { font-size:${n.hero}px; line-height:.9; }
@@ -319,6 +395,39 @@ import{gliderState as Ut}from"./glider.js";import{skiState as Bt}from"./ski.js";
   text-decoration:line-through; text-decoration-thickness:4px;
 }
 .phud__cend-score.is-hidden, .phud__cend-pb.is-hidden, .phud__cend-mult.is-hidden { display:none; }
+
+/* ---- specs/0055 §4.4 (fidelity 2026-09-06) — THE PROVENANCE LINE, cell B
+   The ONE thing that distinguishes the receipt's B cell from its A, and the
+   only thing the sheet found missing on this row: a 1 px \`rgba(244,241,234,.22)\`
+   hairline 10 px under the number, then ONE 9 px mono line — the multiplier,
+   the best trick, and the run it happened on. All three are fields the personal
+   -best board already stores, so the receipt becomes a row you will later
+   recognise on that board. The run is the nearest run marker (or the equipped
+   trail); with neither, the token is simply not printed — a receipt that said
+   "· —" would be inventing a fact. */
+.phud__cend-hair {
+  height:var(--p-hairline); background:rgba(244,241,234,.22); margin:10px 0 7px;
+}
+.phud__cend-prov {
+  font-family:var(--p-mono); font-size:9px; font-style:normal; font-weight:700;
+  letter-spacing:.2em; text-transform:uppercase; color:#cdc7ba;
+}
+.phud__cend-hair.is-hidden, .phud__cend-prov.is-hidden { display:none; }
+
+/* ---- specs/0055 §4.4 + §4.6 (fidelity 2026-09-06) — THE BAIL'S MARK IS THE
+   **DOUBLE DIAMOND**, not the red X. The picked cell (\`#k-trick-combo-end-bailed\`,
+   B) draws §1.8's double diamond in the bail's own \`#ff5c8a\`, 34 × 17 with
+   11 px lobes, justified to the block's left edge opposite the struck
+   multiplier — "the big trick you lost", the severity of the thing and the loss
+   of it in one glance. W2 drew a red X there instead (deviation #6). The X is
+   NOT relocated to the ledger's mark row: neither the A nor the B cell of this
+   panel draws one, and the row is gone by the frame the combo dies anyway. */
+.phud__cend.is-bail .phud__cend-row {
+  justify-content:space-between; align-items:center; gap:16px;
+}
+.phud__cend-dia { width:34px; height:17px; --m:var(--p-bailed); }
+.phud__cend-dia::before, .phud__cend-dia::after { width:11px; height:11px; top:1px; }
+.phud__cend-dia.is-hidden { display:none; }
 /* §6 — SNAP in S1 (the punch, in the pixels you were already reading), RISE in
    S3 (it arrived beside something live, so it announces itself instead). */
 .phud__cend.is-snap { animation:psnapc var(--p-snap) both; }
@@ -350,9 +459,18 @@ import{gliderState as Ut}from"./glider.js";import{skiState as Bt}from"./ski.js";
 
    Everything below is scoped to \`.is-wipe\`: a landed trick's stamp is 0048's
    and this row does not touch it. */
-.phud__trick.is-wipe { top:34%; width:min(760px,86vw); }
+/* specs/0055 §4.7 (fidelity 2026-09-06) — THE PANEL IS THE WORD'S OWN WIDTH.
+   The picked cell (\`extra-patrol-wipeout.html\` #wo-c, the +0.40 s frame) has no
+   width at all: \`white-space:nowrap\` and shrink-to-fit, so the rule and the
+   stat row are justified to WIPEOUT itself — measured 462.25 px at 96 px. W2
+   shipped \`min(760px,86vw)\` = 760 at 1280, 298 px (65 %) wider than the word,
+   which put the joke and the numbers out past both ends of it (deviation #7).
+   \`max-content\` is that shrink-to-fit, said in one property; \`96vw\` is the only
+   thing that ever overrides it, on a phone too narrow for 96 px caps, and the
+   row then justifies to the box because the box is what is left. */
+.phud__trick.is-wipe { top:34%; width:max-content; max-width:96vw; }
 .phud__trick.is-wipe .phud__trick-big {
-  ${E}font-size:96px; line-height:.94; font-weight:${n.weight};
+  ${k}font-size:96px; line-height:.94; font-weight:${n.weight};
   letter-spacing:${n.track}em; color:var(--p-cream);
   text-shadow:0 3px 26px rgba(0,0,0,.55);
 }
@@ -369,7 +487,7 @@ import{gliderState as Ut}from"./glider.js";import{skiState as Bt}from"./ski.js";
   color:#f0ece0; text-shadow:0 1px 8px rgba(0,0,0,.8);
 }
 .phud__trick.is-wipe .phud__trick-n {
-  ${E}font-size:14px; line-height:1; color:rgba(244,241,234,.72);
+  ${k}font-size:14px; line-height:1; color:rgba(244,241,234,.72);
   font-variant-numeric:tabular-nums;
 }
 /* a landed trick keeps 0048's centred sub and shows neither rule nor numbers */
@@ -559,10 +677,10 @@ body.play.is-devbar .phud__read .phud__fps { margin-top:0; }
 }
 .ppause__grp:first-child .ppause__grp-hd { margin-top:0; }
 .ppause__grp-rows { display:grid; grid-template-columns:max-content auto; gap:0 14px; }
-`,x=document.createElement("style");x.id="phud-type",x.textContent=be,document.head.appendChild(x)})();const Yt={landing:"came in too hot",tree:"met a tree",rock:"that was rock",building:"that wall was load-bearing",tower:"the lift is not a slalom gate",person:"sorry. so sorry.",bench:"the bench had it coming"},Me=[10,20,28,30,40],Xt=d=>Me.filter(n=>d*10>=n).length,Jt=[[180,1.5],[360,2],[540,3],[720,4],[900,6],[1080,8],[1260,10],[1440,13]];function Zt(d){let n=1;for(const[E,w]of Jt)if(d+1e-6>=E)n=w;else break;return d>1440?13+(d-1440)/180*3:n}function Qt(d){const n=/(\d{3,4})/.exec(d);return n?+n[1]:/triple/i.test(d)?1080:/double/i.test(d)?720:/flip/i.test(d)?360:0}function ea(d){return/cork|d-spin/i.test(d)?"cork":/underflip/i.test(d)?"underflip":/bio/i.test(d)?"bio":/misty/i.test(d)?"misty":/rodeo/i.test(d)?"rodeo":/flip/i.test(d)?"flip":/50-50|slide|switch-up|press/i.test(d)?"jib":/^\d+$/.test(d.trim())?"spin":"grab"}function ta(d,n){const E=Zt(Qt(d));return E>=4?n?"double":"black":E>=2?"blue":"green"}const q=(d,n)=>{d.textContent!==n&&(d.textContent=n)},t=(d,n,E)=>{const w=document.createElement(d);return n&&(w.className=n),E!=null&&(w.textContent=E),w};function sa({poi:d,run:n,adapter:E,onResume:w,onRespawn:L}){const u=t("div","phud"),I=t("div","phud__read pchip"),A=t("div","phud__title");A.append(t("span","dot"),t("b",null,Wt((d||"world").toUpperCase(),jt))),I.append(A);const be=t("span","spacer"),x={};for(const[e,a]of[["pos","x / y / z"],["spd","speed"],["state","state"],["gear","gear"],["cam","cam"]]){const o=t("div","r");o.append(t("span","k",a),t("span","v","—")),x[e]=o.lastChild,I.append(o)}B&&u.append(I);let T=null;if(B){const e=t("div","phud__lip pchip");e.style.cssText="position:absolute;left:12px;top:190px;min-width:236px;font:11px/1.45 ui-monospace,Menlo,Consolas,monospace;padding:8px 10px;pointer-events:none;white-space:pre;";const a=t("div","phud__title");a.append(t("span","dot"),t("b",null,"LIP · COMPRESSION")),e.append(a);const o=_=>{const m=t("div");m.style.cssText="display:flex;justify-content:space-between;gap:10px";const C=t("span",null,_);C.style.opacity=".55";const c=t("span",null,"—");return m.append(C,c),e.append(m),c},i={};for(const _ of["surface vy","reference","compression"])i[_]=o(_);const s=t("div");s.style.cssText="height:1px;margin:5px 0;opacity:.25;background:currentColor",e.append(s);for(const _ of["ramp x K","comp x K","charge"])i[_]=o(_);const r=t("div");r.style.cssText="position:relative;height:6px;margin:4px 0 6px;border:1px solid currentColor;opacity:.9";const p=t("i");p.style.cssText="position:absolute;left:0;top:0;bottom:0;width:0;background:currentColor;opacity:.95";const l=t("i");l.style.cssText="position:absolute;top:0;bottom:0;width:0;background:currentColor;opacity:.45";const b=t("i");b.style.cssText="position:absolute;top:-2px;bottom:-2px;width:1px;background:currentColor",r.append(p,l,b),e.append(r);const h=t("div");h.style.cssText="height:1px;margin:5px 0;opacity:.25;background:currentColor",e.append(h);for(const _ of["surface accel","snap release","pop window","pop now","state"])i[_]=o(_);const f=t("div");f.style.cssText="margin-top:6px;padding-top:5px;border-top:1px solid currentColor;opacity:.85;white-space:pre-wrap",f.textContent="takeoff —",e.append(f),u.append(e),T={box:e,rows:i,barR:p,barC:l,barMin:b,shot:f,shotT:0}}const ie=t("div","phud__fps");ie.append(t("span","k","fps "),t("span","v","—"));const Ct=ie.lastChild;A.append(be,ie);let O=null,_e={},J=null,Ue="";if(B){O=t("div","phud__dev pchip"),O.hidden=!0;const e=t("div","phud__title");e.append(t("span","dot"),t("b",null,"FLY CAMERA")),O.append(e);for(const[r,p]of[["pos","x / y / z"],["ang","yaw / pitch"],["fov","fov"],["spd","speed"],["cmp","compare"]]){const l=t("div","r");l.append(t("span","k",p),t("span","v","—")),_e[r]=l.lastChild,O.append(l)}J=t("div","phud__dev-url"),J.textContent="?spawn=",O.append(J);const a=t("div","phud__dev-btns"),o=t("button","pdev-btn pdev-btn--sm","copy params"),i=t("button","pdev-btn pdev-btn--sm","copy url");o.type=i.type="button",a.append(o,i),O.append(a),u.append(O);const s=(r,p)=>{const l=()=>{y.classList.remove("is-refusal"),y.textContent="copied · "+p,y.hidden=!1,Y=1.2};navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(r).then(l,()=>{}):l()};o.addEventListener("click",r=>{r.stopPropagation(),s(J.textContent,"spawn params")}),i.addEventListener("click",r=>{r.stopPropagation(),s(Ue,"play url")})}const se=t("div","phud__legend"),F=(e,a)=>{const o=t("span","pkey");return o.append(t("b",null,e),document.createTextNode(a)),se.append(o),o},V=(e,a)=>{const o=t("span","pkey is-hidden");return o.append(t("b",null,e),document.createTextNode(a)),o},k={move:F("WASD","move"),sprint:V("SHIFT","sprint"),jump:F("SPACE","jump"),gear:V("E","gear"),inv:V("I","locker"),boost:F("HOLD SPACE","boost"),lift:V("F","lift"),spin:F("← →","spin"),cam:F("C","camera"),reset:F("R","reset"),refs:B?F("B","refs"):V("B","refs"),dev:B?F("F8","dev"):V("F8","dev"),pause:F("ESC","pause")};k.lift.classList.add("is-hidden"),k.boost.classList.add("is-hidden"),k.pause.classList.add("is-out"),u.append(se),matchMedia("(pointer: coarse)").matches&&(se.style.display="none");const xe=matchMedia("(pointer: coarse)").matches,g=t("div","phud__prompt pchip");g.hidden=!0;const Be=t("b",null,"F"),ke=t("span",null,"");g.append(Be,ke),u.append(g);let re=!1,pe="F",ve=0;const je={SPACE:"Space",ENTER:"Enter",ESC:"Escape",TAB:"Tab"},We=e=>{const a=String(e??"F").trim().toUpperCase();return je[a]?je[a]:/^[A-Z]$/.test(a)?"Key"+a:/^[0-9]$/.test(a)?"Digit"+a:"Key"+(a[0]||"F")};function ze(){if(g.hidden)return null;const e=We(pe),a={code:e,key:e.startsWith("Key")?e.slice(3).toLowerCase():e,bubbles:!0,cancelable:!0};return ve++,g.dataset.fires=String(ve),dispatchEvent(new KeyboardEvent("keydown",a)),dispatchEvent(new KeyboardEvent("keyup",a)),e}if(xe){g.classList.add("phud__prompt--tap"),g.addEventListener("touchstart",o=>{o.stopPropagation(),o.preventDefault(),g.classList.add("is-press")},{passive:!1});const e=o=>{const i=g.getBoundingClientRect();return o.clientX>=i.left&&o.clientX<=i.right&&o.clientY>=i.top&&o.clientY<=i.bottom},a=o=>i=>{i.stopPropagation(),i.preventDefault();const s=g.classList.contains("is-press");g.classList.remove("is-press");const r=i.changedTouches&&i.changedTouches[0];o&&s&&(!r||e(r))&&ze()};g.addEventListener("touchend",a(!0),{passive:!1}),g.addEventListener("touchcancel",a(!1),{passive:!1}),g.addEventListener("click",o=>{o.stopPropagation(),ze()})}const P=t("div","phud__fuel");P.hidden=!0;const Lt=t("span","phud__fuel-lbl","boost"),Ke=t("span","phud__fuel-bar"),Ge=t("i");Ke.append(Ge),P.append(Lt,Ke),u.append(P);let Z=!1,qe=!1;const y=t("div","phud__toast pchip");y.hidden=!0,u.append(y);let Y=0;const S=t("div","phud__trick");S.hidden=!0;const Ve=t("div","phud__trick-big"),At=t("div","phud__trick-rule"),Ye=t("div","phud__trick-row"),Xe=t("div","phud__trick-sub"),Je=t("div","phud__trick-n");Ye.append(Xe,Je),S.append(Ve,At,Ye),u.append(S);let j=0,we=!1,Q=0;const N=t("div","phud__pump");N.hidden=!0;const Ze=t("i","phud__pump-arc");N.append(Ze),u.append(N);let X=0,ye=0;const v=t("div","phud__atime"),Qe=t("span","phud__atime-n","0.00"),et=t("span","phud__atime-u","AIR"),de=t("div","phud__atime-m"),Ot=t("i");de.append(Ot),v.append(Qe,et,de),v.hidden=!0,u.append(v);let W=0,H=0,le=!1,tt="",at="";const z=t("div","phud__combo");z.hidden=!0;const ee=t("div","phud__combo-line"),ot=t("span","phud__combo-mult","×1"),nt=t("span","phud__combo-sep","·"),Ee=t("span","phud__combo-n",""),it=t("span","phud__combo-sep","·"),te=t("span","phud__combo-q","");ee.append(ot,nt,Ee,it,te);const st=t("div","phud__grace"),rt=t("i");st.append(rt);const K=t("div","phud__marks"),pt=t("span","phud__marks-more","");z.append(ee,K,st),u.append(z);let Te="";function Nt(e,a,o){const i=e.length+"|"+(a||"")+"|"+(o?"x":"")+"|"+e.join(",");if(i===Te)return;Te=i,K.textContent="";const s=e.slice(0,8),r=new Set;s.forEach((p,l)=>{const b=ea(p),h=!r.has(b);r.add(b);const f=t("span","pmark pmark--"+ta(p,h));a==="sketchy"&&l===s.length-1&&f.classList.add("is-hollow"),K.append(f)}),o&&K.append(t("span","pmark pmark--x")),e.length>8&&(q(pt,"+ ×"+(e.length-8)),K.append(pt)),K.classList.toggle("is-hidden",!K.childElementCount)}let ae=-1;const R=t("div","phud__cend");R.hidden=!0;const Se=t("span","phud__cend-score","0"),Ce=t("span","phud__cend-mult","×1"),dt=t("span","phud__cend-pb","PB"),lt=t("span","pmark pmark--x");R.append(lt,Se,Ce,dt),u.append(R);let he=0;const oe=t("div","phud__bdot");oe.hidden=!0,oe.title="L L",u.append(oe);const D=t("div","pgearmenu");D.hidden=!0;const ht=t("section","panel pgearmenu__panel"),ct=t("div","panel__hd");ct.append(t("span","lbl lbl--accent","gear"),t("span","spacer"),t("span","lbl","e / esc close"));const Le=t("div","panel__bd pgearmenu__bd");ht.append(ct,Le),D.append(ht),u.append(D);let M=[],G=0,Ae=null;function Oe(){M.forEach((e,a)=>e.el.classList.toggle("is-sel",a===G))}function ce(){D.hidden=!0,Ae=null}function Ne(e){const a=M[e];if(!a||a.disabled)return;const o=Ae;ce(),o&&o(a.gear)}const Rt={openGear({current:e,def:a,gears:o,onPick:i}){Le.textContent="",M=(o||["boots","skis"]).map((s,r)=>{const p=t("div","pgearmenu__row");return p.append(t("span","cap",String(r+1)),t("span","name",s),t("span","tag",s===e?"equipped":s===a?"default":"")),p.addEventListener("click",l=>{l.stopPropagation(),Ne(M.findIndex(b=>b.el===p))}),Le.append(p),{el:p,gear:s,disabled:!1}}),G=Math.max(0,M.findIndex(s=>s.gear===e)),Ae=i,D.hidden=!1,Oe()},closeGear:ce,gearOpen(){return!D.hidden},gearKey(e){if(D.hidden)return!1;if(e==="KeyW"||e==="ArrowUp")return G=(G+M.length-1)%M.length,Oe(),!0;if(e==="KeyS"||e==="ArrowDown")return G=(G+1)%M.length,Oe(),!0;if(e==="Enter"||e==="Space")return Ne(G),!0;if(e==="Escape"||e==="KeyE")return ce(),!0;const a=/^(?:Digit|Numpad)([1-9])$/.exec(e);return a&&Ne(Number(a[1])-1),!0}};if(B){const e=t("div","phud__ref pchip");e.hidden=!0;const a=t("img","phud__ref-img");a.alt="";const o=t("div","phud__ref-cap"),i=t("span","pmark pmark--x");o.append(i);const s=t("span",null,"");o.append(s),e.append(a,o),u.append(e);let r=[],p=0;fetch("/api/poi/"+encodeURIComponent(d)).then(h=>h.json()).then(h=>{r=[...h.aerials||[],...h.photos||[]]}).catch(()=>{});const l=()=>{if(!r.length){e.classList.add("is-empty"),s.textContent="no reference bundle";return}e.classList.remove("is-empty"),p=(p+r.length)%r.length;const h=r[p];a.src=h.url.replace("/files/","/thumb/")+"?w=900",s.textContent=h.name.replace(/\.(jpe?g|png|webp)$/i,"")+" · "+(p+1)+"/"+r.length+" · [ ] cycle · B close"},b=h=>!!h&&(h.tagName==="INPUT"||h.tagName==="TEXTAREA"||h.isContentEditable);addEventListener("keydown",h=>{D.hidden&&(b(h.target)||document.body.classList.contains("is-dev")||(h.code==="KeyB"?(e.hidden=!e.hidden,e.hidden||l()):!e.hidden&&h.code==="BracketRight"?(p++,l()):!e.hidden&&h.code==="BracketLeft"&&(p--,l())))})}const ut=t("div","phud__cross");u.append(ut);const $=t("div","ppause");$.hidden=!0;const mt=t("section","panel ppause__panel"),ft=t("div","panel__hd");ft.append(t("span","lbl lbl--accent","paused"),t("span","spacer"),t("span","lbl",zt({lab:n||"","RED DOG":"red dog chair",SIBERIA:"siberia express"})));const gt=t("div","panel__bd ppause__bd"),ue=t("div","ppause__keys");let Re=null,Ie=null;const It=[["core","every run","green"],["foot","on foot","green"],["ski","on skis","blue"],["bike","on the bike","blue"],["air","in the air","black"],["glide","on the glider","black"],["rocket","on the rocket pack","double"],["lab","lab only","x"]],bt=[["ESC","settings","core"],["W A S D","move","core"],["← →","tricks in the air","core"],["C","camera","core"],["R","reset","core"]],Ft=[["SHIFT","sprint","foot"],["SPACE","jump","foot"],["MOUSE","look","foot"],["E","gear · tap toggles, hold for menu","foot"],["I","inventory · the ski rack, and every other gear type","foot"],["SPACE","hold to thrust · on the rocket pack — 6 s of fuel, refills itself at 1×","rocket"],["F","ride the chairlift · at a base terminal","foot","lift"],["A D","carve · on skis","ski"],["S","stop · on skis; moving backward it drives instead","ski"],["W","skate · on skis; moving backward it stops you","ski"],["W S","pedal / pump · on bike","bike"],["SHIFT","brake · on bike","bike"],["SPACE","hold to preload, release on a lip to pop · on bike","bike"],["MOUSE","aim where to fly — the wing banks and carves round to it · on glider","glide"],["W S","nose down / nose up · on glider","glide"],["SPACE","hold to flare — bleed speed for a clean landing · on glider","glide"],["MOUSE","aim the motor — thrust goes exactly where you look · on the rocket pack","rocket"],["SPACE","let go and you are a falling body; burn back down the way you came to land · on the rocket pack","rocket"],["← →","spin / flip · in the air","air"],["↑ ↓","spin / flip · in the air; on the snow they are W and S","air"],["← →","barrel roll · flying","glide"],["B","reference photos","lab"],["[ ]","cycle refs","lab"],["F8","dev fly mode · noclip + reference compare","lab"]],Pt=B?[...bt,...Ft]:bt;for(const[e,a,o]of It){const i=Pt.filter(l=>l[2]===e);if(!i.length)continue;const s=t("div","ppause__grp"),r=t("div","ppause__grp-hd");r.append(t("span","pmark pmark--"+o),t("span",null,a));const p=t("div","ppause__grp-rows");for(const[l,b,,h]of i){const f=t("div","cap",l),_=t("div","what",b);h==="lift"&&(f.classList.add("is-hidden"),_.classList.add("is-hidden"),Re=f,Ie=_),p.append(f,_)}s.append(r,p),ue.append(s)}ue.childElementCount>1&&ue.classList.add("is-cols");const Fe=t("button","btn btn--accent ppause__big","click to resume");Fe.type="button";const _t=t("a","btn btn--ghost","return to bench");_t.href="/#/run/"+encodeURIComponent(d)+"/"+encodeURIComponent(n);const Pe=t("button","btn btn--ghost","respawn");Pe.type="button";const xt=t("div","ppause__row");xt.append(Fe);const kt=t("div","ppause__row");B&&kt.append(_t,Pe,t("span","lbl","adapter · "+E));const Ht=t("div","ppause__credit","terrain USGS 3DEP · trails © OpenStreetMap contributors (ODbL)");gt.append(ue,xt,kt,Ht),mt.append(ft,gt),$.append(mt),u.append($);const U=t("div","pboard");U.hidden=!0;const vt=t("section","panel pboard__panel"),wt=t("div","panel__hd");wt.append(t("span","lbl lbl--accent","personal best"),t("span","spacer"),t("span","lbl","l l · esc close"));const ne=t("div","panel__bd pboard__bd");vt.append(wt,ne),U.append(vt),u.append(U);const yt=e=>Math.round(Number(e)||0).toLocaleString("en-US"),$t=["rk","sc","mu","bt","sk","tr","wh"];function Et(e,a){const o=t("div","pboard__row"+(e?" "+e:""));return a.forEach((i,s)=>o.append(t("span",$t[s],i))),o}function Dt(e){if(ne.textContent="",ne.append(Et("pboard__row--hd",["#","score","mult","best trick","ski","trail","when"])),!e.length){ne.append(t("div","pboard__empty","no runs banked yet · land a combo"));return}for(const a of e)ne.append(Et(a&&a.you?"is-you":"",[String(a.rank!=null?a.rank:"—"),yt(a.score),"×"+(a.mult!=null?a.mult:1),a.best||"—",a.ski||"—",a.trail||"—",a.when||"—"]))}function me(){U.hidden=!0}U.style.pointerEvents="auto",U.addEventListener("click",e=>{e.stopPropagation(),me()}),$.style.pointerEvents="auto",Fe.addEventListener("click",e=>{e.stopPropagation(),w&&w()}),Pe.addEventListener("click",e=>{e.stopPropagation(),L&&L()}),$.addEventListener("click",()=>w&&w()),document.body.appendChild(u);let fe=0,He=0,Tt=performance.now();const $e=e=>(e>=0?" ":"")+e.toFixed(1);let ge=!1;function St(){const e=!$.hidden;for(const a of[ie,se,y,S,g,P,N,v,z,R,oe])a.classList.toggle("is-hidden",e);for(const a of[ut,I])a.classList.toggle("is-hidden",e||ge);O&&(O.classList.toggle("is-hidden",e),O.hidden=!ge)}return{root:u,pause:$,setPaused(e){$.hidden=!e,e&&(ce(),me()),St()},isPaused(){return!$.hidden},setDev(e){ge=!!e,k.dev.classList.toggle("is-on",ge),St()},devTick(e){if(O){for(const a of Object.keys(_e))e[a]!=null&&(_e[a].textContent=e[a]);e.params!=null&&(J.textContent=e.params),e.url!=null&&(Ue=e.url)}},lipMeter(e){if(!T)return;const a=!!e&&!!e.on;if(T.box.hidden=!a,!a)return;const o=e.s,i=e.T,s=T.rows,r=(c,Mt=2)=>(c>=0?"+":"")+Number(c||0).toFixed(Mt);s["surface vy"].textContent=r(o.surfVy)+" m/s "+(o.surfVy>.05?"UP":o.surfVy<-.05?"down":"flat"),s.reference.textContent=r(o.vyFloor)+" m/s",s.compression.textContent=r(o.comp)+" m/s",s["ramp x K"].textContent=r(o.lipRamp),s["comp x K"].textContent=r(o.lipComp);const p=(o.lipRamp||0)+(o.lipComp||0);s.charge.textContent=(o.lipVy>0?Number(o.lipVy).toFixed(2):"0.00")+" / "+Number(i.lipMax).toFixed(2)+(o.lipVy>0?"":p>0?"  < lipMin":o.lipRamp<0?"  ramp negative":"");const l=c=>Math.max(0,Math.min(100,100*c/(i.lipMax||1))),b=l(Math.max(0,o.lipRamp));T.barR.style.width=b.toFixed(1)+"%",T.barC.style.left=b.toFixed(1)+"%",T.barC.style.width=l(o.lipComp).toFixed(1)+"%",T.barMin.style.left=l(i.lipMin).toFixed(1)+"%";const h=o.sincePop==null?1e9:o.sincePop;let f;!e.grounded&&o.airT>0?f=o.popPaid?"spent":o.lipVy>0&&o.airT<=i.popCoyote?"COYOTE "+(i.popCoyote-o.airT).toFixed(2)+"s left":"closed":o.lipVy>0?f=h<=i.popWindow?"ARMED (popped "+h.toFixed(2)+"s ago)":"at lip · pop now":f="no charge";const _=o.dVyS||0,m=o.gravity||16;s["surface accel"].textContent=r(_,1)+" / -"+m.toFixed(0)+(_<-m?"  PAST FREE FALL":""),s["snap release"].textContent=o.dropK>0?(100*o.dropK).toFixed(0)+"%  "+Number(o.snapFull).toFixed(2)+" -> "+Number(o.snapCut).toFixed(2)+" m":"glued  "+Number(o.snapFull||0).toFixed(2)+" m",s["pop window"].textContent=f;const C=e.pop;if(s["pop now"].textContent=C?Number(C.total).toFixed(2)+" m/s"+(C.add>.005?"  (+"+C.add.toFixed(2)+")":"")+(C.add<=.005&&C.compRaw>.5?"  "+C.gate.toUpperCase():""):"—",s.state.textContent=(e.grounded?"on snow":"air "+Number(o.airT).toFixed(2)+"s")+(o.lipVy>0?" · charged":""),e.launch){const c=e.launch;T.shot.textContent="takeoff "+(c.total>.01?"+"+c.total.toFixed(2)+" m/s":"flat")+"  ["+c.src.toUpperCase()+"]"+(c.drop?`
+`,Q=document.createElement("style");Q.id="phud-type",Q.textContent=Z,document.head.appendChild(Q)})();const pa={landing:"came in too hot",tree:"met a tree",rock:"that was rock",building:"that wall was load-bearing",tower:"the lift is not a slalom gate",person:"sorry. so sorry.",bench:"the bench had it coming"},Ge=[10,20,28,30,40],la=p=>Ge.filter(n=>p*10>=n).length;function ha(){try{const p=window.__guide,n=p&&typeof p.equipped=="function"?p.equipped():null;if(n&&n.name)return String(n.name);const k=window.__playMarkers,w=k&&typeof k.stats=="function"?k.stats():null,v=w&&w.nearest;if(v&&v.kind==="run"&&v.name)return String(v.name)}catch{}return""}const ca=[[180,1.5],[360,2],[540,3],[720,4],[900,6],[1080,8],[1260,10],[1440,13]];function ua(p){let n=1;for(const[k,w]of ca)if(p+1e-6>=k)n=w;else break;return p>1440?13+(p-1440)/180*3:n}function ma(p){const n=/(\d{3,4})/.exec(p);return n?+n[1]:/triple/i.test(p)?1080:/double/i.test(p)?720:/flip/i.test(p)?360:0}function fa(p){return/cork|d-spin/i.test(p)?"cork":/underflip/i.test(p)?"underflip":/bio/i.test(p)?"bio":/misty/i.test(p)?"misty":/rodeo/i.test(p)?"rodeo":/flip/i.test(p)?"flip":/50-50|slide|switch-up|press/i.test(p)?"jib":/^\d+$/.test(p.trim())?"spin":"grab"}function ga(p,n){const k=ua(ma(p));return k>=4?n?"double":"black":k>=2?"blue":"green"}const j=(p,n)=>{p.textContent!==n&&(p.textContent=n)},t=(p,n,k)=>{const w=document.createElement(p);return n&&(w.className=n),k!=null&&(w.textContent=k),w};function wa({poi:p,run:n,adapter:k,onResume:w,onRespawn:v}){const u=t("div","phud"),D=[],O=t("div","phud__read pchip"),Z=t("div","phud__title");Z.append(t("span","dot"),t("b",null,ia((p||"world").toUpperCase(),aa))),O.append(Z);const Q=t("span","spacer"),T={};for(const[e,i]of[["pos","x / y / z"],["spd","speed"],["state","state"],["gear","gear"],["cam","cam"]]){const a=t("div","r");a.append(t("span","k",i),t("span","v","—")),T[e]=a.lastChild,O.append(a)}W&&u.append(O);let S=null;if(W){const e=t("div","phud__lip pchip");e.style.cssText="position:absolute;left:12px;top:190px;min-width:236px;font:11px/1.45 ui-monospace,Menlo,Consolas,monospace;padding:8px 10px;pointer-events:none;white-space:pre;";const i=t("div","phud__title");i.append(t("span","dot"),t("b",null,"LIP · COMPRESSION")),e.append(i);const a=b=>{const f=t("div");f.style.cssText="display:flex;justify-content:space-between;gap:10px";const C=t("span",null,b);C.style.opacity=".55";const c=t("span",null,"—");return f.append(C,c),e.append(f),c},s={};for(const b of["surface vy","reference","compression"])s[b]=a(b);const o=t("div");o.style.cssText="height:1px;margin:5px 0;opacity:.25;background:currentColor",e.append(o);for(const b of["ramp x K","comp x K","charge"])s[b]=a(b);const r=t("div");r.style.cssText="position:relative;height:6px;margin:4px 0 6px;border:1px solid currentColor;opacity:.9";const d=t("i");d.style.cssText="position:absolute;left:0;top:0;bottom:0;width:0;background:currentColor;opacity:.95";const h=t("i");h.style.cssText="position:absolute;top:0;bottom:0;width:0;background:currentColor;opacity:.45";const _=t("i");_.style.cssText="position:absolute;top:-2px;bottom:-2px;width:1px;background:currentColor",r.append(d,h,_),e.append(r);const l=t("div");l.style.cssText="height:1px;margin:5px 0;opacity:.25;background:currentColor",e.append(l);for(const b of["surface accel","snap release","pop window","pop now","state"])s[b]=a(b);const m=t("div");m.style.cssText="margin-top:6px;padding-top:5px;border-top:1px solid currentColor;opacity:.85;white-space:pre-wrap",m.textContent="takeoff —",e.append(m),u.append(e),D.push(e),S={box:e,rows:s,barR:d,barC:h,barMin:_,shot:m,shotT:0}}const pe=t("div","phud__fps");pe.append(t("span","k","fps "),t("span","v","—"));const $t=pe.lastChild;Z.append(Q,pe);let A=null,we={},ee=null,qe="";if(W){A=t("div","phud__dev pchip"),A.hidden=!0;const e=t("div","phud__title");e.append(t("span","dot"),t("b",null,"FLY CAMERA")),A.append(e);for(const[r,d]of[["pos","x / y / z"],["ang","yaw / pitch"],["fov","fov"],["spd","speed"],["cmp","compare"]]){const h=t("div","r");h.append(t("span","k",d),t("span","v","—")),we[r]=h.lastChild,A.append(h)}ee=t("div","phud__dev-url"),ee.textContent="?spawn=",A.append(ee);const i=t("div","phud__dev-btns"),a=t("button","pdev-btn pdev-btn--sm","copy params"),s=t("button","pdev-btn pdev-btn--sm","copy url");a.type=s.type="button",i.append(a,s),A.append(i),u.append(A);const o=(r,d)=>{const h=()=>{E.classList.remove("is-refusal"),E.textContent="copied · "+d,E.hidden=!1,V=1.2};navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(r).then(h,()=>{}):h()};a.addEventListener("click",r=>{r.stopPropagation(),o(ee.textContent,"spawn params")}),s.addEventListener("click",r=>{r.stopPropagation(),o(qe,"play url")})}const le=t("div","phud__legend"),I=(e,i)=>{const a=t("span","pkey");return a.append(t("b",null,e),document.createTextNode(i)),le.append(a),a},q=(e,i)=>{const a=t("span","pkey is-hidden");return a.append(t("b",null,e),document.createTextNode(i)),a},x={move:I("WASD","move"),sprint:q("SHIFT","sprint"),jump:I("SPACE","jump"),gear:q("E","gear"),inv:q("I","locker"),boost:I("HOLD SPACE","boost"),lift:q("F","lift"),spin:I("← →","spin"),cam:I("C","camera"),reset:I("R","reset"),refs:W?I("B","refs"):q("B","refs"),dev:W?I("F8","dev"):q("F8","dev"),pause:I("ESC","pause")};x.lift.classList.add("is-hidden"),x.boost.classList.add("is-hidden"),x.pause.classList.add("is-out"),u.append(le),matchMedia("(pointer: coarse)").matches&&(le.style.display="none");const ve=matchMedia("(pointer: coarse)").matches,g=t("div","phud__prompt pchip");g.hidden=!0;const Ve=t("b",null,"F"),ye=t("span",null,"");g.append(Ve,ye),u.append(g);let he=!1,ce="F",Ee=0;const Xe={SPACE:"Space",ENTER:"Enter",ESC:"Escape",TAB:"Tab"},Ye=e=>{const i=String(e??"F").trim().toUpperCase();return Xe[i]?Xe[i]:/^[A-Z]$/.test(i)?"Key"+i:/^[0-9]$/.test(i)?"Digit"+i:"Key"+(i[0]||"F")};function Je(){if(g.hidden)return null;const e=Ye(ce),i={code:e,key:e.startsWith("Key")?e.slice(3).toLowerCase():e,bubbles:!0,cancelable:!0};return Ee++,g.dataset.fires=String(Ee),dispatchEvent(new KeyboardEvent("keydown",i)),dispatchEvent(new KeyboardEvent("keyup",i)),e}if(ve){g.classList.add("phud__prompt--tap"),g.addEventListener("touchstart",a=>{a.stopPropagation(),a.preventDefault(),g.classList.add("is-press")},{passive:!1});const e=a=>{const s=g.getBoundingClientRect();return a.clientX>=s.left&&a.clientX<=s.right&&a.clientY>=s.top&&a.clientY<=s.bottom},i=a=>s=>{s.stopPropagation(),s.preventDefault();const o=g.classList.contains("is-press");g.classList.remove("is-press");const r=s.changedTouches&&s.changedTouches[0];a&&o&&(!r||e(r))&&Je()};g.addEventListener("touchend",i(!0),{passive:!1}),g.addEventListener("touchcancel",i(!1),{passive:!1}),g.addEventListener("click",a=>{a.stopPropagation(),Je()})}const H=t("div","phud__fuel");H.hidden=!0;const Bt=t("span","phud__fuel-lbl","boost"),Ze=t("span","phud__fuel-bar"),Qe=t("i");Ze.append(Qe),H.append(Bt,Ze),u.append(H);let te=!1,et=!1;const E=t("div","phud__toast pchip");E.hidden=!0,u.append(E);let V=0;const L=t("div","phud__trick");L.hidden=!0;const tt=t("div","phud__trick-big"),Ut=t("div","phud__trick-rule"),at=t("div","phud__trick-row"),it=t("div","phud__trick-sub"),nt=t("div","phud__trick-n");at.append(it,nt),L.append(tt,Ut,at),u.append(L);let M=0,ue=!1,ae=0;const N=t("div","phud__pump");N.hidden=!0;const ot=t("i","phud__pump-arc");N.append(ot),u.append(N);let X=0,Te=0;const y=t("div","phud__atime"),st=t("span","phud__atime-n","0.00"),rt=t("span","phud__atime-u","AIR"),me=t("div","phud__atime-m"),Wt=t("i");me.append(Wt);const jt=t("div","phud__atime-seam");y.append(st,rt,me,jt),y.hidden=!0,u.append(y);let z=0,P=0,fe=!1,dt="",pt="";const K=t("div","phud__combo");K.hidden=!0;const zt=t("div","phud__combo-post"),ie=t("div","phud__combo-line"),lt=t("span","phud__combo-tile"),ht=t("span","phud__combo-board"),ct=t("span","phud__combo-mult","×1"),ut=t("span","phud__combo-sep","·"),Se=t("span","phud__combo-n",""),mt=t("span","phud__combo-sep","·"),ne=t("span","phud__combo-q","");lt.append(ct),ht.append(ut,Se,mt,ne),ie.append(lt,ht);const ft=t("div","phud__grace"),gt=t("i");ft.append(gt);const Y=t("div","phud__marks"),bt=t("span","phud__marks-more","");K.append(zt,ie,ft,Y),u.append(K);let Le="";function Kt(e,i,a){const s=e.length+"|"+(i||"")+"|"+(a?"x":"")+"|"+e.join(",");if(s===Le)return;Le=s,Y.textContent="";const o=e.slice(0,8),r=new Set;o.forEach((d,h)=>{const _=fa(d),l=!r.has(_);r.add(_);const m=t("span","pmark pmark--"+ga(d,l));i==="sketchy"&&h===o.length-1&&m.classList.add("is-hollow"),Y.append(m)}),e.length>8&&(j(bt,"+ ×"+(e.length-8)),Y.append(bt)),Y.classList.toggle("is-hidden",!Y.childElementCount)}let oe=-1;const R=t("div","phud__cend");R.hidden=!0;const xt=t("div","phud__cend-row"),Ce=t("span","phud__cend-score","0"),Oe=t("span","phud__cend-mult","×1"),_t=t("span","phud__cend-pb","PB"),kt=t("span","pmark pmark--double phud__cend-dia"),wt=t("div","phud__cend-hair"),Ae=t("div","phud__cend-prov","");xt.append(kt,Ce,Oe,_t),R.append(xt,wt,Ae),u.append(R);let ge=0;const se=t("div","phud__bdot");se.hidden=!0,se.title="L L",u.append(se);const $=t("div","pgearmenu");$.hidden=!0;const vt=t("section","panel pgearmenu__panel"),yt=t("div","panel__hd");yt.append(t("span","lbl lbl--accent","gear"),t("span","spacer"),t("span","lbl","e / esc close"));const Ne=t("div","panel__bd pgearmenu__bd");vt.append(yt,Ne),$.append(vt),u.append($);let B=[],G=0,Re=null;function Ie(){B.forEach((e,i)=>e.el.classList.toggle("is-sel",i===G))}function be(){$.hidden=!0,Re=null}function He(e){const i=B[e];if(!i||i.disabled)return;const a=Re;be(),a&&a(i.gear)}const Gt={openGear({current:e,def:i,gears:a,onPick:s}){Ne.textContent="",B=(a||["boots","skis"]).map((o,r)=>{const d=t("div","pgearmenu__row");return d.append(t("span","cap",String(r+1)),t("span","name",o),t("span","tag",o===e?"equipped":o===i?"default":"")),d.addEventListener("click",h=>{h.stopPropagation(),He(B.findIndex(_=>_.el===d))}),Ne.append(d),{el:d,gear:o,disabled:!1}}),G=Math.max(0,B.findIndex(o=>o.gear===e)),Re=s,$.hidden=!1,Ie()},closeGear:be,gearOpen(){return!$.hidden},gearKey(e){if($.hidden)return!1;if(e==="KeyW"||e==="ArrowUp")return G=(G+B.length-1)%B.length,Ie(),!0;if(e==="KeyS"||e==="ArrowDown")return G=(G+1)%B.length,Ie(),!0;if(e==="Enter"||e==="Space")return He(G),!0;if(e==="Escape"||e==="KeyE")return be(),!0;const i=/^(?:Digit|Numpad)([1-9])$/.exec(e);return i&&He(Number(i[1])-1),!0}};if(W){const e=t("div","phud__ref pchip");e.hidden=!0;const i=t("img","phud__ref-img");i.alt="";const a=t("div","phud__ref-cap"),s=t("span","pmark pmark--x");a.append(s);const o=t("span",null,"");a.append(o),e.append(i,a),u.append(e),D.push(e);let r=[],d=0;fetch("/api/poi/"+encodeURIComponent(p)).then(l=>l.json()).then(l=>{r=[...l.aerials||[],...l.photos||[]]}).catch(()=>{});const h=()=>{if(!r.length){e.classList.add("is-empty"),o.textContent="no reference bundle";return}e.classList.remove("is-empty"),d=(d+r.length)%r.length;const l=r[d];i.src=l.url.replace("/files/","/thumb/")+"?w=900",o.textContent=l.name.replace(/\.(jpe?g|png|webp)$/i,"")+" · "+(d+1)+"/"+r.length+" · [ ] cycle · B close"},_=l=>!!l&&(l.tagName==="INPUT"||l.tagName==="TEXTAREA"||l.isContentEditable);addEventListener("keydown",l=>{$.hidden&&(_(l.target)||document.body.classList.contains("is-dev")||ze()&&(l.code==="KeyB"?(e.hidden=!e.hidden,e.hidden||h()):!e.hidden&&l.code==="BracketRight"?(d++,h()):!e.hidden&&l.code==="BracketLeft"&&(d--,h())))})}const Et=t("div","phud__cross");u.append(Et);const F=t("div","ppause");F.hidden=!0;const Tt=t("section","panel ppause__panel"),St=t("div","panel__hd");St.append(t("span","lbl lbl--accent","paused"),t("span","spacer"),t("span","lbl",na({lab:n||"","RED DOG":"red dog chair",SIBERIA:"siberia express"})));const Lt=t("div","panel__bd ppause__bd"),J=t("div","ppause__keys");let Pe=null,Fe=null,De=null,Me=null;const qt=[["core","every run","green"],["foot","on foot","green"],["ski","on skis","blue"],["bike","on the bike","blue"],["air","in the air","black"],["glide","on the glider","black"],["rocket","on the rocket pack","double"],["lab","lab only","x"]],Ct=[["ESC","settings","core"],["W A S D","move","core"],["← →","tricks in the air","core"],["C","camera","core"],["R","reset","core"]],Vt=[["SHIFT","sprint","foot"],["SPACE","jump","foot"],["MOUSE","look","foot"],["E","gear · tap toggles, hold for menu","foot"],["I","inventory · the ski rack, and every other gear type","foot"],["SPACE","hold to thrust · on the rocket pack — 6 s of fuel, refills itself at 1×","rocket"],["F","ride the chairlift · at a base terminal","foot","lift"],["A D","carve · on skis","ski"],["S","stop · on skis; moving backward it drives instead","ski"],["W","skate · on skis; moving backward it stops you","ski"],["W S","pedal / pump · on bike","bike"],["SHIFT","brake · on bike","bike"],["SPACE","hold to preload, release on a lip to pop · on bike","bike"],["MOUSE","aim where to fly — the wing banks and carves round to it · on glider","glide"],["W S","nose down / nose up · on glider","glide"],["SPACE","hold to flare — bleed speed for a clean landing · on glider","glide"],["MOUSE","aim the motor — thrust goes exactly where you look · on the rocket pack","rocket"],["SPACE","let go and you are a falling body; burn back down the way you came to land · on the rocket pack","rocket"],["← →","spin / flip · in the air","air"],["↑ ↓","spin / flip · in the air","air"],["← →","barrel roll · flying","glide"],["B","reference photos","lab"],["[ ]","cycle refs","lab"],["F8","dev fly mode · noclip + reference compare","lab"]],Ot=[["F","clear the trail · away from a lift terminal; at one, F still boards","core","trail"],["M","trail map","core"]],At=[["↑ ↓","look","core"]],Xt=W?[...Ct,...Vt,...At,...Ot]:[...Ct,...At,...Ot],Nt=[];for(const[e,i,a]of qt){const s=Xt.filter(h=>h[2]===e);if(!s.length)continue;const o=t("div","ppause__grp");e!=="core"&&Nt.push(o);const r=t("div","ppause__grp-hd");r.append(t("span","pmark pmark--"+a),t("span",null,i));const d=t("div","ppause__grp-rows");for(const[h,_,,l]of s){const m=t("div","cap",h),b=t("div","what",_);l==="lift"&&(m.classList.add("is-hidden"),b.classList.add("is-hidden"),Pe=m,Fe=b),l==="trail"&&(m.classList.add("is-hidden"),b.classList.add("is-hidden"),De=m,Me=b),d.append(m,b)}o.append(r,d),J.append(o)}J.childElementCount>1&&J.classList.add("is-cols");const $e=t("button","btn btn--accent ppause__big","click to resume");$e.type="button";const Rt=t("a","btn btn--ghost","return to bench");Rt.href="/#/run/"+encodeURIComponent(p)+"/"+encodeURIComponent(n);const Be=t("button","btn btn--ghost","respawn");Be.type="button";const It=t("div","ppause__row");It.append($e);const Ue=t("div","ppause__row");W&&Ue.append(Rt,Be,t("span","lbl","adapter · "+k));const Yt=t("div","ppause__credit","terrain USGS 3DEP · trails © OpenStreetMap contributors (ODbL)");Lt.append(J,It,Ue,Yt),Tt.append(St,Lt),F.append(Tt),u.append(F);const U=t("div","pboard");U.hidden=!0;const Ht=t("section","panel pboard__panel"),Pt=t("div","panel__hd");Pt.append(t("span","lbl lbl--accent","personal best"),t("span","spacer"),t("span","lbl","l l · esc close"));const re=t("div","panel__bd pboard__bd");Ht.append(Pt,re),U.append(Ht),u.append(U);const Ft=e=>Math.round(Number(e)||0).toLocaleString("en-US"),Jt=["rk","sc","mu","bt","sk","tr","wh"];function Dt(e,i){const a=t("div","pboard__row"+(e?" "+e:""));return i.forEach((s,o)=>a.append(t("span",Jt[o],s))),a}function Zt(e){if(re.textContent="",re.append(Dt("pboard__row--hd",["#","score","mult","best trick","ski","trail","when"])),!e.length){re.append(t("div","pboard__empty","no runs banked yet · land a combo"));return}for(const i of e)re.append(Dt(i&&i.you?"is-you":"",[String(i.rank!=null?i.rank:"—"),Ft(i.score),"×"+(i.mult!=null?i.mult:1),i.best||"—",i.ski||"—",i.trail||"—",i.when||"—"]))}function xe(){U.hidden=!0}U.style.pointerEvents="auto",U.addEventListener("click",e=>{e.stopPropagation(),xe()}),F.style.pointerEvents="auto",$e.addEventListener("click",e=>{e.stopPropagation(),w&&w()}),Be.addEventListener("click",e=>{e.stopPropagation(),v&&v()}),F.addEventListener("click",()=>w&&w()),document.body.appendChild(u);let _e=0,We=0,Mt=performance.now();const je=e=>(e>=0?" ":"")+e.toFixed(1);let de=!1;function ke(){const e=!F.hidden,i=ze();for(const a of D)a.classList.toggle("is-hidden",!i),i||(a.hidden=!0);for(const a of[pe,le,E,L,g,H,N,y,K,R,se])a.classList.toggle("is-hidden",e);Et.classList.toggle("is-hidden",e||de),O.classList.toggle("is-hidden",e||de||!i),x.refs.classList.toggle("is-hidden",!i),x.dev.classList.toggle("is-hidden",!i);for(const a of Nt)a.hidden=!i;J.classList.toggle("is-cols",i&&J.childElementCount>1),Ue.classList.toggle("is-hidden",!i),A&&(A.classList.toggle("is-hidden",e||!i),A.hidden=!de||!i)}return addEventListener("play:labui",ke),ke(),{root:u,pause:F,setPaused(e){F.hidden=!e,e&&(be(),xe()),ke()},isPaused(){return!F.hidden},setDev(e){de=!!e,x.dev.classList.toggle("is-on",de),ke()},devTick(e){if(A){for(const i of Object.keys(we))e[i]!=null&&(we[i].textContent=e[i]);e.params!=null&&(ee.textContent=e.params),e.url!=null&&(qe=e.url)}},lipMeter(e){if(!S)return;const i=!!e&&!!e.on&&ze();if(S.box.hidden=!i,!i)return;const a=e.s,s=e.T,o=S.rows,r=(c,Qt=2)=>(c>=0?"+":"")+Number(c||0).toFixed(Qt);o["surface vy"].textContent=r(a.surfVy)+" m/s "+(a.surfVy>.05?"UP":a.surfVy<-.05?"down":"flat"),o.reference.textContent=r(a.vyFloor)+" m/s",o.compression.textContent=r(a.comp)+" m/s",o["ramp x K"].textContent=r(a.lipRamp),o["comp x K"].textContent=r(a.lipComp);const d=(a.lipRamp||0)+(a.lipComp||0);o.charge.textContent=(a.lipVy>0?Number(a.lipVy).toFixed(2):"0.00")+" / "+Number(s.lipMax).toFixed(2)+(a.lipVy>0?"":d>0?"  < lipMin":a.lipRamp<0?"  ramp negative":"");const h=c=>Math.max(0,Math.min(100,100*c/(s.lipMax||1))),_=h(Math.max(0,a.lipRamp));S.barR.style.width=_.toFixed(1)+"%",S.barC.style.left=_.toFixed(1)+"%",S.barC.style.width=h(a.lipComp).toFixed(1)+"%",S.barMin.style.left=h(s.lipMin).toFixed(1)+"%";const l=a.sincePop==null?1e9:a.sincePop;let m;!e.grounded&&a.airT>0?m=a.popPaid?"spent":a.lipVy>0&&a.airT<=s.popCoyote?"COYOTE "+(s.popCoyote-a.airT).toFixed(2)+"s left":"closed":a.lipVy>0?m=l<=s.popWindow?"ARMED (popped "+l.toFixed(2)+"s ago)":"at lip · pop now":m="no charge";const b=a.dVyS||0,f=a.gravity||16;o["surface accel"].textContent=r(b,1)+" / -"+f.toFixed(0)+(b<-f?"  PAST FREE FALL":""),o["snap release"].textContent=a.dropK>0?(100*a.dropK).toFixed(0)+"%  "+Number(a.snapFull).toFixed(2)+" -> "+Number(a.snapCut).toFixed(2)+" m":"glued  "+Number(a.snapFull||0).toFixed(2)+" m",o["pop window"].textContent=m;const C=e.pop;if(o["pop now"].textContent=C?Number(C.total).toFixed(2)+" m/s"+(C.add>.005?"  (+"+C.add.toFixed(2)+")":"")+(C.add<=.005&&C.compRaw>.5?"  "+C.gate.toUpperCase():""):"—",o.state.textContent=(e.grounded?"on snow":"air "+Number(a.airT).toFixed(2)+"s")+(a.lipVy>0?" · charged":""),e.launch){const c=e.launch;S.shot.textContent="takeoff "+(c.total>.01?"+"+c.total.toFixed(2)+" m/s":"flat")+"  ["+c.src.toUpperCase()+"]"+(c.drop?`
   DROP-AWAY  snap `+Number(c.snapFull).toFixed(2)+" -> "+Number(c.snapCut).toFixed(2)+" m ("+(100*c.dropK).toFixed(0)+`% let go)
   surface `+r(c.dVyS,1)+" vs -"+c.grav.toFixed(0)+", past free fall":"")+(c.total>.01?`
   ramp `+r(c.ramp)+"  comp "+r(c.comp)+"  -> charge "+c.charge.toFixed(2)+(c.pop>0?`
   pop bonus +`+c.pop.toFixed(2):"")+(c.restored>0?"  (jump restored +"+c.restored.toFixed(2)+")":""):c.drop?"":`
   no charge (ramp `+r(c.ramp)+" comp "+r(c.comp)+")")+(c.eaten?`
-  SWALLOWED, still on the snow next frame`:""),T.shotT=2}else T.shotT>0&&(T.shotT-=e.dt||.016,T.shotT<=0&&(T.shot.textContent="takeoff —"))},setLiftKey(e){re=!!e,k.lift.classList.toggle("is-hidden",!re),Re&&Re.classList.toggle("is-hidden",!re),Ie&&Ie.classList.toggle("is-hidden",!re)},setPrompt(e){if(!e){g.hidden=!0,g.classList.remove("is-press"),k.lift.classList.remove("is-on");return}pe=e.key||"F",Be.textContent=xe?"TAP":pe,g.dataset.key=We(pe),g.dataset.tap=xe?"1":"0",g.dataset.fires=String(ve),ke.textContent=" "+(e.text||""),g.hidden=!1,k.lift.classList.add("is-on")},promptText(){return g.hidden?null:ke.textContent.trim()},setFuel(e,a,o,i=!0){const s=Math.max(0,Math.min(1,Number(e)||0));if(Z=!!a&&!!i,qe=!!i,P.hidden=!i||s>.999&&!Z,P.hidden){k.boost.classList.remove("is-on");return}Ge.style.width=(s*100).toFixed(1)+"%",P.classList.toggle("is-burn",Z),P.classList.toggle("is-dry",!!o),k.boost.classList.toggle("is-on",Z)},fuelShown(){return!P.hidden},flashGear(e){y.classList.remove("is-refusal"),y.textContent="gear · "+e,y.hidden=!1,Y=1.4},...Rt,flash(e){const a=String(e??""),o=/\b(first|failed|blank|empty)\b/i.test(a);y.textContent="",o&&y.append(t("span","pmark pmark--x")),y.append(t("span",null,a)),y.classList.toggle("is-refusal",o),y.hidden=!1,Y=1.4},trick(e){const a=e.name==="wipeout";if(Ve.textContent=a?"WIPEOUT":e.name+"!",a){const o=Math.round(Q*3.6);q(Je,o+" KM/H"+(e.deg?" · "+e.deg+"°":""))}Xe.textContent=a?Yt[e.why]||(e.deg?e.deg+"° · unfinished":"skis crossed"):e.deg+"°",S.classList.toggle("is-wipe",a),S.hidden=!1,S.classList.remove("is-pop","is-snap","is-late","is-gone-word","is-gone-line"),S.offsetWidth,S.classList.add(a?"is-snap":"is-pop"),we=a,j=a?1.96:1.8},pump(e){const a=!!(e&&e.on),o=performance.now(),i=ye?Math.min(.1,(o-ye)/1e3):.016;if(ye=o,!a){X=0,N.hidden=!0;return}const s=Math.max(.001,Number(e.max)||4),r=Math.max(0,Math.min(1,(Number(e.q)||0)/s)),p=!!e.releasing;if(p?X=Math.max(r,X-i/.35):X=r,X<.004&&!p){N.hidden=!0;return}Ze.style.setProperty("--pf",(X*100).toFixed(1)+"deg");const l=Number(e.eta),b=!(l<1.2),h=l<.8;N.classList.toggle("is-hot",b&&Number.isFinite(l)),N.classList.toggle("is-cold",h),N.classList.toggle("is-rel",p),N.hidden=!1},pumpShown(){return!N.hidden},airTimer(e){if(!!(e&&e.air)){const o=Number(e.t)||0;q(Qe,o.toFixed(2)),q(et,e&&e.unit==="JIB"?"JIB":"AIR");const i=Xt(o),r=(Math.min(1,o*10/Me[Me.length-1])*100).toFixed(1)+"%",p=10+i*2+"px";r!==tt&&(de.style.setProperty("--af",r),tt=r),p!==at&&(de.style.setProperty("--aw",p),at=p),v.classList.contains("is-out")&&v.classList.remove("is-out"),v.hidden=!1,W=.6,H=0,le=!0;return}le=!1,!v.hidden&&W<=0&&H<=0&&(H=.3,v.classList.add("is-out"))},airTimerShown(){return!v.hidden},combo(e){if(!e||!e.on){z.hidden=!0,ae=-1,Te="";return}q(ot,"×"+(e.mult!=null?e.mult:1));const a=Array.isArray(e.names)?e.names.filter(Boolean):[],o=a.slice(-2).join(" · ");q(Ee,o),Ee.classList.toggle("is-hidden",!o),nt.classList.toggle("is-hidden",!o);const i=e.quality==="sketchy"?"SKETCHY":e.quality==="clean"?"CLEAN":"";q(te,i),te.classList.toggle("is-hidden",!i),it.classList.toggle("is-hidden",!i||!o),te.classList.toggle("is-clean",e.quality==="clean"),te.classList.toggle("is-sketchy",e.quality==="sketchy"),Nt(a,e.quality,!1);const s=Number(e.graceMax)||2,r=Math.max(0,Math.min(1,1-(Number(e.grace)||0)/s));rt.style.width=(r*100).toFixed(1)+"%";const p=Number(e.count)||0;p!==ae&&(ae>=0&&p>ae&&(ee.classList.remove("is-pop"),ee.offsetWidth,ee.classList.add("is-pop")),ae=p),z.hidden=!1},comboShown(){return!z.hidden},comboEnd(e){if(!e)return;const a=!!e.bailed,o=!!e.pb&&!a;Se.textContent="+"+yt(e.score),Se.classList.toggle("is-hidden",a),Ce.textContent="×"+(e.mult!=null?e.mult:1),Ce.classList.toggle("is-hidden",!a),dt.classList.toggle("is-hidden",!o),lt.classList.toggle("is-hidden",!a),R.classList.toggle("is-bail",a);const i=le&&!v.hidden;R.classList.toggle("is-s3",i),i||(v.hidden=!0,W=0,H=0,le=!1),R.classList.remove("is-snap","is-rise"),R.offsetWidth,R.classList.add(i?"is-rise":"is-snap"),R.hidden=!1,he=a?.8:1.2},board(e){if(!e){me();return}Dt(Array.isArray(e)?e:[]),U.hidden=!1},boardOpen(){return!U.hidden},closeBoard:me,setBoardDot(e){oe.hidden=!e},tick(e,a,o){const i=e.position,s=e.mode,r=s==="skis",p=s==="bike",l=s==="glider",b=s==="rocket",h=s!=="boots",f=e.speed();if(Q=f>Q?f:Math.max(0,Q-Q*(a/.5)),x.pos.textContent=`${$e(i.x)} ${$e(i.y)} ${$e(i.z)}`,x.spd.textContent=f.toFixed(2)+" m/s",x.gear.textContent=s,x.gear.classList.toggle("is-hot",h),x.cam.textContent=o==="tp"?"chase":"first person",Z)x.state.textContent="BOOST";else if(l&&!e.grounded){const m=Ut(),C=e.velocity?e.velocity.y:0;x.state.textContent=m.stall>.35?"STALL":m.flare?"flare":m.updraft>.8?"lift +"+m.updraft.toFixed(1):C>.5?"climb":C<-6?"dive":"glide · "+m.airspeed.toFixed(0)}else if(b&&!e.grounded){const m=e.velocity?e.velocity.y:0;x.state.textContent="coast · "+(m<0?"−":"+")+Math.abs(m).toFixed(0)}else if(e.grounded)if(e.wipeT>0)x.state.textContent="wipeout";else if(r){const m=Bt();x.state.textContent=m.chatter>.35?"CHATTER":m.stop===2?"HOCKEY":m.stop===1?"plow":m.stivoting?"stivot":m.releasing?"PUMP":f>3?"carve":"skate"}else p?x.state.textContent=e.keys.sprint?"brake":e.keys.jumpHeld?"preload":e.keys.back?"pump":f>3?"ride":"pedal":x.state.textContent=e.keys.sprint&&f>5?"sprint":"ground";else{const m=Math.abs(e.airSpinDeg||0);x.state.textContent=m>45?"air · "+Math.round(m)+"°":"air"}k.move.classList.toggle("is-on",e.keys.forward||e.keys.back||e.keys.left||e.keys.right),k.sprint.classList.toggle("is-on",!!e.keys.sprint),k.sprint.classList.toggle("is-hidden",r),k.sprint.lastChild.nodeValue=p?"brake":"sprint",k.jump.classList.toggle("is-on",!e.grounded),k.gear.classList.toggle("is-on",h),k.boost.classList.toggle("is-hidden",!(b||qe)),k.spin.classList.toggle("is-on",!!(e.keys.spinLeft||e.keys.spinRight)),k.cam.classList.toggle("is-on",o==="tp"),Y>0&&(Y-=a,Y<=0&&(y.hidden=!0)),j>0&&(j-=a,we&&(j<=1.56&&S.classList.add("is-late"),j<=.36&&S.classList.add("is-gone-word"),j<=.2&&S.classList.add("is-gone-line")),j<=0&&(S.hidden=!0,we=!1)),he>0&&(he-=a,he<=0&&(R.hidden=!0)),!v.hidden&&W>0?(W-=a,W<=0&&(W=0,H=.3,v.classList.add("is-out"))):!v.hidden&&H>0&&(H-=a,H<=0&&(H=0,v.hidden=!0,v.classList.remove("is-out"))),fe+=a,He++;const _=performance.now();_-Tt>400&&(Ct.textContent=fe>0?String(Math.round(He/fe)):"—",fe=0,He=0,Tt=_)}}}export{sa as createHud,ia as hudFont,Gt as hudKind,qt as hudMark,Vt as hudMotion,Kt as hudSurf,De as hudType};
+  SWALLOWED, still on the snow next frame`:""),S.shotT=2}else S.shotT>0&&(S.shotT-=e.dt||.016,S.shotT<=0&&(S.shot.textContent="takeoff —"))},setLiftKey(e){he=!!e,x.lift.classList.toggle("is-hidden",!he),Pe&&Pe.classList.toggle("is-hidden",!he),Fe&&Fe.classList.toggle("is-hidden",!he)},setTrailKey(e){return De&&De.classList.toggle("is-hidden",!e),Me&&Me.classList.toggle("is-hidden",!e),!!e},setPrompt(e){if(!e){g.hidden=!0,g.classList.remove("is-press"),x.lift.classList.remove("is-on");return}ce=e.key||"F",Ve.textContent=ve?"TAP":ce,g.dataset.key=Ye(ce),g.dataset.tap=ve?"1":"0",g.dataset.fires=String(Ee),ye.textContent=" "+(e.text||""),g.hidden=!1,x.lift.classList.add("is-on")},promptText(){return g.hidden?null:ye.textContent.trim()},setFuel(e,i,a,s=!0){const o=Math.max(0,Math.min(1,Number(e)||0));if(te=!!i&&!!s,et=!!s,H.hidden=!s||o>.999&&!te,H.hidden){x.boost.classList.remove("is-on");return}Qe.style.width=(o*100).toFixed(1)+"%",H.classList.toggle("is-burn",te),H.classList.toggle("is-dry",!!a),x.boost.classList.toggle("is-on",te)},fuelShown(){return!H.hidden},flashGear(e){E.classList.remove("is-refusal"),E.textContent="gear · "+e,E.hidden=!1,V=1.4},...Gt,flash(e){const i=String(e??""),a=/\b(first|failed|blank|empty)\b/i.test(i);E.textContent="",a&&E.append(t("span","pmark pmark--x")),E.append(t("span",null,i)),E.classList.toggle("is-refusal",a),E.hidden=!1,V=1.4},trick(e){if(!(e.name==="wipeout")){L.hidden=!0,M=0,ue=!1;return}tt.textContent="WIPEOUT";const a=Math.round(ae*3.6);j(nt,a+" KM/H"+(e.deg?" · "+e.deg+"°":"")),it.textContent=pa[e.why]||(e.deg?e.deg+"° · unfinished":"skis crossed"),L.classList.add("is-wipe"),L.hidden=!1,L.classList.remove("is-pop","is-snap","is-late","is-gone-word","is-gone-line"),L.offsetWidth,L.classList.add("is-snap"),ue=!0,M=1.96},pump(e){const i=!!(e&&e.on),a=performance.now(),s=Te?Math.min(.1,(a-Te)/1e3):.016;if(Te=a,!i){X=0,N.hidden=!0;return}const o=Math.max(.001,Number(e.max)||4),r=Math.max(0,Math.min(1,(Number(e.q)||0)/o)),d=!!e.releasing;if(d?X=Math.max(r,X-s/.35):X=r,X<.004&&!d){N.hidden=!0;return}ot.style.setProperty("--pf",(X*100).toFixed(1)+"deg");const h=Number(e.eta),_=!(h<1.2),l=h<.8;N.classList.toggle("is-hot",_&&Number.isFinite(h)),N.classList.toggle("is-cold",l),N.classList.toggle("is-rel",d),N.hidden=!1},pumpShown(){return!N.hidden},airTimer(e){if(!!(e&&e.air)){const a=Number(e.t)||0;j(st,a.toFixed(2)),j(rt,e&&e.unit==="JIB"?"JIB":"AIR");const s=la(a),r=(Math.min(1,a*10/Ge[Ge.length-1])*100).toFixed(1)+"%",d=10+s*2+"px";r!==dt&&(me.style.setProperty("--af",r),dt=r),d!==pt&&(me.style.setProperty("--aw",d),pt=d),y.classList.contains("is-out")&&y.classList.remove("is-out"),y.hidden=!1,z=.6,P=0,fe=!0;return}fe=!1,!y.hidden&&z<=0&&P<=0&&(P=.3,y.classList.add("is-out"))},airTimerShown(){return!y.hidden},combo(e){if(!e||!e.on){K.hidden=!0,oe=-1,Le="";return}j(ct,"×"+(e.mult!=null?e.mult:1));const i=Array.isArray(e.names)?e.names.filter(Boolean):[],a=i.slice(-2).join(" · ");j(Se,a),Se.classList.toggle("is-hidden",!a),ut.classList.toggle("is-hidden",!a);const s=e.quality==="sketchy"?"SKETCHY":e.quality==="clean"?"CLEAN":"";j(ne,s),ne.classList.toggle("is-hidden",!s),mt.classList.toggle("is-hidden",!s||!a),ne.classList.toggle("is-clean",e.quality==="clean"),ne.classList.toggle("is-sketchy",e.quality==="sketchy"),Kt(i,e.quality,!1);const o=Number(e.graceMax)||2,r=Math.max(0,Math.min(1,1-(Number(e.grace)||0)/o));gt.style.width=(r*100).toFixed(1)+"%";const d=Number(e.count)||0;d!==oe&&(oe>=0&&d>oe&&(ie.classList.remove("is-pop"),ie.offsetWidth,ie.classList.add("is-pop")),oe=d),K.hidden=!1},comboShown(){return!K.hidden},comboEnd(e){if(!e)return;const i=!!e.bailed,a=!!e.pb&&!i;Ce.textContent="+"+Ft(e.score),Ce.classList.toggle("is-hidden",i),Oe.textContent="×"+(e.mult!=null?e.mult:1),Oe.classList.toggle("is-hidden",!i),_t.classList.toggle("is-hidden",!a),kt.classList.toggle("is-hidden",!i),R.classList.toggle("is-bail",i);const s=i?"":["×"+(e.mult!=null?e.mult:1),e.best?String(e.best):"",ha()].filter(Boolean).join(" · ");j(Ae,s),wt.classList.toggle("is-hidden",!s),Ae.classList.toggle("is-hidden",!s);const o=fe&&!y.hidden;R.classList.toggle("is-s3",o),o||(y.hidden=!0,z=0,P=0,fe=!1),R.classList.remove("is-snap","is-rise"),R.offsetWidth,R.classList.add(o?"is-rise":"is-snap"),R.hidden=!1,ge=i?.8:1.2},board(e){if(!e){xe();return}Zt(Array.isArray(e)?e:[]),U.hidden=!1},boardOpen(){return!U.hidden},closeBoard:xe,setBoardDot(e){se.hidden=!e},tick(e,i,a){const s=e.position,o=e.mode,r=o==="skis",d=o==="bike",h=o==="glider",_=o==="rocket",l=o!=="boots",m=e.speed();if(ae=m>ae?m:Math.max(0,ae-ae*(i/.5)),T.pos.textContent=`${je(s.x)} ${je(s.y)} ${je(s.z)}`,T.spd.textContent=m.toFixed(2)+" m/s",T.gear.textContent=o,T.gear.classList.toggle("is-hot",l),T.cam.textContent=a==="tp"?"chase":"first person",te)T.state.textContent="BOOST";else if(h&&!e.grounded){const f=ea(),C=e.velocity?e.velocity.y:0;T.state.textContent=f.stall>.35?"STALL":f.flare?"flare":f.updraft>.8?"lift +"+f.updraft.toFixed(1):C>.5?"climb":C<-6?"dive":"glide · "+f.airspeed.toFixed(0)}else if(_&&!e.grounded){const f=e.velocity?e.velocity.y:0;T.state.textContent="coast · "+(f<0?"−":"+")+Math.abs(f).toFixed(0)}else if(e.grounded)if(e.wipeT>0)T.state.textContent="wipeout";else if(r){const f=ta();T.state.textContent=f.chatter>.35?"CHATTER":f.stop===2?"HOCKEY":f.stop===1?"plow":f.stivoting?"stivot":f.releasing?"PUMP":m>3?"carve":"skate"}else d?T.state.textContent=e.keys.sprint?"brake":e.keys.jumpHeld?"preload":e.keys.back?"pump":m>3?"ride":"pedal":T.state.textContent=e.keys.sprint&&m>5?"sprint":"ground";else{const f=Math.abs(e.airSpinDeg||0);T.state.textContent=f>45?"air · "+Math.round(f)+"°":"air"}x.move.classList.toggle("is-on",e.keys.forward||e.keys.back||e.keys.left||e.keys.right),x.sprint.classList.toggle("is-on",!!e.keys.sprint),x.sprint.classList.toggle("is-hidden",r),x.sprint.lastChild.nodeValue=d?"brake":"sprint",x.jump.classList.toggle("is-on",!e.grounded),x.gear.classList.toggle("is-on",l),x.boost.classList.toggle("is-hidden",!(_||et)),x.spin.classList.toggle("is-on",!!(e.keys.spinLeft||e.keys.spinRight)),x.cam.classList.toggle("is-on",a==="tp"),V>0&&(V-=i,V<=0&&(E.hidden=!0)),M>0&&(M-=i,ue&&(M<=1.56&&L.classList.add("is-late"),M<=.36&&L.classList.add("is-gone-word"),M<=.2&&L.classList.add("is-gone-line")),M<=0&&(L.hidden=!0,ue=!1)),ge>0&&(ge-=i,ge<=0&&(R.hidden=!0)),!y.hidden&&z>0?(z-=i,z<=0&&(z=0,P=.3,y.classList.add("is-out"))):!y.hidden&&P>0&&(P-=i,P<=0&&(P=0,y.hidden=!0,y.classList.remove("is-out"))),_e+=i,We++;const b=performance.now();b-Mt>400&&($t.textContent=_e>0?String(Math.round(We/_e)):"—",_e=0,We=0,Mt=b)}}}export{wa as createHud,ka as hudFont,sa as hudKind,ra as hudMark,da as hudMotion,oa as hudSurf,Ke as hudType};
