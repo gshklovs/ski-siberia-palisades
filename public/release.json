@@ -1,0 +1,517 @@
+{
+  "release": "6a4fa64cb6805a5a",
+  "source": "astra-siberia",
+  "files": [
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/atlas.js",
+      "bytes": 1193,
+      "sha256": "2d5f3f71d733b9c2e011ccaaa7a784622708971603f34bcf79a28e1b1e68a8e8"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/audio.js",
+      "bytes": 53692,
+      "sha256": "c2f3fe721c07832f600365da8f79e1994e824be695287c89f6081671cbf6006b"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/bike.js",
+      "bytes": 67771,
+      "sha256": "637592ecb917fedf03c8289d1315c10ace73eb879e3a2bdebda4c262a1a8707c"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/boost.js",
+      "bytes": 19716,
+      "sha256": "dc21ddb33c24ceaee5322b65dd569056a0222cc9a3f5618fdf469fe46320943a"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/canopy.js",
+      "bytes": 29104,
+      "sha256": "fcd27a52c4458fbcb1e9cdb420fb354509021d42fdf9e2ee9e0f0739e6770807"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/chunks.js",
+      "bytes": 129014,
+      "sha256": "bdbb2e571b877382f2350e7143df9014b38ddbf06b2c75fcb8f2e5bacb6ea74c"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/clean.js",
+      "bytes": 5808,
+      "sha256": "47115b214e5ab2330b372ea7d70f260dbacaa56d760738a7c92ca70c68027e38"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/collision-router.js",
+      "bytes": 39947,
+      "sha256": "53f78cf9e9deab1e824733f9305f9ea8dd66ec2d4de3a17588333f21b45aa021"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/collision.js",
+      "bytes": 37708,
+      "sha256": "031b0523bfbd57a521555b2af9ed3d0775d161a4c30e3ee35e6eee731320003f"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/controller.js",
+      "bytes": 131312,
+      "sha256": "e59e4a3e89f63718d6f266559fdf7e9fc402ad7ccbe5b4eac51b26eff28574d5"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/dev.js",
+      "bytes": 57417,
+      "sha256": "2293be10cb92206332b56d2ae316dfdf46171b7193f36afcc21e93c882e67711"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/flags.js",
+      "bytes": 11711,
+      "sha256": "abcf584f29e60c5bc00f26c9b5269621173f89505fcd3b7f38c7bd10b9e2486e"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/fx.js",
+      "bytes": 285326,
+      "sha256": "9ad0541cd71792e930e72f1a8fd2dce43d34808829a29085f7989104a244c3f3"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/glider.js",
+      "bytes": 20872,
+      "sha256": "a6cac0e39ca2243637afca1187748b7b1cc472e9b873d341d3ab1ad3b1e7d11e"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/guide.js",
+      "bytes": 112631,
+      "sha256": "749cad33fe3930ec7df0ff4a84415b0556150a356d30352f7dc7d1f95037449e"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/hud.js",
+      "bytes": 145190,
+      "sha256": "540d195c8cf6c23c54da26e841a64ddec28e2d99c1882f11878185aa324ec70b"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/idle.js",
+      "bytes": 7386,
+      "sha256": "926e8b5dc098871eca3ee41b5b0994402e7631b14a6ebc4ea835b1d87a2abc3d"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/intro.js",
+      "bytes": 13133,
+      "sha256": "5542327650d792917862e4f34cbae664bc23892f5246288e9b32906e28cdb6cc"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/inventory.js",
+      "bytes": 170453,
+      "sha256": "7ed6c7ed04f2285be95fd7f5ce509841dd96eec7b6d9b7a81b0d4f6d1a3938b8"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/lift.js",
+      "bytes": 29263,
+      "sha256": "30951480f3db7ee9a8d4af99fc9a76b2b661628049d86dd328aed4fbf7d99e82"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/loader.js",
+      "bytes": 16807,
+      "sha256": "c53649a97f101ecf41d0930fe5e923087d4001f3f85152c7db7a4cfcbfa2774c"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/main.js",
+      "bytes": 225102,
+      "sha256": "e6e30ee433799e31b672f114da8dda70b2d407ba73da85bb202ff8fd1c988302"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/markers.js",
+      "bytes": 139148,
+      "sha256": "4d56f629d8f91240d31e9819b98213602148ff936a73328f976b0060771545e2"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/outfits/after.js",
+      "bytes": 1161,
+      "sha256": "ad16c7365467b1b11d66280ae534c95a46a27ce050158ed6c458edaa1cf86555"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/outfits/armour.js",
+      "bytes": 12868,
+      "sha256": "211003529a2336b16463c36ddaf43ed40e271942e9535be50e0226348e18437a"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/outfits/freeride.js",
+      "bytes": 3228,
+      "sha256": "fb191a30dc85ba60db6358d2364ec00fc921096165a03d4bb2a28bc1515b806b"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/outfits/index.js",
+      "bytes": 664,
+      "sha256": "746b7e2e339570ce1849b85d81486c4a6395784c88e9f6307ea2ffc767a92684"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/outfits/race.js",
+      "bytes": 11873,
+      "sha256": "a7d9818dc0015b46b11d938da0d021ddeec8d5d4e94913e35e5f1ebcf48024d9"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/outfits/retro.js",
+      "bytes": 2088,
+      "sha256": "9e1fccbd0f3f06f107f63647d5412397119dbf595c39a1e9acbcc6e3d9b02ff8"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/outfits/shell.js",
+      "bytes": 5189,
+      "sha256": "32a0cf9595f3f5380613b64f004d4a6b1814579205809359641165d765694fe8"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/rail.js",
+      "bytes": 29578,
+      "sha256": "d8d29cc46fa5722e44cd4376baf115df766d9362d7f5859ca1c287f44f5e7375"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/recorder.js",
+      "bytes": 59272,
+      "sha256": "a8f32c4e9202c719214a2f56a691eb8aab75995acadfaadc1ffe189149fcfc60"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/rider-air-envelope.js",
+      "bytes": 3135,
+      "sha256": "f2a10b89cee4b69de81861b66340b5b34f246c522baafb03c6b920f56994b6f4"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/rider-bindings.js",
+      "bytes": 3860,
+      "sha256": "06ac9d01cf43a71d6955823a16b3055b3ee41975d388e8abc1af6d57e5b985bd"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/rider-cloth-texture.js",
+      "bytes": 2871,
+      "sha256": "7b8a7424abd7341e7533561b3ae45d232e39f32808e0d03af2fa83d6c0701c6a"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/rider-cloth.js",
+      "bytes": 4815,
+      "sha256": "2a35f591301d3c5831b3ee99763cd99277006fd3b9f27fa95f7aed95e4a4414f"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/rider-drape-controls.js",
+      "bytes": 2116,
+      "sha256": "c6a3ed24072a60a1d3062bd5ec584c62eaf548e7c5edf8d39d14f0536d69a398"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/rider-drape-solver.js",
+      "bytes": 12014,
+      "sha256": "46fabe068bd3781c7a4c04ec56c36f48051635f650e5d9b4c98bc3d5d82009dd"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/rider-drape.js",
+      "bytes": 8646,
+      "sha256": "671debec37f388d61de72c03c5ccac2206abbf62255ccbfa4335260f9a17262a"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/rider-finish.js",
+      "bytes": 2237,
+      "sha256": "1ca7d88682872768a590818e2eef707bf49f28ce3cdc9f27193bf61905701afd"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/rider-fpv-boots.js",
+      "bytes": 2931,
+      "sha256": "20d506048e6e4fdf82fa9f052d031cea7b21f37ac5cc8ac79660232d616a0c93"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/rider-fpv.js",
+      "bytes": 8115,
+      "sha256": "e79d63fa855257a75e071a2d4dd4d290d2cc8a92bcf6c545a2cc6eafc10bfe72"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/rider-mesh.js",
+      "bytes": 595978,
+      "sha256": "180a7cc3b8f031bad5427595d74b09f6d9900196b3e1259271fe0ce9dbc352ce"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/rider-polish-mesh.js",
+      "bytes": 5271143,
+      "sha256": "d152b17e828ba361ecceb1d692acf656ca13a595c000e7814b4781d0cd83d8a2"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/rider-stance.js",
+      "bytes": 2100,
+      "sha256": "329d116d038f3f5b463662fd5f6a2c2985cb2a44a182f43927175ec6dcd18af9"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/rider-tailoring.js",
+      "bytes": 2683,
+      "sha256": "376dfa485275345be3faeaf652d88b6bc6e7ec41aab32bfd075497e3fd293fed"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/rider-upper-tailoring.js",
+      "bytes": 5274,
+      "sha256": "97749e4e12a8f74c386e5082cc8c1ee47dceb0a38f9a82fc11f8b63da9e46585"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/rider.js",
+      "bytes": 196872,
+      "sha256": "bc1c0d5c254c7cd426184e79e5dd79f57593805c846ad0fcb133b9186df6efd7"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/rig/bloom.js",
+      "bytes": 18605,
+      "sha256": "e774e66a2a6cc6eab1966e704f4f27a68353518af28d7413f0dc790afae6f4c9"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/rig/clips.js",
+      "bytes": 20949,
+      "sha256": "22b4af48a419b7b4118ed18539f0d30203b729671e9133b123e34e06fda80c62"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/rig/env.js",
+      "bytes": 8917,
+      "sha256": "2bc6869b99870b24fa1d093dabcd8629446c4e40f168220ab8c038c698b42d01"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/rocket.js",
+      "bytes": 11022,
+      "sha256": "e4885628b68f857f8760aa2d01e91addb916cb204793a015d3112a0736789de6"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/settings.js",
+      "bytes": 7457,
+      "sha256": "5830ff484ffe62d9b991e02d415fb36de7e5f5fcbf8f36ae11ccf59b079a22f8"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/ski.js",
+      "bytes": 141085,
+      "sha256": "5893d273aaccd8835e7318608b7689750199bbcfb91af47a84fbb4832f66691b"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/sled.js",
+      "bytes": 30027,
+      "sha256": "24ccf21b6b46de2372a6837fe739530bfcd78d0b6faab29c80bf078bfd1762e7"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/snowball.js",
+      "bytes": 39580,
+      "sha256": "fa597a3622f4bfdcb7d035880d1e3b38b9fe7b7fcd85b92b1af675faa4110e99"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/snowmobile.js",
+      "bytes": 40995,
+      "sha256": "4af5d0644f78f690246bc3df0cfc06f80146c827cd5fe79590c4b34e0c90303d"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/solids.js",
+      "bytes": 38800,
+      "sha256": "35f63bb6b492cd1692e589e43cdfd35445e547fda6fe8739e582944b2397b80b"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/spawn.js",
+      "bytes": 15337,
+      "sha256": "dd34abfddabc5ce9904bbc236eb85927f71ade600ad5039d8dad6ab1cf5ea620"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/speedo.js",
+      "bytes": 39305,
+      "sha256": "aa0ff9063acdfdf729a6a1ef7ac4d41182dd28df5fa8823052645c72e9021439"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/surprise.js",
+      "bytes": 60894,
+      "sha256": "50621300292c9adae5a7511ab0ecf7c5590f3243df9bd222aa0d673d4328d2d3"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/touch.js",
+      "bytes": 37284,
+      "sha256": "43d6f4c5f140724caa6b584aed2138f822626b862e81c3866d4111a7d114224c"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/tracks.js",
+      "bytes": 37740,
+      "sha256": "1d860c89289369669a39274a68d75d2d5391b7e6d72c37a0c0933d4ff98d8ae6"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/js/play/tricks.js",
+      "bytes": 77412,
+      "sha256": "ce3b5beb88faeb57a4ae2a3bedf800c110a3cebffb225c4a3c616c40525012f6"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/css/intro.css",
+      "bytes": 17961,
+      "sha256": "ffb6bce065057cbd7a21af821992a1ee6e44ea7bc40b3fdc983f093d7760ff39"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/css/play.css",
+      "bytes": 47318,
+      "sha256": "a4972f9cfd712bb836818a5b783b498e11d6a789f275d6f8bfc880b27d16dccf"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/css/speedo.css",
+      "bytes": 4961,
+      "sha256": "2888c6fabc4b97c21269a1f938645de38cec46394519d5009277f41a3ecddb52"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/css/te.css",
+      "bytes": 22198,
+      "sha256": "ce6dbf2c618c79d281751b3a32f60c326cb56b931e0a5df6e86f54bbe0630586"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/rider/rider-ach.webp",
+      "bytes": 13048,
+      "sha256": "8c3785dbf65848fd6eb0d32e0d140152e4d527f2d2727a36a4086b857a1fef3b"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/rider/rider-nrm.webp",
+      "bytes": 70080,
+      "sha256": "dc068111fcb7897f43b93b713dd5ebea455c9720efd9d643e850773baf84aed1"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/vendor/jsm/controls/OrbitControls.js",
+      "bytes": 40563,
+      "sha256": "678066c7c32676a376102d57749ea1d8bc7711bd16388cf03e414586502feb20"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/vendor/jsm/loaders/GLTFLoader.js",
+      "bytes": 119629,
+      "sha256": "f7b8cfd76ade8b42b33cf924c3e8ba63dd5d70ebaa208207aa6390218d63b61e"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/vendor/jsm/utils/BufferGeometryUtils.js",
+      "bytes": 36974,
+      "sha256": "3c791672cadb6796d633adc62445a10357da3ad2f816abda928dafd29817b514"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/vendor/three.core.js",
+      "bytes": 1462228,
+      "sha256": "7c075bd6b2414b6c4ed4b3416b180df2984051118c2b89965de066ce99307f1c"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/vendor/three.module.js",
+      "bytes": 621364,
+      "sha256": "9e06b55afc5c845ad8663d0dba7dc8f4e815c218bedae8a9917fac5972e5314f"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/cameras.mjs",
+      "bytes": 2712,
+      "sha256": "a2639f15097bbc0211cf816c3660e9a5cb21e9de752f096c61d737b34d045eaf"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/canopy-data.mjs",
+      "bytes": 787830,
+      "sha256": "d07e1f804e446bd8faa8ff3fc810bbf10ea5917d91012a7ce32cdce6e2d74e93"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/details.mjs",
+      "bytes": 7155,
+      "sha256": "4123ae756922d9770ee303d396fa495fd5c36802057d54cae32d363edf1a5bf7"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/features.mjs",
+      "bytes": 195032,
+      "sha256": "2bf03d97f7299b2c62a7a46a72a7f1f663fa8d6004046ca935fb663af69747f3"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/groomed-run.mjs",
+      "bytes": 10230,
+      "sha256": "5347a083523098d359e48578ef1dca6243ca7847209a118cd74f5ce771799fc5"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/ground.mjs",
+      "bytes": 1152,
+      "sha256": "04e7ee5d870415095edd59eba89e1d0f36be903f46418497b2ecdb668d504f7b"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/layout.mjs",
+      "bytes": 2250,
+      "sha256": "9909787cb695833c514b37270ff5164d228dc9278a1f9a38cf059560d57a892d"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/near-snow-relief.mjs",
+      "bytes": 7062,
+      "sha256": "313376409cce6e8f4a7c8098d1a74dbc0e50376ac58f2c771148d0e204188870"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/rock-albedo.jpg",
+      "bytes": 340709,
+      "sha256": "4217461956298ecb40e4903c18bc52eed30d88ff152a3623190f8e72f907b2d5"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/rock-normal.png",
+      "bytes": 3129678,
+      "sha256": "ed769f309f8258dcf29955be417944d172525115283d3cf4b0ae443a6eec5029"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/rock-surface.mjs",
+      "bytes": 8213,
+      "sha256": "ca35f4d79f4dbd26fb8481bc6f2bf33b25c558f431e193ba5ad277ce8c8ea057"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/snow-bank-asset.mjs",
+      "bytes": 5929,
+      "sha256": "d180c62bb72d9dd3ba8d41c3811c5826b958bcf218d51928afab0d706a8ced4e"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/snow-bank-map.mjs",
+      "bytes": 13819,
+      "sha256": "df273140cbc56b5991f3b744de43c122443436c38b666005fa35d67bbc9f2efc"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/snow-banks.mjs",
+      "bytes": 2000,
+      "sha256": "900a1bbd446e2a9e613042d250338f8a7f737cfd53cc3c192ddcb22ceb40c00e"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/snow-probe.mjs",
+      "bytes": 1191,
+      "sha256": "617dd5f7b42a6ff73d0bf36b67440e82af3640570700d0a7de621e20afe41c90"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/snow-regions.mjs",
+      "bytes": 516,
+      "sha256": "588ee7c0ca93a393e09f164da5fd2812a706eed3b8391a0609a1a1b9636aee01"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/snow-relief.mjs",
+      "bytes": 5678,
+      "sha256": "eb24c0112411ba1cb8b87d9da6dc6cb5e8765c8a094b689c76eac3684504910a"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/snow-restored-budget.glb",
+      "bytes": 415476,
+      "sha256": "ccd43e8258b72da5fe2e3e7ec8b80a048545640a46de72b3e500ec9315a5f22b"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/snow-surface.mjs",
+      "bytes": 18188,
+      "sha256": "7221ff3a79a07b06564d698afb1023e24e11c719a58eadc5d28a2c369d4efce8"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/snow-tracks.mjs",
+      "bytes": 6925,
+      "sha256": "a0170dce3a20eed7e5cd7b71137f948ed365e1a60d1b6309c8951e430e04502d"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/terrain-data.mjs",
+      "bytes": 1618560,
+      "sha256": "157f92999def103d96ab978b3cf5bd70ed9a250a172dbd7dae39ea0931514dcc"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/terrain-patches.mjs",
+      "bytes": 18184,
+      "sha256": "79eb66221aaf6e8f84b76f049012e3da8190cc394d9147cb610310a8b55c7e3b"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/tree-layout.mjs",
+      "bytes": 1028,
+      "sha256": "e35a3b65736555ef83d5da4d23a196c2e453b01ad79b0a2b0be656a03bab6688"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/trees-polished.mjs",
+      "bytes": 9959,
+      "sha256": "983ec78c3a5a0d7cec218e19cb0fca9b5cf3b8c4ed92bc210acdf07ea8f43731"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/trees.mjs",
+      "bytes": 8910,
+      "sha256": "aa9aff2bc0881e165e5dc218c8d86fc91204db3a61be9f844f1c1ca985e9d62e"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/widths.mjs",
+      "bytes": 63619,
+      "sha256": "dcb6b9abbf64785f7f765e23d8fd8ba6c4700d6a3ab9401735fff6254a5a8bdd"
+    },
+    {
+      "path": "r/6a4fa64cb6805a5a/scene/world.mjs",
+      "bytes": 22783,
+      "sha256": "ec4b05627193b3dcfc63c1cf0a2040b4c823571650d5853794e759492f61de77"
+    }
+  ],
+  "totalBytes": 17786936
+}

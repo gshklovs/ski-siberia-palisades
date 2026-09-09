@@ -1,7 +1,32 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": null,
+  "outputDirectory": "public",
   "trailingSlash": false,
-  "redirects": [
-    { "source": "/(.*)", "destination": "https://ski-red-dog-face.vercel.app/?travel=siberia-bowl", "permanent": true }
+  "rewrites": [
+    {
+      "source": "/((?!r/|index\\.html$|release\\.json$).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/r/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/((?!r/).*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    }
   ]
 }

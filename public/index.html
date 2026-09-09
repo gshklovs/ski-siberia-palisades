@@ -1,23 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#171614">
+<meta name="description" content="Ski Siberia and the Palisades cliff band. Detailed alpine snow, groomed runs and ski tracks.">
 <title>Siberia Express — Palisades Tahoe</title>
-<meta name="robots" content="noindex">
-<link rel="canonical" href="https://ski-red-dog-face.vercel.app/?travel=siberia-bowl">
-<meta http-equiv="refresh" content="0; url=https://ski-red-dog-face.vercel.app/?travel=siberia-bowl">
-<style>
-  :root { color-scheme: dark; }
-  html, body { height: 100%; margin: 0; }
-  body {
-    display: grid; place-items: center; background: #0d0f12; color: #e7ecf2;
-    font: 400 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    text-align: center; padding: 24px;
+<link rel="stylesheet" href="/r/6a4fa64cb6805a5a/css/te.css">
+<link rel="stylesheet" href="/r/6a4fa64cb6805a5a/css/play.css">
+<link rel="stylesheet" href="/r/6a4fa64cb6805a5a/css/intro.css">
+<link rel="stylesheet" href="/r/6a4fa64cb6805a5a/css/speedo.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='25' font-size='26'%3E%E2%9B%B7%3C/text%3E%3C/svg%3E">
+</head>
+<body class="play intro-up">
+<div id="play-boot" class="pboot"><div class="pboot__card"><div class="pboot__hd">SIBERIA EXPRESS</div><div class="pboot__bd"><div class="pboot__bar"><i></i></div><div id="play-boot-msg" class="pboot__msg">Loading the mountain…</div></div></div></div>
+<script>
+(async function () {
+  const url = new URL(location.href);
+  for (const [name, value] of Object.entries({snowBanks:'map',alpinePolish:'1',riderPolish:'1',groomedRun:'1'})) {
+    if (!url.searchParams.has(name)) url.searchParams.set(name, value);
   }
-  .b { letter-spacing: .28em; font-size: 11px; color: #7d8794; text-transform: uppercase; }
-  h1 { font-size: 20px; font-weight: 600; margin: 14px 0 6px; }
-  p { margin: 0 0 18px; color: #98a2b0; max-width: 34em; }
-  a { color: #e7ecf2; }
-</style>
-<main>
-  <div class="b">SIBERIA</div>
-  <h1>Siberia is part of the mountain now</h1>
-  <p>This world was merged into Red Dog Face. You are being sent to Siberia Bowl inside it.</p>
-  <p><a href="https://ski-red-dog-face.vercel.app/?travel=siberia-bowl">https://ski-red-dog-face.vercel.app/?travel=siberia-bowl</a></p>
-</main>
+  history.replaceState(null, '', url);
+  const root = location.origin + '/';
+  const assets = root + 'r/6a4fa64cb6805a5a/';
+  const sceneBase = assets + 'scene/';
+  const imports = {three: assets + 'vendor/three.module.js', 'three/addons/': assets + 'vendor/jsm/'};
+  const base = document.createElement('base'); base.href = sceneBase; document.head.append(base);
+  const map = document.createElement('script'); map.type = 'importmap'; map.textContent = JSON.stringify({imports}); document.head.append(map);
+  const say = text => { const label = document.getElementById('play-boot-msg'); if (label) label.textContent = text; };
+  window.__playFail = (reason, detail) => { window.__playError = String(reason); say('Could not start: ' + reason + (detail ? ' — ' + detail : '')); document.body.classList.remove('intro-up'); };
+  window.__PLAY = {
+    poi:'siberia-palisades', run:'siberia-palisades-A-astra-01', info:{}, mode:'world',
+    entryUrl:sceneBase + 'world.mjs', sceneBase, sceneHtml:'', imports,
+    test:url.searchParams.has('test'), qs:url.searchParams, say,
+    guide:true, gearSet:'locker', debugHud:false, brand:'SIBERIA', regions:[],
+    root:assets, pageRoot:root, release:'r/6a4fa64cb6805a5a/'
+    ,sceneModules:['./ground.mjs']
+  };
+  try { await import('/r/6a4fa64cb6805a5a/js/play/main.js'); }
+  catch (error) { console.error(error); window.__playFail(error.message); }
+})();
+</script>
+</body>
+</html>
